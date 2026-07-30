@@ -1,0 +1,25 @@
+[task]
+name = "physical_properties"
+
+[inputs]
+source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
+
+[outputs]
+root = "results/physical_properties"
+
+[physics]
+frequency_ghz = 223.8
+dust_opacity_cm2_per_g = 0.5
+gas_to_dust_ratio = 100.0
+gas_to_dust_error = 24.0
+mean_molecular_weight = 2.8
+distance_kpc = 2.8
+distance_error_kpc = 0.5
+beam_major_arcsec = 0.71
+beam_minor_arcsec = 0.60
+
+[uncertainty]
+sample_count = 10000
+random_seed = 42
+background_rms_mjysr = 3.5
+temperature_fraction = 0.10

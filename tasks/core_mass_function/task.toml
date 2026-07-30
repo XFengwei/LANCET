@@ -1,0 +1,65 @@
+[task]
+name = "core_mass_function"
+
+[inputs]
+catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+
+[outputs]
+root = "results/core_mass_function"
+
+[columns]
+id = "ID"
+mass = "Mass_core"
+mass_error = "err_Mass_core"
+temperature = "Tenv"
+size = "FWHM_linear"
+region = "Subregion"
+
+[ordering]
+region_order = ["young", "intermediate", "evolved"]
+
+[fit]
+# The fitted convention is dN/dM proportional to M^(-alpha).
+# Zero means no externally imposed completeness floor.
+completeness_mass_msun = 0.0
+global_minimum_count = 30
+regional_minimum_count = 12
+mcmc_steps = 60000
+mcmc_burn_in = 10000
+global_proposal_width = 0.03
+regional_proposal_width = 0.04
+global_seed = 42
+bootstrap_samples = 3000
+bootstrap_seed_offset = 1000
+
+[regions.young]
+code = "Y"
+label = "Young"
+color = "#009E73"
+marker = "s"
+seed = 100
+
+[regions.intermediate]
+code = "I"
+label = "Intermediate"
+color = "#0072B2"
+marker = "^"
+seed = 101
+
+[regions.evolved]
+code = "E"
+label = "Evolved"
+color = "#D55E00"
+marker = "o"
+seed = 102
+
+[figures]
+formats = ["pdf", "png"]
+dpi = 300
+width_inches = 7.2
+height_inches = 5.8
+mass_bins = 12
+posterior_bins = 45
+posterior_draws = 1200
+plot_seed = 316
+global_fit_color = "#0072B2"

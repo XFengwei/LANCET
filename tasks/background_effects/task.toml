@@ -1,0 +1,26 @@
+[task]
+name = "background_effects"
+status = "supporting"
+
+[outputs]
+root = "results/background_effects"
+
+[model]
+frequency_ghz = 223.8
+temperature_k = 20.0
+beam_major_arcsec = 0.71
+beam_minor_arcsec = 0.61
+core_brightness_mjy_beam = [1.0, 10.0, 100.0]
+background_min_mjysr = 10.0
+background_max_mjysr = 3162.2776601683795
+background_samples = 50
+
+[figures]
+formats = ["pdf", "png"]
+dpi = 200
+width_inches = 5.4
+height_inches = 4.2
+xscale = "log"
+marker_size = 4.0
+marker_every = 5
+colors = ["#4C78A8", "#F2A541", "#D1495B"]

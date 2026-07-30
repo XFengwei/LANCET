@@ -1,0 +1,142 @@
+[task]
+name = "bonnor_ebert"
+
+[inputs]
+catalogue = "results/environment_measurements/tables/core_environment_catalogue.ecsv"
+
+[outputs]
+root = "results/bonnor_ebert"
+
+[catalogue]
+id_column = "ID"
+region_column = "Subregion"
+mass_column = "Mass_core"
+mass_error_column = "err_Mass_core"
+instability_threshold = 1.0
+
+[calculation]
+active_profile = "radius_thermal"
+
+[profiles.radius_thermal]
+formula = "radius"
+internal_support = "thermal"
+mean_particle_weight = 2.33
+mean_mass_per_h2 = 2.8
+
+[profiles.radius_thermal.support_temperature]
+source = "column"
+column = "Tenv"
+unit = "K"
+
+[profiles.radius_thermal.internal_nonthermal]
+source = "none"
+column = ""
+value = 0.0
+unit = "km / s"
+kind = "nonthermal_sigma"
+remove_tracer_thermal = true
+tracer_molecular_weight = 30.0
+
+[profiles.radius_thermal.radius]
+# FWHM_linear is the full circularized deconvolved FWHM in AU. Treating half
+# of it as the BE truncation radius remains a model assumption.
+source = "column"
+column = "FWHM_linear"
+unit = "AU"
+factor = 1.0
+
+[profiles.measured_external]
+formula = "external_pressure"
+internal_support = "thermal_plus_nonthermal"
+external_pressure_mode = "density_velocity"
+mean_particle_weight = 2.33
+mean_mass_per_h2 = 2.8
+
+[profiles.measured_external.support_temperature]
+source = "column"
+column = "Temp_env_mean"
+unit = "K"
+
+[profiles.measured_external.internal_nonthermal]
+source = "external_fraction"
+column = ""
+value = 0.0
+unit = "km / s"
+kind = "nonthermal_sigma"
+remove_tracer_thermal = true
+tracer_molecular_weight = 30.0
+# Fraction of the environmental nonthermal dispersion retained inside a core.
+# Use any value from 0 (complete dissipation) to 1 (no dissipation).
+fraction = 0.0
+
+[profiles.measured_external.external_temperature]
+source = "column"
+column = "Temp_env_mean"
+unit = "K"
+
+[profiles.measured_external.external_density]
+# Convert aperture-mean intercore surface density to a line-of-sight
+# volume-averaged mass density using the adopted 0.4 pc cloud depth.
+source = "column"
+column = "Interco_env_mean"
+value = 0.0
+unit = "g / cm2"
+kind = "surface_density_path_length"
+path_length_pc = 0.4
+
+[profiles.measured_external.external_velocity]
+# Vsig_env_mean is the aperture-mean one-dimensional C18O moment-2 dispersion.
+# Its tracer thermal contribution is removed before gas thermal pressure is
+# added using external_temperature.
+source = "column"
+column = "Vsig_env_mean"
+value = 0.0
+unit = "km / s"
+kind = "observed_sigma"
+remove_tracer_thermal = true
+tracer_molecular_weight = 30.0
+
+[profiles.measured_external.direct_external_pressure]
+# Used only after external_pressure_mode is changed to "direct".
+source = "scalar"
+column = ""
+value = 1.0e6
+unit = "K / cm3"
+representation = "pressure_over_k"
+
+[example]
+temperature_k = 30.0
+number_density_h2_cm3 = 1.0e4
+line_fwhm_kms = 1.0
+tracer_molecular_weight = 30.0
+radius_pc = 0.03
+observed_mass_msun = 5.0
+mean_particle_weight = 2.33
+mean_mass_per_h2 = 2.8
+
+[regions.young]
+code = "Y"
+label = "Young"
+color = "#4C78A8"
+
+[regions.intermediate]
+code = "I"
+label = "Intermediate"
+color = "#F2A541"
+
+[regions.evolved]
+code = "E"
+label = "Evolved"
+color = "#D1495B"
+
+[figures]
+formats = ["pdf", "png"]
+dpi = 300
+width_inches = 10.2
+height_inches = 4.4
+marker_size = 25.0
+marker_edge_width = 0.6
+marker_alpha = 0.75
+ratio_min = 0.1
+ratio_max = 200.0
+ratio_bins = 18

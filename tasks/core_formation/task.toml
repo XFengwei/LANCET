@@ -1,0 +1,79 @@
+[task]
+name = "core_formation"
+
+[inputs]
+physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
+fragment_ellipse_catalogue = "extraction/astrodendro/my_dendrogram.dat"
+high_resolution_continuum = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.MJysr.fits"
+low_resolution_continuum = "results/prepare_continuum_images/converted/7M/IRDC316.8.ACA.p1.cont.image.MJysr.fits"
+
+[references]
+# This published catalogue is checked during inspection only. The adopted
+# fragment masses below are scientific inputs and are not calculated from it.
+paper1_fragment_catalogue = "data/delivered/paper1/PaperI_table2.fit"
+
+[outputs]
+root = "results/core_formation"
+
+[dust_opacity]
+# Optically thin dust masses scale inversely with opacity. Paper I fragment
+# masses are multiplied by 0.9 / 0.5 = 1.8 for consistency with this work.
+paper1_cm2_per_g = 0.9
+adopted_cm2_per_g = 0.5
+
+[regions.young]
+label = "Young"
+code = "Y"
+cloud_mass_msun = 11000.0
+paper1_fragment_mass_msun = 50.0
+fragment_count = 12
+
+[regions.intermediate]
+label = "Intermediate"
+code = "I"
+cloud_mass_msun = 17000.0
+paper1_fragment_mass_msun = 391.0
+fragment_count = 37
+
+[regions.evolved]
+label = "Evolved"
+code = "E"
+cloud_mass_msun = 8000.0
+paper1_fragment_mass_msun = 766.0
+fragment_count = 16
+
+[efficiency_plot]
+scales_pc = [4.0, 0.15, 0.01]
+scale_fractional_error = 0.3
+
+[overlay]
+width_arcsec = 100.0
+height_arcsec = 100.0
+image_vmin = -21.0
+contour_levels_mjysr = [6.0, 24.0, 96.0, 384.0]
+
+[[panels]]
+key = "young"
+label = "Young"
+center_ra_deg = 221.0820
+center_dec_deg = -59.7394
+image_vmax = 400.0
+
+[[panels]]
+key = "intermediate"
+label = "Intermediate"
+center_ra_deg = 221.23695
+center_dec_deg = -59.80308
+image_vmax = 400.0
+
+[[panels]]
+key = "evolved"
+label = "Evolved"
+center_ra_deg = 221.3468
+center_dec_deg = -59.8230
+image_vmax = 800.0
+
+[figures]
+formats = ["pdf", "png"]
+dpi = 200

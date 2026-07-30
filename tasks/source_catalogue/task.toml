@@ -1,0 +1,57 @@
+[task]
+name = "source_catalogue"
+
+[inputs]
+getsf_catalogue = "extraction/getsf/triple/results/G316.sw.sources.ok.cat"
+intercore_background = "extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
+core_background = "extraction/getsf/triple/results/+components/G316.sw.1303.obs.sbackground.fits"
+temperature = "results/column_density/prepared/temperature_allscale.fits"
+young_region = "region/trichotomy/trichotomy_young_shrink.reg"
+intermediate_region = "region/trichotomy/trichotomy_intermediate_shrink.reg"
+evolved_region = "region/trichotomy/trichotomy_evolved_shrink.reg"
+
+[outputs]
+root = "results/source_catalogue"
+
+[size]
+beam_major_arcsec = 0.71
+beam_minor_arcsec = 0.60
+beam_position_angle_deg = 47.4
+distance_pc = 2800.0
+unresolved_threshold_factor = 1.25
+unresolved_size_factor = 0.5
+
+[regions]
+young = "young_region"
+intermediate = "intermediate_region"
+evolved = "evolved_region"
+
+[flux_diagnostics]
+beam_fwhm_arcsec = 0.65
+peak_snr_min = 3.0
+relative_difference_clip = 0.30
+reference_label = "12m7m compact sources"
+comparison_label = "12m7mTP compact sources"
+# Change these two entries to update the primary diagnostic colors.
+reference_color = "#333333"
+comparison_color = "#0072B2"
+reference_filled = false
+comparison_filled = true
+reference_marker_size = 5.2
+comparison_marker_size = 4.8
+reference_marker_alpha = 0.88
+comparison_marker_alpha = 0.82
+reference_zorder = 5
+comparison_zorder = 3
+reference_error_lightening = 0.60
+comparison_error_lightening = 0.52
+formats = ["pdf", "png"]
+dpi = 200
+width_inches = 6.0
+height_inches = 5.0
+flux_min_jy = 5.0e-5
+flux_max_jy = 2.0e-1
+size_min_arcsec = 0.55
+size_max_arcsec = 3.2
+ratio_min = 0.03
+ratio_max = 3.0

@@ -1,0 +1,73 @@
+[task]
+name = "column_density"
+
+[inputs]
+temperature_lowres = "data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits"
+column_density_lowres = "data/delivered/sedfitter/combine/NH2_18arcsec+36arcsec.fits"
+column_density_multiscale = "data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec+36arcsec.fits"
+dust_continuum_allscale = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.MJysr.rp.fits"
+intercore_background = "extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
+freefree_smoothed = "results/construct_freefree_model/Te_8000K/ff230_map_smoothed_18arcsec.fits"
+box_regions = "region/box2arcmin_three_regions.reg"
+dense_young_region = "region/trichotomy/trichotomy_young.reg"
+dense_intermediate_region = "region/trichotomy/trichotomy_intermediate.reg"
+dense_evolved_region = "region/trichotomy/trichotomy_evolved.reg"
+
+[outputs]
+root = "results/column_density"
+
+[model]
+frequency_ghz = 223.8
+opacity_cm2_per_g = 0.005
+mean_molecular_weight = 2.8
+distance_pc = 2800.0
+
+[view]
+center_ra_deg = 221.2346
+center_dec_deg = -59.7738
+width_deg = 0.19166666666666668
+height_deg = 0.13666666666666666
+scalebar_length_deg = 0.02
+scalebar_label = "1 pc"
+resolution_label = "0.65 arcsec = 1820 au"
+subregion_width_deg = 0.03333333333333333
+subregion_height_deg = 0.03333333333333333
+subregion_scalebar_pc = 0.1
+
+[plot_style]
+background_vmin = 0.0
+transition = 2.0
+highlight_vmax = 10.0
+background_ticks = [0.0, 0.5, 1.0, 1.5, 2.0]
+freefree_levels = [0.05, 0.10, 0.20, 0.40, 0.80]
+
+[figures]
+formats = ["pdf"]
+full_field_dpi = 200
+subregion_dpi = 100
+
+[subregions.young]
+label = "Young"
+center_ra_deg = 221.0820
+center_dec_deg = -59.7394
+
+[subregions.intermediate]
+label = "Intermediate"
+center_ra_deg = 221.2439
+center_dec_deg = -59.8038
+
+[subregions.evolved]
+label = "Evolved"
+center_ra_deg = 221.3468
+center_dec_deg = -59.8230
+
+[dense_regions]
+young = "dense_young_region"
+intermediate = "dense_intermediate_region"
+evolved = "dense_evolved_region"
+
+[dense_gas]
+threshold_g_cm2 = 1.0
+cloud_mass_young_msun = 11000.0
+cloud_mass_intermediate_msun = 17000.0
+cloud_mass_evolved_msun = 8000.0

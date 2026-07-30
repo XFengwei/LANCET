@@ -1,0 +1,38 @@
+[task]
+name = "magnetic_fields"
+status = "ongoing"
+
+[inputs]
+stokes_i = "data/delivered/archive/planck/PLCKI_G316.769-0.003_353GHz.fits"
+stokes_q = "data/delivered/archive/planck/PLCKQ_G316.769-0.003_353GHz.fits"
+stokes_u = "data/delivered/archive/planck/PLCKU_G316.769-0.003_353GHz.fits"
+
+[outputs]
+root = "results/magnetic_fields"
+
+[noise]
+# These exploratory values must be replaced or justified by a reproducible
+# Planck noise estimate before publication use.
+rms_i_kcmb = 1.0e-2
+rms_qu_kcmb = 3.0e-4
+
+[thresholds]
+intensity_snr = [2.0, 3.0]
+polarized_snr = [2.0, 3.0]
+angle_polarized_snr = 2.0
+fraction_intensity_snr = 3.0
+
+[plot]
+formats = ["pdf", "png"]
+dpi = 300
+width_inches = 7.0
+height_inches = 6.0
+colormap = "BuPu"
+vmin_kcmb = 1.0e-2
+vmax_kcmb = 0.42
+vector_step_pixels = 5
+vector_length_pixels = 4.0
+vector_color = "#F4DE00"
+vector_line_width = 1.8
+vector_outline_width = 1.5
+vector_outline_color = "black"

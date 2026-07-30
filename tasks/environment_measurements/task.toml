@@ -1,0 +1,22 @@
+[task]
+name = "environment_measurements"
+
+[inputs]
+physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+temperature = "data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits"
+velocity_dispersion = "results/moment_maps/moments/c18o.mom2.fits.gz"
+intercore_surface_density = "results/column_density/maps/surface_density_intercore.fits"
+surface_density = "results/column_density/prepared/surface_density_lowres.fits"
+
+[outputs]
+root = "results/environment_measurements"
+
+[aperture]
+radius_arcsec = 15.0
+minimum_valid_value = 0.0
+
+[maps]
+Temp = "temperature"
+Vsig = "velocity_dispersion"
+Interco = "intercore_surface_density"
+Surface = "surface_density"

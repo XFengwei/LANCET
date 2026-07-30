@@ -1,0 +1,120 @@
+[task]
+name = "correlation"
+
+[inputs]
+catalogue = "results/environment_measurements/tables/core_environment_catalogue.ecsv"
+
+[outputs]
+root = "results/correlation"
+
+[variables]
+columns = [
+  "Mass_core",
+  "Volden_core",
+  "Surface_core",
+  "Surface_intercorebkg",
+  "Temp_env_median",
+  "Vsig_env_median",
+  "Surface_env_median",
+  "Interco_env_median",
+]
+log_columns = [
+  "Mass_core",
+  "Volden_core",
+  "Surface_core",
+  "Surface_intercorebkg",
+  "Temp_env_median",
+  "Vsig_env_median",
+  "Surface_env_median",
+  "Interco_env_median",
+]
+
+[labels]
+Mass_core = 'Core $M_{\rm core}$'
+Volden_core = 'Core $n_{\rm core}$'
+Surface_core = 'Core $\Sigma_{\rm core}$'
+Surface_intercorebkg = 'Core $\Sigma^{\rm ic}_{\rm core}$'
+Temp_env_median = 'Env. $T_{\rm env}$'
+Vsig_env_median = 'Env. $\sigma_{\rm env}$'
+Surface_env_median = 'Env. $\Sigma_{\rm env}$'
+Interco_env_median = 'Env. $\Sigma^{\rm ic}_{\rm env}$'
+
+[corner_plot]
+size_inches = 18.0
+histogram_bins = 20
+contour_fractions = [0.50, 0.80, 0.95]
+scatter_size = 10.0
+scatter_alpha = 0.35
+highlight_threshold = 0.4
+padding_fraction = 0.08
+highlight_color = "crimson"
+kde_color = "tab:blue"
+
+[compact_plot]
+width_inches = 6.8
+height_inches = 5.8
+colormap = "RdYlBu_r"
+outline_threshold = 0.5
+minimum_box_fraction = 0.4
+maximum_box_fraction = 0.8
+show_values = true
+value_fontsize = 7.0
+tick_fontsize = 12.0
+label_rotation_degrees = 55.0
+
+[regression]
+x_column = "Interco_env_median"
+y_column = "Surface_intercorebkg"
+y_error_column = "err_Surface_intercorebkg"
+
+# The primary profile adopts xerr = 0.33*x. A 20% alternative and neighboring
+# choices are retained in the sensitivity calculation.
+x_fractional_error = 0.33
+sensitivity_fractions = [0.0, 0.10, 0.20, 0.33, 0.50]
+
+n_walkers = 32
+n_steps = 15000
+burn_in = 1000
+thin = 10
+seed = 20260724
+
+# Approximate reference line for visual comparison. The intercept is expressed
+# on the current opacity-consistent x/y scale.
+reference_slope = 1.60
+reference_intercept = 0.817
+x_limits = [0.07, 1.3]
+y_limits = [0.05, 10.0]
+median_bins = 8
+posterior_draws = 5000
+plot_seed = 7316
+
+[publication_plot]
+width_inches = 6.4
+height_inches = 5.4
+font_size = 10.0
+label_font_size = 11.0
+legend_font_size = 10.0
+tick_font_size = 10.0
+annotation_font_size = 10.0
+annotation_x = 0.03
+annotation_y = 0.97
+marker_size = 5.0
+marker_edge_width = 0.8
+point_alpha = 0.75
+error_color = "0.6"
+error_line_width = 0.6
+capsize = 2.0
+fit_color = "#FF7F0E"
+best_fit_line_width = 2.0
+posterior_lines = 200
+posterior_line_width = 1.0
+posterior_alpha = 0.04
+posterior_seed = 316
+grid_expansion_dex = 0.10
+legend_location = "lower right"
+
+[figures]
+formats = ["pdf", "png"]
+dpi = 240
+corner_dpi = 150
+publication_dpi = 300

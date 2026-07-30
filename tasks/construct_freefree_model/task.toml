@@ -1,0 +1,52 @@
+[task]
+name = "construct_freefree_model"
+
+[inputs]
+meerkat_cube = "data/delivered/archive/radio/MeerKAT_subcube_reprojected.fits"
+meerkat_reference = "data/delivered/archive/radio/MeerKAT_subimage_1.38GHz_reprojected.fits"
+cornish_map = "data/delivered/archive/radio/CORNISH_5p5GHz.fits"
+dust_reference = "data/delivered/paper1/TP_SEDsynthetic230GHz_cont.fits"
+
+[outputs]
+root = "results/construct_freefree_model"
+
+[preparation]
+cornish_beam_arcsec = 2.5
+common_beam_arcsec = 8.0
+
+[fit]
+electron_temperatures_k = [6000.0, 8000.0, 10000.0]
+minimum_bands = 6
+snr_threshold = 5.0
+mfs_threshold_jy_per_beam = 0.005
+alpha_min = -0.5
+alpha_max = 2.0
+
+# Paper II reproduction profile. These values exactly reproduce the stored
+# fit mask, band-count map, and tested emission-measure pixels. The two fully
+# flagged MeerKAT planes remain represented in the ordered list but are
+# rejected automatically because their image values are NaN.
+frequency_source = "configured"
+meerkat_frequencies_ghz = [
+  0.908, 0.952, 0.997, 1.043, 1.093, 1.145, 1.199,
+  1.256, 1.318, 1.382, 1.448, 1.520, 1.594, 1.657,
+]
+rms_meerkat_jy_per_beam = [
+  0.0003, 0.0003, 0.0003, 0.0003, 0.0003, 0.0003, 0.0003,
+  0.0003, 0.0003, 0.0003, 0.0003, 0.0003, 0.0003, 0.0003,
+]
+rms_cornish_jy_per_beam = 0.01
+rms_role = "fixed_effective_uncertainty_and_snr_threshold"
+rms_provenance = "recovered_from_paper2_legacy_products"
+
+[postprocess]
+smoothed_beam_arcsec = 18.0
+reference_temperature_k = 8000.0
+
+[temperature_comparison_plot]
+reference_temperature_k = 8000.0
+comparison_temperatures_k = [6000.0, 10000.0]
+histogram_bins = 30
+colors = ["blue", "black"]
+output_formats = ["pdf", "png"]
+dpi = 300

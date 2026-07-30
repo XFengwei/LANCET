@@ -1,0 +1,98 @@
+[task]
+name = "prepare_continuum_images"
+
+[outputs]
+root = "results/prepare_continuum_images"
+
+[primary_beam_mask]
+minimum_response = 0.20
+
+[[primary_beam_masks]]
+name = "7MTM2TM1"
+image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.fits"
+primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+output = "masked/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.fits"
+
+[[primary_beam_masks]]
+name = "7MTM2"
+image = "data/delivered/alma/7MTM2/cont/miriad/IRDC316.8.7MTM2.robust0.5.clean.dropdeg.fits"
+primary_beam = "data/delivered/alma/7MTM2/cont/casa/primary_beam_rp2miriad.fits"
+output = "masked/7MTM2/IRDC316.8.7MTM2.robust0.5.clean.dropdeg.pbcut.fits"
+
+[[primary_beam_masks]]
+name = "allscale_dust"
+image = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.MJysr.rp.fits"
+primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+output = "masked/TP7MTM2TM1/allscale_combined_v3_dust.MJysr.rp.pbcut.fits"
+
+[[primary_beam_masks]]
+name = "allscale_dust_freefree"
+image = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.rp.fits"
+primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+output = "masked/TP7MTM2TM1/allscale_combined_v3_dust_ff.MJysr.rp.pbcut.fits"
+
+[[unit_conversions]]
+name = "aca_image"
+source_kind = "delivered"
+input = "data/delivered/alma/7M/cont/IRDC316.8.ACA.p1.cont.image.fits"
+output = "converted/7M/IRDC316.8.ACA.p1.cont.image.MJysr.fits"
+
+[[unit_conversions]]
+name = "aca_pbcor"
+source_kind = "delivered"
+input = "data/delivered/alma/7M/cont/IRDC316.8.ACA.p1.cont.image.pbcor.fits"
+output = "converted/7M/IRDC316.8.ACA.p1.cont.image.pbcor.MJysr.fits"
+
+[[unit_conversions]]
+name = "12m_image"
+source_kind = "delivered"
+input = "data/delivered/alma/TM2TM1/cont/IRDC316.8.TM1TM2.selfcal.cont.image.tt0.fits"
+output = "converted/TM2TM1/IRDC316.8.TM1TM2.selfcal.cont.image.tt0.MJysr.fits"
+
+[[unit_conversions]]
+name = "12m_pbcor"
+source_kind = "delivered"
+input = "data/delivered/alma/TM2TM1/cont/IRDC316.8.TM1TM2.selfcal.cont.image.tt0.pbcor.fits"
+output = "converted/TM2TM1/IRDC316.8.TM1TM2.selfcal.cont.image.tt0.pbcor.MJysr.fits"
+
+[[unit_conversions]]
+name = "7MTM2TM1_pb_attenuated"
+source_kind = "delivered"
+input = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.fits"
+output = "converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.MJysr.fits"
+
+[[unit_conversions]]
+name = "7MTM2TM1_pbcut"
+source_kind = "task_output"
+input = "masked/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.fits"
+output = "converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.MJysr.fits"
+
+[[unit_conversions]]
+name = "7MTM2TM1_casa_image"
+source_kind = "delivered"
+input = "data/delivered/alma/7MTM2TM1/cont/casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.fits"
+output = "converted/7MTM2TM1_casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.MJysr.fits"
+
+[[unit_conversions]]
+name = "7MTM2TM1_casa_pbcor"
+source_kind = "delivered"
+input = "data/delivered/alma/7MTM2TM1/cont/casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.pbcor.fits"
+output = "converted/7MTM2TM1_casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.pbcor.MJysr.fits"
+
+[[unit_conversions]]
+name = "allscale_dust"
+source_kind = "delivered"
+input = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.fits"
+output = "converted/TP7MTM2TM1/allscale_combined_v3_dust.MJysr.fits"
+
+[[unit_conversions]]
+name = "allscale_dust_freefree"
+source_kind = "delivered"
+input = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.fits"
+output = "converted/TP7MTM2TM1/allscale_combined_v3_dust_ff.MJysr.fits"
+
+[[unit_conversions]]
+name = "7MTM2_pbcut"
+source_kind = "task_output"
+input = "masked/7MTM2/IRDC316.8.7MTM2.robust0.5.clean.dropdeg.pbcut.fits"
+output = "converted/7MTM2/IRDC316.8.7MTM2.robust0.5.clean.dropdeg.pbcut.MJysr.fits"

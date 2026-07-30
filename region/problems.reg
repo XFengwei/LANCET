@@ -1,0 +1,15 @@
+# Region file format: DS9 CARTA 5.0.3
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+icrs
+box(221.309636117, -59.809428922, 13.9174", 12.2473", 0) # color=#2EE6D6 width=2
+box(221.354219858, -59.813441479, 20.0846", 16.0600", 0) # color=#2EE6D6 width=2
+box(221.367298673, -59.810936366, 18.6117", 17.9984", 0) # color=#2EE6D6 width=2
+box(221.252801696, -59.792055925, 18.2711", 16.9660", 0) # color=#2EE6D6 width=2
+box(221.298739068, -59.806195617, 19.1118", 16.8186", 0) # color=#2EE6D6 width=2
+box(221.341922387, -59.815870650, 14.1214", 12.4949", 0) # color=#2EE6D6 width=2
+box(221.324481459, -59.812305644, 14.4790", 11.8935", 0) # color=#2EE6D6 width=2
+box(221.266407012, -59.799943011, 20.6172", 19.4718", 0) # color=#2EE6D6 width=2
+box(221.233849408, -59.818204854, 25.6709", 23.4386", 0) # color=#2EE6D6 width=2
+box(221.195090903, -59.817798126, 22.8918", 23.6812", 0) # color=#2EE6D6 width=2
+box(221.371775830, -59.833732816, 39.2226", 30.1174", 0) # color=#2EE6D6 width=2
+box(221.231328173, -59.785194510, 17.9110", 17.9109", 0) # color=#2EE6D6 width=2

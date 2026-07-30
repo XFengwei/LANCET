@@ -1,0 +1,28 @@
+[task]
+name = "c18o_moments"
+
+[inputs]
+c18o_cube = "data/delivered/total_power/SEDIGISM/c18o_2-1_apex-sedigism.fits"
+alma_grid = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.rp.fits"
+
+[outputs]
+root = "results/moment_maps"
+
+[moments]
+basename = "c18o"
+snr_hi = 9.0
+snr_lo = 2.0
+min_beam = 1.0
+snr_hi_min_channels = 1
+snr_lo_min_channels = 1
+min_tot_ch = 2
+edge_channels = 5
+moment1_min_channels = 2
+moment2_min_channels = 2
+
+[reprojection]
+order = "bilinear"
+
+[figures]
+formats = ["pdf", "png"]
+dpi = 200

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lancet"
+version = "0.1.0"
+description = "Reusable astronomy analysis components and reproducible LANCET workflows"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "astropy>=6.0",
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "photutils>=1.11",
+    "radio-beam>=0.3",
+    "regions>=0.8",
+    "reproject>=0.13",
+    "scipy>=1.11",
+    "spectral-cube>=0.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

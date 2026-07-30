@@ -1,0 +1,35 @@
+# Scientific inputs, external products, manuscripts, and generated outputs
+/data/
+/extraction/
+/papers/
+/presentation/
+/references/
+/results/
+
+# Python build and test artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local environments and secrets
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Notebook and editor artifacts
+.ipynb_checkpoints/
+.idea/
+.vscode/
+*~
+*.swp
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db

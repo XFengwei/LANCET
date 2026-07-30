@@ -1,0 +1,56 @@
+[task]
+name = "n_pdf"
+status = "ongoing"
+
+[inputs]
+# This retained map replaces the removed historical NH2_allscale filename.
+# Its suitability for the final N-PDF analysis remains to be established.
+column_density = "data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec+36arcsec.fits"
+
+[outputs]
+root = "results/n_pdf"
+
+[ordering]
+region_order = ["young", "intermediate", "evolved"]
+
+[analysis]
+# All choices below are provisional and should remain configurable.
+background_cm2 = 3.0e22
+eta_min = -5.0
+eta_max = 6.0
+eta_bins = 80
+
+[regions.young]
+label = "Young"
+center_ra_deg = 221.10306
+center_dec_deg = -59.73783
+width_arcsec = 240.0
+height_arcsec = 240.0
+color = "#0072B2"
+
+[regions.intermediate]
+label = "Intermediate"
+center_ra_deg = 221.21985
+center_dec_deg = -59.79145
+width_arcsec = 240.0
+height_arcsec = 240.0
+color = "#E69F00"
+
+[regions.evolved]
+label = "Evolved"
+center_ra_deg = 221.34940
+center_dec_deg = -59.81123
+width_arcsec = 240.0
+height_arcsec = 240.0
+color = "#D55E00"
+
+[plot]
+formats = ["pdf", "png"]
+dpi = 300
+width_inches = 7.0
+height_inches = 5.6
+eta_min = -5.0
+eta_max = 6.0
+pdf_min = 1.0e-6
+pdf_max = 3.0
+legend_location = "upper right"
