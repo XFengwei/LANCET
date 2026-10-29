@@ -79,7 +79,7 @@ def test_array_comparison_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/compare_interferometer_arrays.py",
+            "scripts/combination_diagnostic.py",
             "--stage",
             "inspect",
         ],
@@ -127,7 +127,7 @@ def test_generated_beam_match_agrees_with_retained_product() -> None:
     generated = (
         PROJECT_ROOT
         / "results"
-        / "compare_interferometer_arrays"
+        / "combination_diagnostic"
         / "beam_match"
         / "combined_convolved_to_ACA.fits"
     )
