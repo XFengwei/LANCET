@@ -1,0 +1,116 @@
+[task]
+name = "combination_diagnostic"
+
+[measurement_sets]
+combined_12m = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM1TM2.bin.combselfcal"
+configuration_c5 = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM1.bin.combselfcal"
+configuration_c2 = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM2.bin.combselfcal"
+aca_7m = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.ACA.bin.selfcal"
+
+[images]
+aca_pbcor = "results/prepare_continuum_images/converted/7M/IRDC316.8.ACA.p1.cont.image.pbcor.MJysr.fits"
+aca_uncorrected = "results/prepare_continuum_images/converted/7M/IRDC316.8.ACA.p1.cont.image.MJysr.fits"
+twelve_m_pbcor = "results/prepare_continuum_images/converted/TM2TM1/IRDC316.8.TM1TM2.selfcal.cont.image.tt0.pbcor.MJysr.fits"
+combined_pbcut = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.MJysr.fits"
+allscale_sky = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.rp.fits"
+
+[regions]
+successful_combinations = "region/success.reg"
+
+[outputs]
+root = "results/combination_diagnostic"
+
+[reduction_inputs]
+combination_script = "data/reduction/alma/7MTM2TM1/cont/ms/combine_cont.sh"
+total_power = "data/reduction/alma/TP7MTM2TM1/cont/totalpower_dust_ff.fits"
+
+[uv_plot]
+round_decimals = 1
+chunk_rows = 250000
+zoom_limit_metres = 70.0
+output_formats = ["pdf", "svg", "png"]
+dpi = 300
+
+[visibility_profile]
+chunk_rows = 20000
+uv_min_klambda = 0.1
+uv_max_klambda = 3000.0
+radial_bins = 80
+zoom_max_klambda = 60.0
+reference_frequency_ghz = 225.0
+output_formats = ["pdf", "svg", "png"]
+dpi = 300
+
+[overlap_tests]
+uv_edges_klambda = [8.0, 10.0, 12.0, 15.0, 18.0, 22.0, 26.0, 32.0]
+read_max_klambda = 40.0
+maximum_pair_separation_arcsec = 5.0
+strict_pair_separation_arcsec = 2.0
+orientation_sectors = 8
+maximum_time_pair_gap_seconds = 30.0
+model_pixel_arcsec = 0.5
+model_patch_arcsec = 256.0
+model_padding_factor = 2
+pb_reference_frequency_ghz = 225.0
+pb_12m_fwhm_arcsec = 26.0
+pb_7m_fwhm_arcsec = 43.0
+bootstrap_repeats = 500
+random_seed = 3168
+
+[image_comparison_plot]
+center_ra_deg = 221.2918
+center_dec_deg = -59.8059
+width_deg = 0.11666666666666667
+height_deg = 0.06666666666666667
+vmin_mjysr = -20.0
+vmax_mjysr = 500.0
+colormap = "mako"
+scalebar_length_deg = 0.02
+scalebar_label = "1 pc"
+output_formats = ["pdf", "svg", "png"]
+dpi = 300
+
+[beam_match]
+residual_reference = "aca_uncorrected"
+output_format = "png"
+dpi = 200
+
+[figure1]
+width_inches = 7.2440944882
+height_inches = 7.2440944882
+output_formats = ["pdf", "svg", "png"]
+dpi = 600
+tp_minimum_response = 0.1
+tp_display_scale = 2.7 # Display only; disclosed in the Figure 1 caption.
+amplitude_uv_edges_klambda = [4.8, 6.0, 7.0, 8.0, 10.0, 12.0, 15.0, 18.0, 22.0, 26.0, 32.0, 40.0, 50.0, 65.0, 85.0, 110.0, 145.0, 190.0, 250.0, 330.0, 430.0, 560.0, 730.0, 960.0, 1050.0]
+
+[pointing_range]
+# Display normalization only; disclose in the manuscript caption.
+tp_display_scale = 2.7
+
+[dirty_beam]
+# R4b: rerun of Shuting Lin's MIRIAD workflow (script.zip) through the final invert;
+# robust 0.5 as the paper image. The reference Gaussian is the paper restoring beam.
+psf_fits = "data/reduction/alma/7MTM2TM1/cont/miriad_r4b/work_shuting/combined.robust0.5.psf.fits"
+imfit_log = "data/reduction/alma/7MTM2TM1/cont/miriad_r4b/work_shuting/combined.robust0.5.psf.imfit.log"
+# restor fits (bmaj, bmin arcsec; pa deg) of the rerun vs delivered images, for the record.
+rerun_restor_beams = { robust0_5 = [0.707, 0.600, 47.2], robust1_0 = [0.772, 0.681, 47.7], robust2_0 = [0.792, 0.704, 47.8] }
+paper_image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
+zoom_half_arcsec = 3.0
+wide_half_arcsec = 40.0
+wide_color_limit = 0.1
+profile_max_arcsec = 40.0
+volume_ratio_radii_arcsec = [1.0, 2.0, 5.0, 10.0, 20.0, 40.0]
+width_inches = 7.2440944882
+output_formats = ["pdf", "svg", "png"]
+dpi = 300
+
+[joint_image_comparison]
+casa = "results/prepare_continuum_images/converted/7MTM2TM1_casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.pbcor.MJysr.fits"
+miriad = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.MJysr.fits"
+casa_pb = "data/delivered/alma/7MTM2TM1/cont/casa/IRDC316.8.TM1TM2ACA.selfcal.cont.pb.tt0.fits"
+minimum_pb = 0.2
+cutout_arcsec = 100.0
+region_centres_deg = [[221.244, -59.8020], [221.359, -59.8227]]
+region_names = ["Central", "South"]
+width_inches = 7.2440944882
