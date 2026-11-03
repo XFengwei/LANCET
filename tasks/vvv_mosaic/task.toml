@@ -19,6 +19,9 @@ width_pixels = 2725
 height_pixels = 3523
 
 [blending]
+# VVV tiles have a padded, under-exposed border (~80 px); blank it before
+# coadding. Tile overlaps are ~265 px, so neighbours still overlap.
+edge_trim_pixels = 100
 # Tile backgrounds are compared on block_pixels x block_pixels median cells.
 block_pixels = 16
 # Smooth offset surfaces make overlapping tiles agree; corrections fade into
