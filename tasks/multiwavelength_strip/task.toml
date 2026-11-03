@@ -1,0 +1,98 @@
+[task]
+name = "multiwavelength_strip"
+
+[outputs]
+root = "results/multiwavelength_strip"
+
+[grid]
+# Rotated TAN grid whose long axis follows the LANCET filament spine. The spine
+# runs 32 deg above the west (decreasing RA) axis of a north-up image, i.e. at
+# an astronomical position angle of 270 + 32 = 302 deg east of north. The box
+# centre is the midpoint of the 12m+7m mosaic footprint along/across the spine
+# (221.20544, -59.78962), shifted 0.30 arcmin towards PA 32 deg (strip "up")
+# so the spine, which sits ~0.27 arcmin above that midpoint, is centred.
+center_ra_deg = 221.21071
+center_dec_deg = -59.78538
+long_axis_pa_deg = 302.0
+width_arcmin = 14.0
+height_arcmin = 4.0
+pixel_scale_arcsec = 0.3
+
+# Panels from top to bottom. Every input is reprojected onto the same grid.
+# kind = "vvv": seamless J/H/Ks mosaic built with tasks/vvv_mosaic settings.
+# kind = "rgb": three images as [red, green, blue].
+# kind = "single": one image shown with a colormap.
+[[panels]]
+name = "nir"
+label = "Near-infrared  VVV  $J$, $H$, $K_s$"
+kind = "vvv"
+vvv_config = "tasks/vvv_mosaic/task.toml"
+
+[[panels]]
+name = "mir"
+label = "Mid/far-infrared  Spitzer 3.6, 5.8 µm + Herschel 70 µm"
+kind = "rgb"
+inputs = [
+    "data/delivered/archive/infrared/image_HHLI-PACS070.fits",
+    "data/delivered/archive/infrared/image_GLIMPSE-IRAC3.fits",
+    "data/delivered/archive/infrared/image_GLIMPSE-IRAC1.fits",
+]
+# The infrared-dark spine is only ~2x fainter than the diffuse background,
+# both near the bottom of each band's range. Black sits just below the dark
+# spine and a strong asinh lifts the background so the cloud shows in
+# silhouette.
+low_percentile = [0.2, 0.2, 0.2]
+high_percentile = [99.95, 99.95, 99.9]
+asinh_softening = [0.003, 0.004, 0.006]
+weights = [1.0, 0.75, 0.8]
+
+[[panels]]
+name = "fir"
+label = "Far-infrared  Herschel 250 µm"
+kind = "single"
+input = "data/delivered/archive/infrared/image_HHLI-SPIRE250.fits"
+# SPIRE saturates on the brightest emission; fill those NaN holes.
+fill_holes = true
+cmap = "afmhot"
+low_percentile = 0.5
+high_percentile = 99.9
+asinh_softening = 0.2
+
+[[panels]]
+name = "mm"
+label = "Millimetre  ALMA 12m+7m+TP  1.3 mm"
+kind = "single"
+input = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.fits"
+# Full all-scale image, no primary-beam cut. Optionally restrict it with
+# mask_input (a primary-beam image) and mask_minimum (e.g. 0.20).
+# Same scaling as Paper II Fig. 3 (tasks/plot_allscale_continuum styles.allscale):
+# linear greys from -6 rms to 233 MJy/sr, then square-root truncated mako to
+# 1500 MJy/sr. Pixels outside the image are drawn as the grey minimum (white).
+style = "dual_colour"
+label_colour = "black"
+background_vmin = -21.0
+transition = 233.0
+highlight_vmax = 1500.0
+
+[[panels]]
+name = "radio"
+label = "Radio  MeerKAT  1.38 GHz"
+kind = "single"
+input = "data/delivered/archive/radio/MeerKAT_subimage_1.38GHz_reprojected.fits"
+cmap = "bone"
+# Put the noise floor (~half of the strip) at black.
+low_percentile = 40.0
+high_percentile = 99.9
+asinh_softening = 0.03
+
+[figure]
+width_inches = 12.0
+panel_gap_inches = 0.03
+dpi = 300
+formats = ["png", "pdf"]
+label_fontsize = 11
+# Scale bar on the bottom panel (d = 2.8 kpc; 0.02 deg = 1 pc as elsewhere).
+scalebar_length_deg = 0.02
+scalebar_label = "1 pc"
+# Small N/E arrows on the top panel, since the grid is rotated.
+compass = true
