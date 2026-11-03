@@ -1,0 +1,51 @@
+[task]
+name = "vvv_mosaic"
+
+[inputs]
+tile_directory = "data/delivered/archive/infrared/VVV"
+tiles = ["d053", "d054", "d091", "d092"]
+bands = ["j", "h", "ks"]
+
+[outputs]
+root = "results/vvv_mosaic"
+
+[grid]
+# North-up equatorial TAN grid matching presentation/g316.8_vvv_jhks_full.png.
+frame = "icrs"
+pixel_scale_arcsec = 0.34
+center_ra_deg = 221.227
+center_dec_deg = -59.766
+width_pixels = 2725
+height_pixels = 3523
+
+[blending]
+# Tile backgrounds are compared on block_pixels x block_pixels median cells.
+block_pixels = 16
+# Smooth offset surfaces make overlapping tiles agree; corrections fade into
+# tile interiors over decay_arcsec. Larger smoothness = stiffer surfaces.
+smoothness = 4.0
+decay_arcsec = 240.0
+# Each tile's weight ramps from 0 at its edge to 1 over feather_arcsec.
+feather_arcsec = 40.0
+
+[photometry]
+# Every tile is rescaled to this zero point before coadding.
+reference_zero_point = 25.0
+
+[rgb]
+# Channel order: red, green, blue.
+red = "ks"
+green = "h"
+blue = "j"
+# Per-channel black point is black_sigma clipped-noise units below the sky
+# mode; the white point is this percentile.
+black_sigma = 3.0
+high_percentile = 99.5
+asinh_softening = 0.05
+# Multiplicative channel weights applied after normalisation.
+weights = [1.0, 0.92, 1.0]
+saturation = 1.2
+
+[figures]
+png = "g316.8_vvv_jhks_full.png"
+preview_max_pixels = 2000
