@@ -14,7 +14,7 @@ from astropy.io import fits
 from astropy.wcs import FITSFixedWarning, WCS
 import astropy.units as u
 import numpy as np
-from reproject import reproject_adaptive
+from reproject import reproject_adaptive, reproject_interp
 from scipy import ndimage
 
 from lancet import ProjectPaths
@@ -105,6 +105,120 @@ def reproject_image(
     return image
 
 
+def beam_fwhm_arcsec(path: Path) -> float:
+    """Geometric-mean restoring-beam FWHM recorded in the header of *path*."""
+    header = fits.getheader(path)
+    return 3600.0 * float(np.sqrt(header["BMAJ"] * header["BMIN"]))
+
+
+def surface_brightness_model(
+    path: Path, wcs_out: WCS, shape_out: tuple[int, int]
+) -> np.ndarray:
+    """Resample a (smooth) model image onto the grid in MJy/sr."""
+    data, wcs = read_image(path)
+    header = fits.getheader(path)
+    unit = str(header.get("BUNIT", "")).strip().lower()
+    if unit == "jy/beam":
+        omega = (
+            np.pi / (4.0 * np.log(2.0))
+            * np.deg2rad(header["BMAJ"])
+            * np.deg2rad(header["BMIN"])
+        )
+        data = data / omega / 1.0e6
+    elif unit != "mjy/sr":
+        raise ValueError(f"Unsupported model unit {unit!r} in {path}")
+    image, _ = reproject_interp((data, wcs), wcs_out, shape_out=shape_out)
+    return image.astype(np.float32)
+
+
+def fill_with_model(
+    image: np.ndarray,
+    model: np.ndarray,
+    *,
+    pixel_arcsec: float,
+    image_beam_arcsec: float,
+    model_beam_arcsec: float,
+    fit_band_arcsec: Sequence[float],
+    blend_arcsec: float,
+    edge_trim_arcsec: float = 0.0,
+    feather_arcsec: float = 0.0,
+) -> tuple[np.ndarray, float, float]:
+    """Fill NaN pixels of *image* with a lower-resolution *model*.
+
+    The image is smoothed to the model beam and ``image = a * model + b`` is
+    fitted in a band just inside the coverage edge. The fitted model fills
+    the gaps; the fit residual along the edge is carried a short way into the
+    filled region (fading over *blend_arcsec*) so the join has no step.
+    Within *feather_arcsec* inside the edge the image cross-fades into the
+    fill. Pixels that neither map covers take the nearest smooth value.
+    """
+    from astropy.convolution import Gaussian2DKernel, convolve_fft
+
+    covered = np.isfinite(image)
+    if covered.all():
+        return image, 1.0, 0.0
+    # The outermost mosaic pixels are unreliable; treat them as gaps too.
+    trim = int(round(edge_trim_arcsec / pixel_arcsec))
+    if trim > 0:
+        covered = ndimage.binary_erosion(
+            np.pad(covered, 1, constant_values=False), iterations=trim
+        )[1:-1, 1:-1]
+        image = np.where(covered, image, np.nan)
+    fwhm = np.sqrt(max(model_beam_arcsec**2 - image_beam_arcsec**2, 0.0))
+    kernel = Gaussian2DKernel(fwhm / np.sqrt(8.0 * np.log(2.0)) / pixel_arcsec)
+    weight = convolve_fft(covered.astype(float), kernel, allow_huge=True)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        smoothed = (
+            convolve_fft(np.where(covered, image, 0.0), kernel, allow_huge=True)
+            / weight
+        )
+
+    inside = ndimage.distance_transform_edt(covered) * pixel_arcsec
+    band = (
+        covered
+        & np.isfinite(model)
+        & (inside > fit_band_arcsec[0])
+        & (inside < fit_band_arcsec[1])
+    )
+    design = np.vstack([model[band], np.ones(band.sum())]).T
+    scale, offset = np.linalg.lstsq(design, smoothed[band], rcond=None)[0]
+
+    residual = np.where(band, smoothed - (scale * model + offset), 0.0)
+    nearest = ndimage.distance_transform_edt(
+        ~band, return_distances=False, return_indices=True
+    )
+    residual = ndimage.gaussian_filter(
+        residual[tuple(nearest)], fwhm / np.sqrt(8.0 * np.log(2.0)) / pixel_arcsec
+    )
+    outside = ndimage.distance_transform_edt(~covered) * pixel_arcsec
+    fill = scale * model + offset + residual * np.exp(-outside / blend_arcsec)
+
+    filled = image.copy()
+    gaps = ~covered & np.isfinite(model)
+    filled[gaps] = fill[gaps]
+    # Feather the join: inside the edge, cross-fade from the filled model to
+    # the image over feather_arcsec.
+    if feather_arcsec > 0:
+        ramp = np.clip(inside / feather_arcsec, 0.0, 1.0)
+        ramp = ramp * ramp * (3.0 - 2.0 * ramp)
+        edge = covered & (ramp < 1.0) & np.isfinite(fill)
+        filled[edge] = ramp[edge] * image[edge] + (1.0 - ramp[edge]) * fill[edge]
+
+    # Where neither map has data, extend the smooth (model-resolution)
+    # surface from its nearest valid pixel.
+    remaining = ~np.isfinite(filled)
+    if remaining.any():
+        surface = np.where(covered, smoothed, fill)
+        nearest = ndimage.distance_transform_edt(
+            ~np.isfinite(surface), return_distances=False, return_indices=True
+        )
+        extended = ndimage.gaussian_filter(
+            surface[tuple(nearest)], fwhm / np.sqrt(8.0 * np.log(2.0)) / pixel_arcsec
+        )
+        filled[remaining] = extended[remaining]
+    return filled, float(scale), float(offset)
+
+
 def vvv_band_images(
     project: ProjectPaths,
     vvv_config: Mapping[str, object],
@@ -173,6 +287,25 @@ def run_reproject(project: ProjectPaths, config: Mapping[str, object]) -> None:
                 )
                 with np.errstate(invalid="ignore"):
                     image[~(response >= float(panel["mask_minimum"]))] = np.nan
+            if "fill_input" in panel:
+                fill_path = project.root / str(panel["fill_input"])
+                image, scale, offset = fill_with_model(
+                    image,
+                    surface_brightness_model(fill_path, wcs_out, shape_out),
+                    pixel_arcsec=pixel_arcsec,
+                    image_beam_arcsec=beam_fwhm_arcsec(
+                        project.root / str(panel["input"])
+                    ),
+                    model_beam_arcsec=beam_fwhm_arcsec(fill_path),
+                    fit_band_arcsec=panel["fill_fit_band_arcsec"],
+                    blend_arcsec=float(panel["fill_blend_arcsec"]),
+                    edge_trim_arcsec=float(panel.get("fill_edge_trim_arcsec", 0.0)),
+                    feather_arcsec=float(panel.get("fill_feather_arcsec", 0.0)),
+                )
+                print(
+                    f"{name}: gaps filled with {scale:.3f} x model "
+                    f"{offset:+.2f} from {fill_path.name}"
+                )
             images = {"i": image}
         for key, image in images.items():
             path = grid_path(output_root, name, key)
@@ -281,6 +414,74 @@ def compass_vectors(wcs: WCS, shape: tuple[int, int]) -> dict[str, np.ndarray]:
     return vectors
 
 
+def draw_annotations(
+    ax,
+    annotations: Sequence[Mapping[str, object]],
+    shape: tuple[int, int],
+    pixel_arcsec: float,
+    fontsize: float,
+) -> None:
+    """Draw boxes and |____| brackets given as arcmin offsets from the centre.
+
+    x runs along the strip (right = +x), y across it (up = +y).
+    """
+    import matplotlib.patheffects as effects
+    from matplotlib.patches import Rectangle
+
+    cx, cy = (shape[1] - 1) / 2.0, (shape[0] - 1) / 2.0
+    per_arcmin = 60.0 / pixel_arcsec
+    outline = [effects.withStroke(linewidth=2.5, foreground="black")]
+    line = dict(color="white", lw=1.5)
+    text = dict(color="white", fontsize=fontsize, ha="center", path_effects=outline)
+    gap = 0.08 * per_arcmin
+
+    for item in annotations:
+        if item["kind"] == "box":
+            x = cx + float(item["center_arcmin"][0]) * per_arcmin
+            y = cy + float(item["center_arcmin"][1]) * per_arcmin
+            half = float(item["size_arcsec"]) / pixel_arcsec / 2.0
+            ax.add_patch(
+                Rectangle(
+                    (x - half, y - half), 2 * half, 2 * half, fill=False, **line
+                )
+            )
+            if "leader_arcmin" in item:
+                # Polyline callout from the upper-right corner: a diagonal
+                # leg to the elbow, then a horizontal arm ending at the label.
+                (dx, dy), arm = item["leader_arcmin"], float(item["arm_arcmin"])
+                elbow = (x + half + dx * per_arcmin, y + half + dy * per_arcmin)
+                end = (elbow[0] + arm * per_arcmin, elbow[1])
+                ax.plot(
+                    [x + half, elbow[0], end[0]],
+                    [y + half, elbow[1], end[1]],
+                    **line,
+                )
+                ax.text(
+                    end[0] + gap / 2,
+                    end[1],
+                    str(item["label"]),
+                    va="center",
+                    **{**text, "ha": "left"},
+                )
+                continue
+            above = item.get("label_side", "above") == "above"
+            ax.text(
+                x,
+                y + half + gap if above else y - half - gap,
+                str(item["label"]),
+                va="bottom" if above else "top",
+                **text,
+            )
+        elif item["kind"] == "bracket":
+            x0, x1 = (cx + v * per_arcmin for v in item["x_range_arcmin"])
+            y = cy + float(item["y_arcmin"]) * per_arcmin
+            tick = float(item.get("tick_arcmin", 0.2)) * per_arcmin
+            ax.plot([x0, x0, x1, x1], [y + tick, y, y, y + tick], **line)
+            ax.text((x0 + x1) / 2.0, y - gap, str(item["label"]), va="top", **text)
+        else:
+            raise ValueError(f"Unknown annotation kind {item['kind']!r}")
+
+
 def run_plot(project: ProjectPaths, config: Mapping[str, object]) -> None:
     """Stack the panels into one figure without coordinate axes."""
     import matplotlib.pyplot as plt
@@ -308,6 +509,7 @@ def run_plot(project: ProjectPaths, config: Mapping[str, object]) -> None:
             origin="lower",
             interpolation="none",
         )
+        ax.set_autoscale_on(False)
         ax.set_axis_off()
         label_colour = str(panel.get("label_colour", "white"))
         label_outline = "white" if label_colour == "black" else "black"
@@ -323,26 +525,39 @@ def run_plot(project: ProjectPaths, config: Mapping[str, object]) -> None:
                 effects.withStroke(linewidth=2.5, foreground=label_outline)
             ],
         )
+        draw_annotations(
+            ax, panel.get("annotations", []), shape, pixel_arcsec, fontsize
+        )
 
         if index == 0 and figure_config["compass"]:
-            origin = np.array([shape[1] - 140.0, 120.0])
+            origin = np.array([shape[1] - 170.0, 150.0])
             for label, vector in compass_vectors(wcs, shape).items():
-                tip = origin + 80.0 * vector
+                tip = origin + 100.0 * vector
                 ax.annotate(
                     "",
                     xy=tip,
                     xytext=origin,
-                    arrowprops=dict(arrowstyle="-|>", color="white", lw=1.2),
+                    arrowprops=dict(
+                        arrowstyle="-|>",
+                        color="white",
+                        lw=1.2,
+                        shrinkA=0,
+                        shrinkB=0,
+                        joinstyle="miter",
+                        capstyle="butt",
+                    ),
                 )
                 ax.text(
-                    *(origin + 105.0 * vector),
+                    *(origin + 135.0 * vector),
                     label,
                     color="white",
-                    fontsize=fontsize * 0.85,
+                    fontsize=fontsize,
                     ha="center",
                     va="center",
                     path_effects=outline,
                 )
+            # Small white dot where the two arrows meet.
+            ax.plot(*origin, marker="o", markersize=4, color="white", zorder=5)
 
         if index == len(panels) - 1:
             length = float(figure_config["scalebar_length_deg"]) * 3600 / pixel_arcsec
@@ -351,10 +566,10 @@ def run_plot(project: ProjectPaths, config: Mapping[str, object]) -> None:
             ax.plot([x1 - length, x1], [y, y], color="white", lw=2.5)
             ax.text(
                 x1 - length / 2,
-                y + 25,
+                y + 20,
                 str(figure_config["scalebar_label"]),
                 color="white",
-                fontsize=fontsize * 0.9,
+                fontsize=fontsize,
                 ha="center",
                 va="bottom",
                 path_effects=outline,
