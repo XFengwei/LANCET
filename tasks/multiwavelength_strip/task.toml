@@ -24,13 +24,13 @@ pixel_scale_arcsec = 0.3
 # kind = "single": one image shown with a colormap.
 [[panels]]
 name = "nir"
-label = "Near-infrared  VVV  $J$, $H$, $K_s$"
+label = "VVV  $J$, $H$, $K_s$"
 kind = "vvv"
 vvv_config = "tasks/vvv_mosaic/task.toml"
 
 [[panels]]
 name = "mir"
-label = "Mid/far-infrared  Spitzer 3.6, 5.8 µm + Herschel 70 µm"
+label = "Spitzer 3.6, 5.8 µm + Herschel 70 µm"
 kind = "rgb"
 inputs = [
     "data/delivered/archive/infrared/image_HHLI-PACS070.fits",
@@ -45,10 +45,39 @@ low_percentile = [0.2, 0.2, 0.2]
 high_percentile = [99.95, 99.95, 99.9]
 asinh_softening = [0.003, 0.004, 0.006]
 weights = [1.0, 0.75, 0.8]
+# Annotations: offsets in arcmin from the strip centre, x along the strip
+# (right = PA 302 deg, north-west), y across it (up = PA 32 deg).
+[[panels.annotations]]
+kind = "box"
+# Compact 70 um peak at 14:44:56.27 -59:48:00.6.
+center_arcmin = [-1.078, -0.372]
+size_arcsec = 40.0
+label = "high-mass protostellar object"
+# Callout from the box's upper-right corner: diagonal leg [dx, dy], then a
+# horizontal arm to the label (arcmin).
+leader_arcmin = [0.35, 0.45]
+arm_arcmin = 0.35
+
+[[panels.annotations]]
+kind = "bracket"
+# Young region (region/trichotomy/trichotomy_young.reg), which the spine
+# enters at x ~ +2.1 to +2.7 arcmin, up to the end of the dark lane.
+x_range_arcmin = [2.2, 6.6]
+y_arcmin = -1.25
+tick_arcmin = 0.25
+label = "infrared dark cloud"
+
+[[panels.annotations]]
+kind = "bracket"
+# The ring: radio/5.8 um shell from its eastern edge to the western rim.
+x_range_arcmin = [-5.9, -2.3]
+y_arcmin = -1.25
+tick_arcmin = 0.25
+label = "H II region"
 
 [[panels]]
 name = "fir"
-label = "Far-infrared  Herschel 250 µm"
+label = "Herschel 250 µm"
 kind = "single"
 input = "data/delivered/archive/infrared/image_HHLI-SPIRE250.fits"
 # SPIRE saturates on the brightest emission; fill those NaN holes.
@@ -60,14 +89,25 @@ asinh_softening = 0.2
 
 [[panels]]
 name = "mm"
-label = "Millimetre  ALMA 12m+7m+TP  1.3 mm"
+label = "ALMA 12m+7m+TP  1.3 mm"
 kind = "single"
 input = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.fits"
 # Full all-scale image, no primary-beam cut. Optionally restrict it with
 # mask_input (a primary-beam image) and mask_minimum (e.g. 0.20).
+# Pixels outside the ALMA mosaic are filled with the 18.1" synthetic 230 GHz
+# (dust + free-free) model, converted to MJy/sr and flux-aligned by a linear
+# fit (all-scale smoothed to 18.1" = a * model + b) in a band 18-60" inside
+# the coverage edge. The fit residual fades over fill_blend_arcsec outside.
+fill_input = "results/synthesize_continuum/model/continuum_230GHz.fits"
+fill_fit_band_arcsec = [18.0, 60.0]
+fill_blend_arcsec = 60.0
+# Drop this many arcsec of the mosaic edge (edge artefacts) before filling.
+fill_edge_trim_arcsec = 3.0
+# Cross-fade from the model to the image over this band inside the edge.
+fill_feather_arcsec = 30.0
 # Same scaling as Paper II Fig. 3 (tasks/plot_allscale_continuum styles.allscale):
 # linear greys from -6 rms to 233 MJy/sr, then square-root truncated mako to
-# 1500 MJy/sr. Pixels outside the image are drawn as the grey minimum (white).
+# 1500 MJy/sr.
 style = "dual_colour"
 label_colour = "black"
 background_vmin = -21.0
@@ -76,7 +116,7 @@ highlight_vmax = 1500.0
 
 [[panels]]
 name = "radio"
-label = "Radio  MeerKAT  1.38 GHz"
+label = "MeerKAT  1.38 GHz"
 kind = "single"
 input = "data/delivered/archive/radio/MeerKAT_subimage_1.38GHz_reprojected.fits"
 cmap = "bone"
@@ -86,11 +126,12 @@ high_percentile = 99.9
 asinh_softening = 0.03
 
 [figure]
-width_inches = 12.0
+# A&A full text width (17 cm), so labels at label_fontsize print at that size.
+width_inches = 6.7
 panel_gap_inches = 0.03
-dpi = 300
+dpi = 450
 formats = ["png", "pdf"]
-label_fontsize = 11
+label_fontsize = 12
 # Scale bar on the bottom panel (d = 2.8 kpc; 0.02 deg = 1 pc as elsewhere).
 scalebar_length_deg = 0.02
 scalebar_label = "1 pc"
