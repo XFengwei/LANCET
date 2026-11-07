@@ -39,6 +39,7 @@ def read_unique_uv_coordinates(
     *,
     decimals: int = 1,
     chunk_rows: int = 250_000,
+    unflagged_only: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Read and deduplicate the UVW column without loading all rows at once."""
     path = Path(measurement_set)
@@ -54,17 +55,25 @@ def read_unique_uv_coordinates(
     # disable the log file
     casa_config.nologfile = True
     casa_config.logfile = None
+    casa_config.data_auto_update = False
+    casa_config.measures_auto_update = False
     from casatools import table
 
     handle = table()
     handle.open(str(path), nomodify=True)
+    selected = None
     try:
-        number_of_rows = int(handle.nrows())
+        if unflagged_only:
+            selected = handle.query(
+                "ANTENNA1 != ANTENNA2 && !FLAG_ROW && !all(FLAG)"
+            )
+        source = selected if selected is not None else handle
+        number_of_rows = int(source.nrows())
         chunks: list[np.ndarray] = []
         for start in range(0, number_of_rows, chunk_rows):
             row_count = min(chunk_rows, number_of_rows - start)
             uvw = np.asarray(
-                handle.getcol(
+                source.getcol(
                     "UVW",
                     startrow=start,
                     nrow=row_count,
@@ -81,6 +90,8 @@ def read_unique_uv_coordinates(
             )
             chunks.append(np.column_stack([u_unique, v_unique]))
     finally:
+        if selected is not None:
+            selected.close()
         handle.close()
 
     if not chunks:
