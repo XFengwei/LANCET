@@ -283,6 +283,7 @@ def create_core_overlay_figure(
     image_vmin: float,
     image_vmax: float,
     contour_levels: tuple[float, ...],
+    excluded_fragment_catalogue: Table | None = None,
     figsize: tuple[float, float] = (4.0, 4.0),
 ) -> Any:
     """Create one high-resolution core view with low-resolution contours."""
@@ -368,10 +369,19 @@ def create_core_overlay_figure(
         position_angle_column="position_angle",
         position_angle_type="mathematical",
         expansion_factor=2.35,
-        edgecolor="orange",
+        edgecolor="red",
         linewidth=1.5,
         zorder=20,
     )
+    if excluded_fragment_catalogue is not None:
+        add_catalogue_ellipses(
+            axis, cutout.wcs, excluded_fragment_catalogue,
+            ra_column="x_cen", dec_column="y_cen",
+            major_column="major_sigma", minor_column="minor_sigma",
+            position_angle_column="position_angle",
+            position_angle_type="mathematical", expansion_factor=2.35,
+            edgecolor="orange", linewidth=1.5, alpha=0.9, zorder=20,
+        )
     axis.set_xlim(-0.5, image.shape[1] - 0.5)
     axis.set_ylim(-0.5, image.shape[0] - 0.5)
 
@@ -417,3 +427,56 @@ def create_core_overlay_figure(
     for spine in axis.spines.values():
         spine.set_visible(False)
     return figure
+
+
+def draw_temperature_efficiency_cascade(ax, table, original):
+    """Retain the adopted hierarchy and overlay the preferred heating model."""
+    from matplotlib.lines import Line2D
+
+    COLORS = ["#246FA8", "#D4851E", "#BD3654"]
+    MARKERS = ["o", "s", "^"]
+    scales = np.array([4., .15, .01])
+    assert np.all(scales > 0)
+    selected = table[(table["coupling"]=="independent") & (table["prior"]=="brightness")]
+    for row, base, color, marker in zip(selected, original, COLORS, MARKERS):
+        assert str(row["code"]) == str(base["subregion_code"])
+        for sampled, adopted in [("baseline_mass_msun", "core_mass"),
+                                 ("fragment_mass_msun", "fragment_mass"),
+                                 ("cloud_mass_msun", "cloud_mass")]:
+            assert np.isclose(row[sampled], base[adopted]), "Temperature scenarios require the current regional masses"
+        fragment = row["fragment_mass_msun"]/row["cloud_mass_msun"]
+        baseline = row["baseline_mass_msun"]/row["cloud_mass_msun"]
+        assert fragment > 0 and baseline > 0
+        low, middle, high = [row[f"core_cloud_{p}_percent"]/100 for p in ("p16", "p50", "p84")]
+        assert 0 < low <= middle <= high <= baseline
+        # Interpolation is a guide between measured reservoir scales only.
+        x = np.geomspace(scales[1], scales[2], 80)
+        weight = np.linspace(0, 1, len(x))
+        lower = np.exp((1-weight)*np.log(fragment)+weight*np.log(low))
+        upper = np.exp((1-weight)*np.log(fragment)+weight*np.log(high))
+        ax.fill_between(x, lower, upper, color=color, alpha=.18, linewidth=0)
+        ax.plot(scales, [1., fragment, baseline], color=color, lw=1.6,
+                marker=marker, ms=5, mfc="white", mew=1.1)
+        # Keep the original counting-error convention separate from temperature.
+        ax.errorbar(scales[1:], [fragment, baseline],
+            yerr=[base["fragment_efficiency_counting_error"], base["core_efficiency_counting_error"]],
+            fmt="none", color=color, alpha=.65, lw=.75, capsize=2)
+        ax.plot(scales[1:], [fragment, middle], color=color, ls="--", lw=1.25)
+        ax.errorbar([scales[2]], [middle], yerr=[[middle-low], [high-middle]],
+            fmt=marker, ms=4.5, mfc=color, mec="white", mew=.5,
+            color=color, lw=1.2, capsize=3, zorder=5)
+    ax.set(xscale="log", yscale="log", xlim=(6., .0045), ylim=(.0007, 2.4))
+    ax.set_xticks(scales, ["Cloud\n4 pc", "Fragment\n0.15 pc", "Core\n0.01 pc"])
+    ax.set_yticks([.001, .01, .1, 1], ["0.1%", "1%", "10%", "100%"])
+    ax.set_xlabel("Physical scale")
+    ax.set_ylabel("Mass / cloud mass")
+    ax.tick_params(direction="in", pad=5)
+    regions = [Line2D([], [], color=c, marker=m, lw=1.5, label=str(r["label"]))
+               for r,c,m in zip(original, COLORS, MARKERS)]
+    legend = ax.legend(handles=regions, loc="lower left", fontsize=9, handlelength=1.6)
+    ax.add_artist(legend)
+    models = [Line2D([], [], color=".3", marker="o", mfc="white", lw=1.5, label="Adopted Tenv"),
+              Line2D([], [], color=".3", marker="o", ls="--", lw=1.25, label="Brightness prior")]
+    ax.legend(handles=models, loc="upper right", bbox_to_anchor=(1., .95),
+              fontsize=8.5, handlelength=1.8)
+

@@ -131,7 +131,7 @@ def test_bonnor_ebert_task_inspection_reports_radius_assumption() -> None:
         capture_output=True,
         text=True,
     )
-    assert "rows=231, valid=231" in completed.stdout
+    assert "rows=231, valid=209" in completed.stdout
     assert "Profile: radius_thermal" in completed.stdout
     assert "Formula: radius" in completed.stdout
     assert "not independently measured" in completed.stdout

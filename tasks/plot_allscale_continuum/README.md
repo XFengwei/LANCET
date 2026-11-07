@@ -8,7 +8,8 @@ This task creates the publication and clean-display views of the all-scale
 - The delivered dust-plus-free-free all-scale continuum image.
 - The delivered dust-only all-scale continuum image.
 - The current 230 GHz synthesized-continuum task result.
-- The DS9 regions describing the 12 m primary-beam footprint.
+- The adopted 12m+7m mosaic primary-beam map. Annotated views show its 0.2
+  contour, matching the source-extraction selection.
 
 All inputs are read-only. The task does not use or modify reduction data.
 

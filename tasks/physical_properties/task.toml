@@ -23,3 +23,15 @@ sample_count = 10000
 random_seed = 42
 background_rms_mjysr = 3.5
 temperature_fraction = 0.10
+
+[statistics]
+resolved_only_columns = ["FWHM_angle", "FWHM_linear", "Ellipticity", "Volden_core", "nVolden_core"]
+
+# Diagnostic temperature priors; these do not replace the adopted catalogue.
+[temperature_sampling]
+sample_count = 100000
+random_seed = 20261101
+upper_temperatures_k = [30.0, 40.0, 50.0] # Young, Intermediate, Evolved
+# For global peak-brightness percentile q: F ~ Beta(1+2q, 3-2q).
+brightness_strength = 2.0
+output_root = "results/paper_ii_referee_response/diagnostics/R8d/2026-11-01/temperature_sampling"

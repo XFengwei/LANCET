@@ -152,6 +152,8 @@ def prepare_catalogue(
             + ", ".join(sorted(missing))
         )
     mass = np.asarray(catalogue[str(columns["mass"])], dtype=float)
+    if "Resolvability" in catalogue.colnames:
+        names.append("Resolvability")
     selected = catalogue[valid_mass_mask(mass)][names].copy()
     selected.meta["selection"] = (
         f"finite positive {columns['mass']}; row alignment preserved"

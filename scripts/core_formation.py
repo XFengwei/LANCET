@@ -10,12 +10,16 @@ import tomllib
 
 from astropy.io import fits
 from astropy.table import Table
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from astropy.wcs import WCS
 import matplotlib.patheffects as path_effects
 import numpy as np
 
 from lancet import ProjectPaths
 from lancet.core_formation import (
     create_core_overlay_figure,
+    draw_temperature_efficiency_cascade,
     summarize_core_formation,
 )
 
@@ -108,14 +112,64 @@ def _opacity_settings(
 def _summarize(
     catalogue: Table,
     config: Mapping[str, object],
+    fragments: Table,
 ) -> Table:
     reference_opacity, adopted_opacity = _opacity_settings(config)
+    settings = {key: dict(value) for key, value in _region_settings(config).items()}
+    for region in settings.values():
+        selected = fragments[(fragments["Subregion"] == region["label"]) & fragments["selected"]]
+        region["paper1_fragment_mass_msun"] = float(np.sum(selected["mass_dense"]))
+        region["fragment_count"] = len(selected)
     return summarize_core_formation(
         catalogue,
-        _region_settings(config),
+        settings,
         reference_opacity_cm2_per_g=reference_opacity,
         adopted_opacity_cm2_per_g=adopted_opacity,
     )
+
+
+def select_fragments(paths: Mapping[str, Path], config: Mapping[str, object]) -> Table:
+    """Require the full dendrogram leaf footprint to lie within PB >= 0.2."""
+    fragments = Table.read(paths["fragment_mass_catalogue"], format="ascii")
+    gain, header = fits.getdata(paths["selection_gain"], header=True)
+    gain = np.squeeze(gain)
+    coords = SkyCoord(fragments["RA"], fragments["Dec"], unit=(u.hourangle, u.deg), frame="icrs")
+    x, y = WCS(header).celestial.world_to_pixel(coords)
+    ix, iy = np.rint(x).astype(int), np.rint(y).astype(int)
+    inside = (ix >= 0) & (ix < gain.shape[1]) & (iy >= 0) & (iy < gain.shape[0])
+    sampled = np.full(len(fragments), np.nan)
+    sampled[inside] = gain[iy[inside], ix[inside]]
+    fragments["gain_adopted"] = sampled
+    fragments["centroid_selected"] = np.isfinite(sampled) & (sampled >= float(config["selection"]["minimum_gain"]))
+    labels, label_header = fits.getdata(paths["fragment_label_mask"], header=True)
+    label_wcs, gain_wcs = WCS(label_header).celestial, WCS(header).celestial
+    ellipses = Table.read(paths["fragment_ellipse_catalogue"], format="ascii")
+    # Sample every 1-arcsec leaf pixel, including its boundary, at the PB-map
+    # resolution (0.1 arcsec). This also detects footprint outside the PB grid.
+    subdivisions = int(np.ceil(abs(label_header["CDELT1"] / header["CDELT1"])))
+    offsets = np.linspace(-.5, .5, subdivisions + 1)
+    ox, oy = np.meshgrid(offsets, offsets)
+    selected, minimum, covered = [], [], []
+    for row in fragments:
+        match = ellipses[ellipses["ID"] == row["ID"]]
+        assert len(match) == 1
+        py, px = np.where(labels == int(match["_idx"][0]))
+        assert len(px) == int(round(float(match["area_exact"][0])))
+        sky = label_wcs.pixel_to_world((px[:, None] + ox.ravel()).ravel(),
+                                       (py[:, None] + oy.ravel()).ravel())
+        gx, gy = gain_wcs.world_to_pixel(sky)
+        ix, iy = np.rint(gx).astype(int), np.rint(gy).astype(int)
+        inside = (ix >= 0) & (ix < gain.shape[1]) & (iy >= 0) & (iy < gain.shape[0])
+        values = np.full(len(ix), np.nan)
+        values[inside] = gain[iy[inside], ix[inside]]
+        good = np.isfinite(values) & (values >= float(config["selection"]["minimum_gain"]))
+        selected.append(bool(np.all(good)))
+        minimum.append(float(np.min(values)) if np.all(np.isfinite(values)) else np.nan)
+        covered.append(float(np.mean(good)))
+    fragments["minimum_footprint_gain"] = minimum
+    fragments["footprint_fraction_inside"] = covered
+    fragments["selected"] = selected
+    return fragments
 
 
 def _fits_description(path: Path) -> str:
@@ -182,7 +236,7 @@ def inspect_inputs(
         f"{reference_opacity:g} -> {adopted_opacity:g} cm2/g; "
         f"mass scale={reference_opacity / adopted_opacity:.3f}"
     )
-    summary = _summarize(physical, config)
+    summary = _summarize(physical, config, select_fragments(paths, config))
     for row in summary:
         print(
             f"  {row['label']}: cores={row['core_count']}, "
@@ -231,10 +285,12 @@ def build_summary(
         paths["physical_catalogue"],
         format="ascii.ecsv",
     )
-    summary = _summarize(catalogue, config)
+    fragments = select_fragments(paths, config)
+    summary = _summarize(catalogue, config, fragments)
     output = summary_path(paths)
     _prepare_outputs([output], overwrite=overwrite)
     summary.write(output, format="ascii.ecsv", overwrite=True)
+    fragments.write(output.parent / "fragment_pb_selection.ecsv", format="ascii.ecsv", overwrite=overwrite)
     print(f"Wrote {output}")
     for row in summary:
         print(
@@ -271,12 +327,13 @@ def _save_figure(
     outputs: Sequence[Path],
     *,
     dpi: int,
+    pad_inches: float = 0.1,
 ) -> None:
     from matplotlib import pyplot as plt
 
     try:
         for output in outputs:
-            figure.savefig(output, bbox_inches="tight", dpi=dpi)
+            figure.savefig(output, bbox_inches="tight", dpi=dpi, pad_inches=pad_inches)
             print(f"Wrote {output}")
     finally:
         plt.close(figure)
@@ -293,7 +350,7 @@ def _load_or_build_summary(
         paths["physical_catalogue"],
         format="ascii.ecsv",
     )
-    return _summarize(catalogue, config)
+    return _summarize(catalogue, config, select_fragments(paths, config))
 
 
 def plot_efficiency(
@@ -317,6 +374,17 @@ def plot_efficiency(
         config,
     )
     _prepare_outputs(outputs, overwrite=overwrite)
+    if "temperature_sampling_summary" in paths:
+        temperature_summary = Table.read(paths["temperature_sampling_summary"])
+        with plt.rc_context({"font.family": "sans-serif", "font.size": 10,
+                "pdf.fonttype": 42, "svg.fonttype": "none", "axes.linewidth": .8,
+                "axes.spines.top": False, "axes.spines.right": False,
+                "legend.frameon": False}):
+            figure, axis = plt.subplots(figsize=(3.9, 3.8))
+            figure.subplots_adjust(left=.17, right=.98, bottom=.21, top=.98)
+            draw_temperature_efficiency_cascade(axis, temperature_summary, summary)
+            _save_figure(figure, outputs, dpi=600, pad_inches=.025)
+        return outputs
     scales = np.asarray(plot["scales_pc"], dtype=float)
     if scales.shape != (3,) or np.any(scales <= 0):
         raise ValueError("scales_pc must contain three positive values")
@@ -482,6 +550,10 @@ def plot_overlays(
         paths["fragment_ellipse_catalogue"],
         format="ascii",
     )
+    selected = select_fragments(paths, config)
+    included = np.isin(fragments["ID"], selected["ID"][selected["selected"]])
+    excluded_fragments = fragments[~included]
+    fragments = fragments[included]
     high_data, high_header = fits.getdata(
         paths["high_resolution_continuum"],
         header=True,
@@ -532,6 +604,7 @@ def plot_overlays(
             contour_levels=tuple(
                 float(value) for value in overlay["contour_levels_mjysr"]
             ),
+            excluded_fragment_catalogue=excluded_fragments,
         )
         _save_figure(
             figure,

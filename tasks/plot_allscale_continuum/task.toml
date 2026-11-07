@@ -5,7 +5,10 @@ name = "plot_allscale_continuum"
 combined_continuum = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.fits"
 dust_continuum = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.MJysr.fits"
 synthetic_continuum = "results/synthesize_continuum/model/continuum_230GHz.fits"
-primary_beam_regions = "region/12m-pb01.reg"
+primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+
+[primary_beam]
+minimum_response = 0.20
 
 [outputs]
 root = "results/plot_allscale_continuum"

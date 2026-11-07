@@ -1,0 +1,47 @@
+data:
+  data_root: results/sa_jepa_continuum_pilot/smoke/data
+  npy_pattern: input.npy
+  input_type: image
+  num_samples: 4
+  crop_mode: none
+  d4_augment: false
+  cdd_mode: log
+  cdd_constrained: true
+  cdd_sm_mode: reflect
+  cdd_precompute: true
+  cdd_precompute_max_gb: 1.0
+  target_mask: target_mask.npy
+
+model:
+  mode: pyramid
+  model_key: cdd_scaleaware_convnext
+  sigmas: [2, 4, 8, 16, 32]
+  mask_size_scaling: 1.6
+  mask_box_hardcap: 35
+  convnext_layer_dilations: [1, 1, 2, 4]
+  normalize_loss_l2: false
+  post_log_transform: true
+
+train:
+  epochs: 1
+  batch_size: 1
+  gradient_accumulation_steps: 2
+  gradient_accumulation_mode: step
+  num_workers: 0
+  val_fraction: 0.0
+  symmetry_loss_weight: 0.0
+  spread_regularizer:
+    type: std_hinge
+    target: context
+    spatial_mode: pooled
+    weight: 5.0
+    target_std: 1.0
+    eps: 0.0001
+  prediction_loss_weight: 50
+  scale_probe_enabled: true
+  compute_effective_rank: true
+  post_training_artifacts: false
+  inference_tta_enabled: false
+  inference_tile_size: 256
+  inference_tile_overlap: 64
+  inference_max_diagnostic_size: 384

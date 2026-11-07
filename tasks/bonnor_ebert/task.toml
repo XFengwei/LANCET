@@ -38,6 +38,7 @@ remove_tracer_thermal = true
 tracer_molecular_weight = 30.0
 
 [profiles.radius_thermal.radius]
+resolved_only = true
 # FWHM_linear is the full circularized deconvolved FWHM in AU. Treating half
 # of it as the BE truncation radius remains a model assumption.
 source = "column"

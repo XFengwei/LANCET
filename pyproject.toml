@@ -24,6 +24,9 @@ dependencies = [
 dev = [
     "pytest>=8.0",
 ]
+volume-density = [
+    "volume-density-mapper>=0.1.4",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -96,14 +96,15 @@ imfit_log = "data/reduction/alma/7MTM2TM1/cont/miriad_r4b/work_shuting/combined.
 # restor fits (bmaj, bmin arcsec; pa deg) of the rerun vs delivered images, for the record.
 rerun_restor_beams = { robust0_5 = [0.707, 0.600, 47.2], robust1_0 = [0.772, 0.681, 47.7], robust2_0 = [0.792, 0.704, 47.8] }
 paper_image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
-zoom_half_arcsec = 3.0
-wide_half_arcsec = 40.0
-wide_color_limit = 0.1
-profile_max_arcsec = 40.0
+zoom_half_arcsec = 1.5
+# MIRIAD restor fits the Gaussian to the central 11x11 beam pixels (restor.for, beamFit NP=11).
+restor_fit_box_pixels = 11
+profile_plot_max_arcsec = 3.0
+profile_max_arcsec = 40.0 # radial profile CSV and volume ratios
 volume_ratio_radii_arcsec = [1.0, 2.0, 5.0, 10.0, 20.0, 40.0]
-width_inches = 7.2440944882
+width_inches = 3.4645669291
 output_formats = ["pdf", "svg", "png"]
-dpi = 300
+dpi = 600
 
 [joint_image_comparison]
 casa = "results/prepare_continuum_images/converted/7MTM2TM1_casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.pbcor.MJysr.fits"

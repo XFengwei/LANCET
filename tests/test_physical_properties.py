@@ -11,11 +11,32 @@ import pytest
 
 from lancet.physical_properties import (
     blackbody_cgs,
+    core_optical_depth,
     propagate_uncertainty,
 )
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_core_opacity_recovers_heated_core_behind_cooler_environment() -> None:
+    nu = 223.8 * u.GHz
+    tcore, tenv = 50 * u.K, 20 * u.K
+    tau_core, tau_half = 0.12, 0.015
+    benv = blackbody_cgs(nu, tenv)
+    background = benv * (1 - np.exp(-2 * tau_half))
+    rear = benv * (1 - np.exp(-tau_half))
+    peak = np.exp(-tau_half) * (1 - np.exp(-tau_core)) * (blackbody_cgs(nu, tcore) - rear)
+    recovered = core_optical_depth(nu=nu, temp=tcore, Isr=peak, Ibg=background,
+                                  environment_temp=tenv)
+    np.testing.assert_allclose(recovered.value, tau_core, rtol=1e-12)
+
+
+def test_explicit_equal_environment_preserves_old_opacity() -> None:
+    kwargs = dict(nu=223.8*u.GHz, temp=20*u.K,
+                  Isr=100*u.MJy/u.sr, Ibg=300*u.MJy/u.sr)
+    np.testing.assert_allclose(core_optical_depth(**kwargs).value,
+        core_optical_depth(**kwargs, environment_temp=kwargs["temp"]).value, rtol=1e-12)
 
 
 def test_blackbody_increases_with_temperature() -> None:
@@ -88,6 +109,7 @@ def test_generated_physical_properties_schema_and_regression_values() -> None:
         "WCS_DCOOR",
         "Tenv",
         "Subregion",
+        "Resolvability",
         "FWHM_angle",
         "FWHM_linear",
         "Ellipticity",
@@ -117,8 +139,13 @@ def test_generated_physical_properties_schema_and_regression_values() -> None:
     np.testing.assert_allclose(
         actual["nVolden_core"][indices],
         [3.3051022428170023, 0.01952763541595397, 0.013915990678481108],
-        rtol=1e-12,
+        rtol=5e-9,  # Allow the CODATA proton-mass update in Astropy.
     )
+    assert np.count_nonzero(actual["Resolvability"] == "N") == 22
+    summary = Table.read(generated.with_name("core_property_summary.ecsv"))
+    counts = {r["property"]: r["n"] for r in summary}
+    assert counts["nVolden_core"] == counts["FWHM_linear"] == 209
+    assert counts["Mass_core"] == counts["Surface_core"] == counts["Tau_core"] == 231
     np.testing.assert_array_equal(
         np.asarray(actual["Subregion"][indices], dtype=str),
         ["E", "I", "I"],

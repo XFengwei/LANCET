@@ -23,19 +23,21 @@ def gaussian_beam(shape, pixel_arcsec, bmaj_arcsec, bmin_arcsec, bpa_deg, center
 
 
 def radial_profile(image, center, pixel_arcsec, edges_arcsec):
-    """Azimuthal mean and minimum in annuli around the PSF peak."""
+    """Azimuthal mean, minimum and mean pixel radius in annuli around the PSF peak."""
     y, x = np.indices(image.shape, dtype=float)
     radius = np.hypot(x-center[0], y-center[1])*pixel_arcsec
     index = np.digitize(radius.ravel(), edges_arcsec)-1
     values = image.ravel()
     mean = np.full(len(edges_arcsec)-1, np.nan)
     minimum = np.full_like(mean, np.nan)
+    mean_radius = np.full_like(mean, np.nan)
     for k in range(len(mean)):
         use = index == k
         if use.any():
             mean[k] = values[use].mean()
             minimum[k] = values[use].min()
-    return mean, minimum
+            mean_radius[k] = radius.ravel()[use].mean()
+    return mean, minimum, mean_radius
 
 
 def cumulative_volume(image, center, pixel_arcsec, radii_arcsec):
@@ -69,7 +71,7 @@ def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
     """Plot the effective mosaic PSF from MIRIAD mospsf with its Gaussian fit."""
     from astropy.io import fits
     from matplotlib import pyplot as plt
-    from matplotlib.patches import Ellipse
+    from matplotlib.patches import Ellipse, Rectangle
 
     settings = config["dirty_beam"]
     root = Path(project_root)
@@ -100,8 +102,8 @@ def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
 
     edges = np.arange(0, settings["profile_max_arcsec"]+pixel, pixel)
     mids = 0.5*(edges[1:]+edges[:-1])
-    psf_mean, psf_min = radial_profile(psf, center, pixel, edges)
-    gauss_mean, _ = radial_profile(gauss, center, pixel, edges)
+    psf_mean, psf_min, ring_radius = radial_profile(psf, center, pixel, edges)
+    gauss_mean, _, _ = radial_profile(gauss, center, pixel, edges)
     radii = mids
     psf_volume = cumulative_volume(psf, center, pixel, radii)
     gauss_volume = np.pi*fit["bmaj_arcsec"]*fit["bmin_arcsec"]/(4*np.log(2))
@@ -111,12 +113,13 @@ def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
     ratio_at = {f"{r:g}": float(cumulative_volume(psf, center, pixel, np.array([r]))[0]/gauss_volume)
                 for r in settings["volume_ratio_radii_arcsec"]}
 
-    plt.rcParams.update({"font.family": "sans-serif", "font.size": 9,
+    plt.rcParams.update({"font.family": "sans-serif", "font.size": 8,
         "axes.linewidth": 0.7, "pdf.fonttype": 42, "svg.fonttype": "none", "legend.frameon": False})
-    fig, axes = plt.subplots(2, 2, figsize=(settings["width_inches"], settings["width_inches"]*0.86))
-    fig.subplots_adjust(left=0.09, right=0.97, bottom=0.08, top=0.97, wspace=0.32, hspace=0.30)
-    a, b, c, d = axes.flat
-    for axis in axes.flat:
+    fig, axes = plt.subplots(1, 2, figsize=(settings["width_inches"], settings["width_inches"]*0.60))
+    fig.subplots_adjust(left=0.15, right=0.98, bottom=0.24, top=0.82, wspace=0.75)
+    a, b = axes
+    b.set_box_aspect(1)
+    for axis in axes:
         axis.tick_params(direction="in", top=True, right=True, length=3, width=0.7)
 
     def offsets(half):
@@ -127,37 +130,55 @@ def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
     zoom, extent = offsets(settings["zoom_half_arcsec"])
     image = a.imshow(zoom, origin="lower", extent=extent, cmap="RdBu_r", vmin=-0.2, vmax=1.0)
     a.contour(zoom, levels=[0.1, 0.3, 0.5, 0.7, 0.9], extent=extent, colors="k", linewidths=0.5)
-    a.contour(zoom, levels=[-0.05, -0.02], extent=extent, colors="k", linewidths=0.5, linestyles="--")
+    negative_levels = [level for level in [-0.05, -0.02] if zoom.min() <= level <= zoom.max()]
+    if negative_levels:
+        a.contour(zoom, levels=negative_levels, extent=extent, colors="k", linewidths=0.5, linestyles="--")
     a.add_patch(Ellipse((0, 0), fit["bmin_arcsec"], fit["bmaj_arcsec"], angle=-fit["bpa_deg"],
                         fill=False, edgecolor="gold", linewidth=1.2))
-    a.set(xlabel=r"$\Delta\alpha$ (arcsec)", ylabel=r"$\Delta\delta$ (arcsec)")
-    fig.colorbar(image, ax=a, fraction=0.046, pad=0.03)
+    # MIRIAD restor fits the restoring Gaussian to a fixed square patch of the beam
+    box_pixels = settings["restor_fit_box_pixels"]
+    box_edge = box_pixels/2*pixel
+    a.add_patch(Rectangle((-box_edge, -box_edge), 2*box_edge, 2*box_edge, fill=False,
+                          edgecolor="k", linewidth=0.9, linestyle=":"))
+    half = settings["zoom_half_arcsec"]
+    a.set(xlabel=r"$\Delta\alpha$ (arcsec)", ylabel=r"$\Delta\delta$ (arcsec)",
+          xlim=(half, -half), ylim=(-half, half), xticks=[-1,0,1], yticks=[-1,0,1])
+    bounds = a.get_position()
+    cax = fig.add_axes([bounds.x0, .88, bounds.width, .035])
+    colorbar = fig.colorbar(image, cax=cax, orientation="horizontal", ticks=[0,.5,1])
+    colorbar.ax.tick_params(labelsize=7, length=2, pad=1)
 
-    wide, extent = offsets(settings["wide_half_arcsec"])
-    lim = settings["wide_color_limit"]
-    image = b.imshow(wide, origin="lower", extent=extent, cmap="RdBu_r", vmin=-lim, vmax=lim)
-    b.set(xlabel=r"$\Delta\alpha$ (arcsec)", ylabel=r"$\Delta\delta$ (arcsec)")
-    fig.colorbar(image, ax=b, fraction=0.046, pad=0.03, extend="both")
+    b.axvspan(0, box_edge, color="0.88", linewidth=0, zorder=0)
+    b.text(box_edge+0.12, 0.45, "Fit\nregion", fontsize=7, color="0.35",
+           ha="left", va="center")
 
-    c.plot(mids, psf_mean, color="k", linewidth=1.0, label="Dirty beam, azimuthal mean")
-    c.plot(mids, psf_min, color="0.55", linewidth=0.8, linestyle=":", label="Dirty beam, annulus minimum")
-    c.plot(mids, gauss_mean, color="goldenrod", linewidth=1.0, linestyle="--", label="Restoring beam")
-    c.axhline(0, color="0.6", linewidth=0.5)
-    c.set(xscale="log", xlim=(pixel, settings["profile_max_arcsec"]), ylim=(-0.12, 1.05),
-          xlabel="Radius (arcsec)", ylabel="Normalized response")
-    c.legend(loc="upper right", fontsize=7.5)
+    b.plot(ring_radius, psf_mean, color="k", linewidth=1.0, label="Dirty PSF")
+    b.plot(ring_radius, gauss_mean, color="goldenrod", linewidth=1.0, linestyle="--", label="Restoring beam")
+    b.axhline(0, color="0.6", linewidth=0.5)
+    b.set(xlim=(0, settings["profile_plot_max_arcsec"]), ylim=(-0.05, 1.05),
+          xlabel="Radius (arcsec)", ylabel="Normalized response",
+          xticks=[0,1,2,3], yticks=[0,.5,1])
+    b.legend(loc="upper right", fontsize=7, handlelength=1.1, handletextpad=.3, borderpad=.15)
 
-    d.plot(radii, psf_volume/gauss_volume, color="k", linewidth=1.0)
-    d.axhline(1, color="goldenrod", linewidth=0.8, linestyle="--")
-    d.set(xscale="log", xlim=(pixel, settings["profile_max_arcsec"]),
-          xlabel="Radius (arcsec)", ylabel=r"Dirty / clean beam volume within $r$")
+    for axis, label, x in zip(axes, "ab", (0.84, 0.84)):
+        axis.text(x, 0.95, f"({label})", transform=axis.transAxes, ha="left", va="top",
+                  fontsize=8, color="k")
 
-    for axis, label in zip(axes.flat, "abcd"):
-        axis.text(0.04, 0.95, f"({label})", transform=axis.transAxes, ha="left", va="top",
-                  fontsize=9, color="k", bbox={"facecolor": "white", "edgecolor": "none", "pad": 1, "alpha": 0.8})
+    # Trim vertical canvas margins without scaling the panels or their fonts.
+    fig.canvas.draw()
+    old_height = fig.get_figheight()
+    content = fig.get_tightbbox(fig.canvas.get_renderer())
+    bottom = max(0.0, content.y0 - 0.02)
+    top = min(old_height, content.y1 + 0.02)
+    positions = [(axis, axis.get_position().frozen()) for axis in [*axes, cax]]
+    height = top - bottom
+    fig.set_size_inches(settings["width_inches"], height, forward=True)
+    for axis, position in positions:
+        axis.set_position([position.x0, (position.y0*old_height-bottom)/height,
+                           position.width, position.height*old_height/height])
 
     formats = settings["output_formats"]
-    save_figure(fig, [out/f"miriad_dirty_beam.{fmt}" for fmt in formats], dpi=settings["dpi"])
+    save_figure(fig, [out/f"miriad_dirty_beam.{fmt}" for fmt in formats], dpi=settings["dpi"], bbox_inches=None, exclude_axes=[cax])
     plt.close(fig)
 
     np.savetxt(out/"radial_profile.csv",

@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 from scipy import odr, optimize, stats
+from .physical_properties import resolved_core_mask
 
 
 def log10_positive(values: np.ndarray | Sequence[float]) -> np.ndarray:
@@ -23,6 +24,7 @@ def prepare_correlation_data(
     columns: Sequence[str],
     *,
     log_columns: Sequence[str] = (),
+    resolved_only_columns: Sequence[str] = (),
 ) -> dict[str, np.ndarray]:
     """Extract configured columns and apply declared log10 transformations."""
     requested = [str(column) for column in columns]
@@ -46,6 +48,8 @@ def prepare_correlation_data(
         data[column] = (
             log10_positive(values) if column in logarithmic else values.copy()
         )
+        if column in resolved_only_columns:
+            data[column][~resolved_core_mask(table)] = np.nan
     return data
 
 
@@ -108,6 +112,7 @@ def prepare_powerlaw_data(
     y_error_column: str,
     x_fractional_error: float,
     minimum_points: int = 5,
+    resolved_only_columns: Sequence[str] = (),
 ) -> dict[str, np.ndarray | int]:
     """Prepare positive finite measurements for a log-log power-law fit."""
     required = {x_column, y_column, y_error_column}
@@ -135,6 +140,8 @@ def prepare_powerlaw_data(
         & (x_error_all >= 0)
         & (y_error_all >= 0)
     )
+    if {x_column, y_column} & set(resolved_only_columns):
+        valid &= resolved_core_mask(table)
     x = x_all[valid]
     y = y_all[valid]
     x_error = x_error_all[valid]

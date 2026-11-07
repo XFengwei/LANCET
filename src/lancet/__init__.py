@@ -87,6 +87,13 @@ from .stability import (
     nonthermal_velocity_dispersion,
     sound_speed,
 )
+from .volume_density import (
+    angular_size_cm,
+    apply_resolution_floor,
+    cube_storage_bytes,
+    density_from_width,
+    number_density_h2,
+)
 
 __version__ = "0.1.0"
 
@@ -96,6 +103,8 @@ __all__ = [
     "ProjectRootNotFound",
     "UnresolvedSourceError",
     "__version__",
+    "angular_size_cm",
+    "apply_resolution_floor",
     "beam_solid_angle",
     "beam_match_and_reproject",
     "bonnor_ebert_mass_external_pressure",
@@ -106,7 +115,9 @@ __all__ = [
     "calibrate_simba",
     "compare_powerlaw_methods",
     "convolve_gaussians",
+    "cube_storage_bytes",
     "deconvolve_gaussian",
+    "density_from_width",
     "deduplicate_uv_coordinates",
     "debiased_polarized_intensity",
     "diagnose_minimum_mass",
@@ -131,6 +142,7 @@ __all__ = [
     "mass_density_from_surface_density",
     "magnetic_field_angle_degrees",
     "nonthermal_velocity_dispersion",
+    "number_density_h2",
     "npdf_histogram",
     "prepare_sed_cube",
     "pairwise_correlations",

@@ -17,5 +17,6 @@ def test_position_angle_is_east_of_north():
 
 def test_radial_profile_peaks_at_centre():
     beam = gaussian_beam((101, 101), 0.1, 0.7, 0.7, 0.0, (50, 50))
-    mean, minimum = radial_profile(beam, (50, 50), 0.1, np.arange(0, 3.0, 0.1))
-    assert mean[0] == 1.0 and np.all(np.diff(mean) < 0) and np.all(minimum <= mean)
+    mean, minimum, radius = radial_profile(beam, (50, 50), 0.1, np.arange(0, 3.0, 0.1))
+    assert mean[0] == 1.0 and radius[0] == 0.0
+    assert np.all(np.diff(mean) < 0) and np.all(minimum <= mean)

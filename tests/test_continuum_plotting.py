@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from lancet.continuum_plotting import (
+    add_primary_beam_contour,
     create_dual_colour_figure,
     highlighted_emission,
     image_plane,
@@ -100,6 +101,29 @@ def test_clean_figure_can_be_rendered(tmp_path: Path) -> None:
 
     assert output.is_file()
     assert output.stat().st_size > 0
+
+
+def test_primary_beam_contour_uses_its_own_wcs(tmp_path: Path) -> None:
+    from astropy.wcs import WCS
+    from matplotlib import pyplot as plt
+
+    image_header = _header()
+    beam_header = _header()
+    beam_header["CRPIX1"] = 18.0
+    response = np.tile(np.linspace(0.0, 1.0, 41), (31, 1))
+    path = tmp_path / "primary_beam.fits"
+    fits.writeto(path, response, beam_header)
+    figure = plt.figure()
+    axis = figure.add_subplot(projection=WCS(image_header).celestial)
+
+    contour = add_primary_beam_contour(axis, path, minimum_response=0.2)
+
+    # The 0.2 contour is at native x=8, shifted by three image pixels.
+    np.testing.assert_allclose(contour.levels, [0.2])
+    np.testing.assert_allclose(
+        contour.get_paths()[0].vertices[:, 0], 11.0, atol=1e-6
+    )
+    plt.close(figure)
 
 
 def test_allscale_plot_inspection_is_read_only() -> None:

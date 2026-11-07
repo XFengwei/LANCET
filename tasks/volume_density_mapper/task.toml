@@ -1,0 +1,32 @@
+[task]
+name = "volume_density_mapper"
+
+[inputs]
+surface_density = "results/column_density/maps/surface_density_allscale.fits"
+alma_footprint = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.MJysr.fits"
+primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+low_resolution_surface_density = "results/column_density/prepared/surface_density_lowres.fits"
+
+[outputs]
+root = "results/volume_density_mapper"
+
+[geometry]
+center_ra = "14:44:58.79"
+center_dec = "-59:48:01.94"
+pilot_size_pixels = 1500
+distance_pc = 2800.0
+
+[resolution]
+high_arcsec = 0.65
+low_arcsec = 18.0
+transition_buffer_arcsec = 18.0
+
+[primary_beam]
+minimum_response = 0.20
+
+[model]
+mean_molecular_weight = 2.8
+padding = false
+
+[full_map]
+high_resolution_rebin = 3

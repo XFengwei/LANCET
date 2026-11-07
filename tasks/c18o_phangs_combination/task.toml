@@ -1,0 +1,63 @@
+[inputs]
+ms_12m = "data/reduction/alma/TP7MTM2/cube/main/1_data_raw/irdc316_12m_c18o.ms"
+ms_7m = "data/reduction/alma/TP7MTM2/cube/main/1_data_raw/irdc316_7m_c18o.ms"
+tp_cube = "data/reduction/alma/TP7MTM2/cube/main/1_data_raw/irdc316_tp_c18o_vlsr.fits"
+
+[outputs]
+# Kept separate from the legacy MIRIAD tree.
+root = "data/reduction/alma/TP7MTM2/cube/phangs_test"
+
+[target]
+name = "irdc316"
+# Sky coordinate at the CASA reference pixel for the legacy MIRIAD spatial
+# grid with one required padding row (1716 x 1226 pixels at 0.4 arcsec/pixel,
+# SIN projection). CASA's mosaic FFT cannot process the original odd height.
+ra = "14h44m55.306994s"
+dec = "-59d46m28.813092s"
+# PSF evaluation point: on-target 12m field 67, 6.90 arcsec from ACA field 86.
+psf_ra = "14h44m56.8141s"
+psf_dec = "-59d47m20.1360s"
+systemic_velocity_kms = -40.0
+# Pilot window around the TP spectral peak. Change to 40.0 for the full cube.
+velocity_width_kms = 0.34
+
+[spectral]
+product = "c18o21"
+# Pilot channel width. Change to 0.085 for parity with the legacy MIRIAD cube.
+channel_kms = 0.085
+
+[staging]
+# tclean has usepointing=false and obtains mosaic centers from the FIELD table.
+# Clear POINTING before concatenating the separately extracted ACA SPWs to
+# avoid duplicating millions of channel-independent rows.
+clear_pointing = true
+
+[imaging]
+# MIRIAD spatial grid plus one CASA-required padding row.
+dynamic_sizing = false
+cell_arcsec = 0.4
+imsize = [1716, 1226]
+robust = 2.0
+pblimit = 0.2
+# The staged MS is already on the requested LSRK grid. Nearest-neighbor
+# selection preserves its edge channels; CASA linear interpolation blanks the
+# final channel because it lacks a sample beyond the boundary.
+interpolation = "nearest"
+clean_scales_arcsec = [0.0, 1.0, 2.5, 5.0, 10.0]
+
+[cleaning]
+# Build a positive-emission mask from the multiscale image. The high-S/N
+# islands seed connected growth through emission down to the low-S/N limit.
+mask_absolute = false
+mask_high_snr = 3.5
+mask_low_snr = 1.5
+# Do not let numpy.roll make the first and last planes of the four-channel
+# pilot into artificial spectral neighbours.
+mask_spectral_roll = false
+# Keep the delivered image footprint at imaging.pblimit=0.2, but prevent the
+# deep single-scale clean from placing components in the least reliable edge.
+mask_pb_limit = 0.3
+# First assess the expanded mask at a conservative depth. Lower this to 1.0
+# only after the residual and model have been inspected.
+singlescale_threshold_snr = 1.5
+convergence_fracflux = 0.01

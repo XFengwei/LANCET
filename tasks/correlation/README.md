@@ -1,5 +1,12 @@
 # Core–environment correlations
 
+`variables.resolved_only_columns` applies per-quantity censoring. Pairs using
+core volume density require `Resolvability=Y` (209 sources before
+positive/finite filtering). Beam-averaged surface density, mass and environmental pairs use all valid
+sources. The same selection is applied to the data used for statistics,
+histograms, scatters, contours and any regression whose axes require it.
+The intercore–intercore fit retains its original 228 valid positions.
+
 This task measures pairwise correlations among four core properties and four
 environment properties, then fits the intercore surface-density relation with
 a power law. Its input is the generated, opacity-consistent environment

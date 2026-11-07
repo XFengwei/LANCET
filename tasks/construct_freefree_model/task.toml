@@ -43,6 +43,13 @@ rms_provenance = "recovered_from_paper2_legacy_products"
 smoothed_beam_arcsec = 18.0
 reference_temperature_k = 8000.0
 
+[core_contamination]
+noise_box_beams = 8.0
+adopted_radio_rms_mjy_per_beam = 1.0
+detection_sigma = 3.0
+upper_limit_sigma = 1.0
+continuum_image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.fits"
+
 [temperature_comparison_plot]
 reference_temperature_k = 8000.0
 comparison_temperatures_k = [6000.0, 10000.0]
