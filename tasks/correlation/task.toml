@@ -8,6 +8,7 @@ catalogue = "results/environment_measurements/tables/core_environment_catalogue.
 root = "results/correlation"
 
 [variables]
+resolved_only_columns = ["Volden_core"]
 columns = [
   "Mass_core",
   "Volden_core",
@@ -58,7 +59,7 @@ outline_threshold = 0.5
 minimum_box_fraction = 0.4
 maximum_box_fraction = 0.8
 show_values = true
-value_fontsize = 7.0
+value_fontsize = 8.5
 tick_fontsize = 12.0
 label_rotation_degrees = 55.0
 

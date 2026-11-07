@@ -72,3 +72,31 @@ conda run -n py312 python scripts/synthesize_continuum.py --stage all
 
 Existing products are protected by default. Add `--overwrite` only when the
 declared configuration or an upstream input has intentionally changed.
+
+For the Paper II SIMBA peak comparison, first run the `model` and `validate`
+stages, then run:
+
+```bash
+conda run -n py312 python scripts/simba_peak_comparison.py
+```
+
+For the common-footprint Fourier-amplitude comparison, run:
+
+```bash
+conda run -n py312 python scripts/simba_fourier_comparison.py
+```
+
+The script writes the figure to `results/synthesize_continuum/figures/` and
+the binned data and methods to `results/synthesize_continuum/validation/`.
+Use `--overwrite` to replace existing outputs. See the R10 Fourier diagnostic
+report for the window, beam and noise limitations.
+
+This separately maintained comparison selects SIMBA local maxima at least
+1 Jy/beam in the configured display crop, and compares their brightnesses
+with the 250 GHz model at the same positions and 24-arcsec resolution. It
+also reports peak contrasts after subtracting median backgrounds in 36--60
+arcsec annuli. The CSV and JSON measurements are in `validation/`; the
+figure is `figures/simba_bright_peak_comparison.pdf`. The 0.20 SIMBA flux
+calibration factor was confirmed by the author. Annular contrasts are
+affected by neighbouring emission and negative bowls and do not independently
+recover missing spatial scales. Use `--overwrite` to replace these outputs.

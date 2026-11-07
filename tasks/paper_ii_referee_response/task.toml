@@ -1,0 +1,192 @@
+[task]
+name = "paper_ii_referee_response"
+kind = "coordination"
+manuscript_reference = "AA62184-26"
+report_date = "2026-08-14"
+created = "2026-10-24"
+status = "in_progress"
+
+[manuscript]
+working_source = "papers/II/submission_a&a_v2/lancet-II-v2.tex"
+submitted_baseline = "papers/II/submission_a&a_v1/lancet-II.tex"
+bold_source = "papers/II/submission_a&a_v2/lancet-II-v2-bold.tex"
+diff_source = "papers/II/submission_a&a_v2/lancet-II-v2-diff.tex"
+bibliography = "papers/II/submission_a&a_v2/lancet.bib"
+figures = "papers/II/submission_a&a_v2/figures"
+revision_macro = '\revise'
+revision_color = "red"
+finalized = false
+regenerate_variants = false
+
+[response]
+working_source = "papers/II/referee-response-v1/response-draft.tex"
+initial_assessment = "papers/II/referee-response-v1/referee-summary.md"
+format_template = "papers/II/response-template.tex"
+source_manuscript_version = "submitted_v1"
+needs_v2_reconciliation = true
+
+[outputs]
+root = "results/paper_ii_referee_response"
+diagnostics = "results/paper_ii_referee_response/diagnostics"
+evidence = "results/paper_ii_referee_response/evidence"
+maintained_products = "owning_task_results"
+
+[dependency_review]
+assessment = "tasks/paper_ii_referee_response/dependencies.md"
+reviewed = "2026-10-25"
+recommended_start = ["R5", "R3_boundary_definitions"]
+# This records a proposed sequence, not completed scientific subtasks.
+status = "ready_for_review"
+
+[protected_files_sha256]
+# Setup-time hashes. These files remain frozen until clean-source finalization.
+"papers/II/submission_a&a_v2/lancet-II-v2-bold.tex" = "f99c835650a3a267a331d189f804c5abfa5db5fc685d2eeeaf62daf150d17c82"
+"papers/II/submission_a&a_v2/lancet-II-v2-diff.tex" = "f99c835650a3a267a331d189f804c5abfa5db5fc685d2eeeaf62daf150d17c82"
+
+[[subtasks]]
+id = "R1"
+referee_items = ["1"]
+topic = "Scales, mass-fraction terminology and numerical consistency"
+mode = "maintained_update"
+status = "complete"
+owners = ["core_formation"]
+scripts = ["scripts/core_formation.py"]
+evidence = "Unrounded regional mass sums, consistent physical scales and mass-ratio identities."
+
+[[subtasks]]
+id = "R2a"
+referee_items = ["2a"]
+topic = "Scientific motivation and survey coverage"
+mode = "manuscript"
+status = "complete"
+owners = []
+scripts = []
+evidence = "Introduction and abstract describe the actual mosaic opportunity and established combination literature."
+
+[[subtasks]]
+id = "R2b"
+referee_items = ["2b"]
+topic = "ACA versus reconstructed TP contributions"
+mode = "maintained_update"
+status = "complete"
+owners = ["source_catalogue", "synthesize_continuum", "column_density"]
+scripts = ["scripts/source_catalogue.py", "scripts/synthesize_continuum.py", "scripts/column_density.py"]
+evidence = "Quantitative source/background comparison with explicit input and denominator provenance."
+
+[[subtasks]]
+id = "R3"
+referee_items = ["3"]
+topic = "Regional definitions and evolutionary classification"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["source_catalogue", "column_density", "core_formation"]
+scripts = ["scripts/source_catalogue.py", "scripts/column_density.py", "scripts/core_formation.py"]
+evidence = "Author-approved Introduction with cloud/clump definitions and quantitative evolutionary diagnostics, supported by the detailed characterization in Paper I; response shortened and R3 closed."
+diagnostic_report = "results/paper_ii_referee_response/diagnostics/R5_R3/2026-10-25/report.md"
+revision_evidence = "results/paper_ii_referee_response/evidence/R3/2026-10-25/notes.md"
+
+[[subtasks]]
+id = "R4a"
+referee_items = ["4a"]
+topic = "Consistency in the spatial-frequency overlap"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["combination_diagnostic"]
+scripts = ["scripts/combination_diagnostic.py"]
+evidence = "Matched-response overlap comparison, relative amplitude scale and uncertainty."
+
+diagnostic_report = "results/combination_diagnostic/full_sampling/report.md"
+
+[[subtasks]]
+id = "R4b"
+referee_items = ["4b"]
+topic = "Conventional continuum joint imaging and dirty PSF"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["combination_diagnostic"]
+scripts = ["scripts/combination_diagnostic.py"]
+evidence = "Representative common-footprint continuum imaging comparison, settings, dirty PSF, residuals and photometry."
+
+[[subtasks]]
+id = "R4c"
+referee_items = ["4c"]
+topic = "J-comb versus feathering and compact/extended flux changes"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["combination_diagnostic", "source_catalogue", "synthesize_continuum"]
+scripts = ["scripts/combination_diagnostic.py", "scripts/source_catalogue.py", "scripts/synthesize_continuum.py"]
+evidence = "Author-approved count and flux discussion, and comparison of method principles with Jiao et al. (2022); original J-comb inputs and settings remain unavailable."
+
+[[subtasks]]
+id = "R5"
+referee_items = ["5a", "5b"]
+topic = "Primary-beam construction, sensitivity and selection boundary"
+mode = "maintained_update"
+status = "complete"
+owners = ["prepare_continuum_images", "plot_allscale_continuum", "column_density", "source_catalogue"]
+scripts = ["scripts/prepare_continuum_images.py", "scripts/plot_allscale_continuum.py", "scripts/column_density.py", "scripts/source_catalogue.py"]
+evidence = "Author-confirmed PB combination/attenuation/photometry sequence, updated reply/manuscript and verified PB=0.2 overlays in Figs. 2 and 3."
+diagnostic_report = "results/paper_ii_referee_response/diagnostics/R5_R3/2026-10-25/report.md"
+revision_evidence = "results/paper_ii_referee_response/evidence/R5/2026-10-25/qa_notes.md"
+
+[[subtasks]]
+id = "R6"
+referee_items = ["6"]
+topic = "Shared footprint, completeness and parent associations"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["source_catalogue", "core_formation"]
+scripts = ["scripts/source_catalogue.py", "scripts/core_formation.py"]
+evidence = "Full-fragment dendrogram footprint PB >= 0.2 selection applied, mass comparison and figures updated; closed at the author's request."
+
+[[subtasks]]
+id = "R7"
+referee_items = ["7"]
+topic = "Compact free-free emission and mass sensitivity"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["construct_freefree_model", "synthesize_continuum", "physical_properties", "core_formation"]
+scripts = ["scripts/freefree_mass_efficiency_bias.py", "scripts/core_freefree_contamination.py", "scripts/construct_freefree_model.py", "scripts/synthesize_continuum.py", "scripts/physical_properties.py", "scripts/core_formation.py"]
+evidence = "Author-approved CORNISH-South sensitivity test, nondetection limits and both-reservoir mass-fraction estimates; manuscript and concise response updated. Closed at the author's request."
+
+[[subtasks]]
+id = "R8"
+referee_items = ["8a", "8b", "8c", "8d"]
+topic = "Sizes/limits, opacity, brightness temperature and heating"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["source_catalogue", "physical_properties", "background_effects", "core_formation"]
+scripts = ["scripts/source_catalogue.py", "scripts/physical_properties.py", "scripts/background_effects.py", "scripts/core_temperature_stress_test.py", "scripts/core_temperature_sampling.py", "scripts/plot_core_temperature_sampling.py", "scripts/core_formation.py"]
+evidence = "Closed at the author's request after verification of the 209-core size/volume-density selection, all-source beam-averaged surface densities, corrected median 5.2e6 cm^-3, opacity estimates and 30/40/50 K temperature sampling. Both working TeX documents compile; 38 relevant tests pass."
+
+
+[[subtasks]]
+id = "R9"
+referee_items = ["9a", "9b"]
+topic = "Environmental estimators, covariance and velocity components"
+mode = "diagnostic_then_update"
+status = "complete"
+owners = ["environment_measurements", "correlation", "c18o_moments"]
+scripts = ["scripts/environment_measurements.py", "scripts/correlation.py", "scripts/c18o_moments.py"]
+evidence = "Author-approved clarification of peak and aperture-median measurements and the coherent spine velocity component, with manuscript, captions and response updated. Closed at the author's request."
+
+[[subtasks]]
+id = "R10"
+referee_items = ["10"]
+topic = "Quantitative SIMBA benchmark and bandpass figure"
+mode = "maintained_update"
+status = "complete"
+owners = ["synthesize_continuum"]
+scripts = ["scripts/synthesize_continuum.py", "scripts/simba_pixel_comparison.py"]
+evidence = "Bandpass panel removed because its original data are unavailable; author-confirmed SIMBA calibration and beam-matched pixel comparison included in Figure C1."
+
+[[subtasks]]
+id = "E1"
+referee_items = ["introductory_request", "editorial"]
+topic = "Final response and submission variants"
+mode = "finalization"
+status = "pending"
+owners = []
+scripts = []
+requires_finalized_clean = true
+evidence = "Final response and checked clean, marked/bold and latexdiff PDFs after user finalization."

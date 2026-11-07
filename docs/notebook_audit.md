@@ -37,7 +37,7 @@ project notebook.
 | `0.7_StarCluster.ipynb` | Replaced by `scripts/star_cluster.py` |
 | `1.1_ConstructFFmodel.ipynb` | Replaced by `lancet.freefree` and the `construct_freefree_model` task |
 | `1.2_SyntheticContinuum.ipynb` | Replaced by `lancet.continuum` and the `synthesize_continuum` task |
-| `1.3_MultiArrayCombine.ipynb` | Split between the `prepare_continuum_images` and `compare_interferometer_arrays` tasks |
+| `1.3_MultiArrayCombine.ipynb` | Split between the `prepare_continuum_images` and `combination_diagnostic` tasks |
 | `1.4_ShowInterSDcombine.ipynb` | Replaced by the `plot_allscale_continuum` task |
 | `1.5_ConvertImageUnits.ipynb` | Replaced by `lancet.imaging` and the `prepare_continuum_images` task |
 | `1.6_PrimaryBeamCorrection.ipynb` | Replaced by `lancet.imaging` and the `prepare_continuum_images` task |
@@ -59,7 +59,7 @@ project notebook.
 ```mermaid
 flowchart LR
     FF["construct_freefree_model"] --> SYN["synthesize_continuum"]
-    PREP["prepare_continuum_images"] --> ARR["compare_interferometer_arrays"]
+    PREP["prepare_continuum_images"] --> ARR["combination_diagnostic"]
     SYN --> ALL["plot_allscale_continuum"]
     PREP --> ALL
     PREP --> CD["column_density"]

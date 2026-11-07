@@ -50,6 +50,18 @@ data-dependent task additionally requires its declared local inputs.
 
 ## Independent calculations
 
+### Paper II referee response
+
+The coordination task in
+[`tasks/paper_ii_referee_response/`](tasks/paper_ii_referee_response/README.md)
+maps the referee items to existing analysis tasks and records isolated
+diagnostics, maintained script updates, manuscript changes and response
+evidence. Its configuration declares the active clean v2 manuscript, red
+revision convention, and reserved bold/diff sources. Those variants are
+generated only after the clean manuscript is finalized.
+
+### Standalone calculations
+
 Calculate the gas-to-dust mass ratio from Giannetti et al. (2017), A&A, 606,
 L12, Eq. 2:
 
@@ -140,10 +152,12 @@ After preparing the continuum images, recreate the multi-array comparison
 products with:
 
 ```bash
-conda run -n py312 python scripts/compare_interferometer_arrays.py --stage inspect
-conda run -n py312 python scripts/compare_interferometer_arrays.py --stage uv
-conda run -n py312 python scripts/compare_interferometer_arrays.py --stage compare-images
-conda run -n py312 python scripts/compare_interferometer_arrays.py --stage beam-match
+conda run -n py312 python scripts/combination_diagnostic.py --stage inspect
+conda run -n py312 python scripts/combination_diagnostic.py --stage uv
+conda run -n py312 python scripts/combination_diagnostic.py --stage visibilities
+conda run -n py312 python scripts/combination_diagnostic.py --stage total-power
+conda run -n py312 python scripts/combination_diagnostic.py --stage compare-images
+conda run -n py312 python scripts/combination_diagnostic.py --stage beam-match
 ```
 
 The UV stage reads the four declared measurement sets under
@@ -164,6 +178,26 @@ publication PDFs and clean PNGs under
 Its input paths, view, transition values, and output formats are declared in
 [`tasks/plot_allscale_continuum/task.toml`](tasks/plot_allscale_continuum/task.toml).
 
+Test `volume-density-mapper` on the exact 1500-pixel central field and then
+build the resolution-aware full-map width and mean-density products with:
+
+```bash
+python -m pip install -e ".[volume-density]"
+conda run -n py312 python scripts/volume_density_mapper.py inspect
+conda run -n py312 python scripts/volume_density_mapper.py pilot
+conda run -n py312 python scripts/volume_density_mapper.py full
+conda run -n py312 python scripts/volume_density_mapper.py mask
+```
+
+The task uses the finite ALMA footprint to distinguish the 0.65-arcsec inner
+resolution from the 18-arcsec outer map, applies a local beam floor, and flags
+the resolution transition. The final `mask` stage writes the recommended
+PB-response >= 0.20 products with the outer region removed. The native full
+3-D cube is deliberately not
+written because the upstream pilot fails projected-column closure; details
+and product definitions are in
+[`tasks/volume_density_mapper/README.md`](tasks/volume_density_mapper/README.md).
+
 Reconstruct the C18O cube derivatives, masked moments, ALMA-grid
 velocity-dispersion map, and moment figure from the single delivered line cube
 with:
@@ -177,6 +211,22 @@ The dilated-mask thresholds and supporting parameters are declared in
 [`tasks/c18o_moments/task.toml`](tasks/c18o_moments/task.toml). All generated
 cubes, moment products, reprojections, and figures are written under
 `results/moment_maps/`; the delivered data tree remains read-only.
+
+Test the current PHANGS-ALMA 12m+7m joint-imaging and TP-feathering path on
+the already continuum-subtracted C18O measurement sets with:
+
+```bash
+conda run -n py312 python scripts/c18o_phangs_combination.py --stage inspect
+conda run -n py312 python scripts/c18o_phangs_combination.py \
+  --stage validate --pipeline-root /path/to/phangs_imaging_scripts
+```
+
+The configured pilot uses a 4 km/s window around the TP peak and 0.1 km/s
+channels. CASA execution is split into `stage`, `dirty`, `image`, and
+`postprocess` stages, and all outputs remain isolated from the legacy MIRIAD
+tree under `data/reduction/alma/TP7MTM2/cube/phangs_test`. Environment setup,
+the safe execution order, and the full-resolution switch are documented in
+[`tasks/c18o_phangs_combination/README.md`](tasks/c18o_phangs_combination/README.md).
 
 Build the source catalogue and its dependent physical-property table with:
 

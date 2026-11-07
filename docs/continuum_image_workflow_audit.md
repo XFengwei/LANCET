@@ -6,7 +6,7 @@ The continuum-image sequence separates into three reproducible tasks:
 
 1. `prepare_continuum_images` applies primary-beam cutoff masks and converts
    Jy/beam images to MJy/sr.
-2. `compare_interferometer_arrays` reads declared measurement sets for UV
+2. `combination_diagnostic` reads declared measurement sets for UV
    coverage, compares ACA and 12 m continuum images, and performs the
    beam-matched consistency check.
 3. `plot_allscale_continuum` produces the interferometer plus total-power dust
@@ -38,7 +38,7 @@ the earlier float64 storage is below `6e-8`.
 
 ## Multi-array comparison
 
-The `compare_interferometer_arrays` task is implemented with `inspect`, `uv`,
+The `combination_diagnostic` task is implemented with `inspect`, `uv`,
 `compare-images`, and `beam-match` stages.
 
 The retained products are:

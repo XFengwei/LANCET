@@ -26,6 +26,34 @@ CATALOGUE = (
 )
 
 
+def test_unresolved_core_limits_are_masked_per_quantity() -> None:
+    table = Table({"Mass_core": [1., 2., 3.], "Surface_core": [2., 5., 4.],
+                   "Volden_core": [3., 9., 6.], "background": [4., 8., 12.],
+                   "Resolvability": ["Y", "N", "Y"]})
+    data = prepare_correlation_data(table,
+        ["Mass_core", "Surface_core", "Volden_core", "background"],
+        log_columns=["Mass_core", "Surface_core", "Volden_core", "background"],
+        resolved_only_columns=["Volden_core"])
+    stats = pairwise_correlations(data, minimum_points=2)
+    assert stats["n_points"][0, 3] == 3
+    assert stats["n_points"][0, 1] == 3
+    assert stats["n_points"][1, 2] == 2
+    assert np.isfinite(data["Surface_core"]).all()
+    assert np.isnan(data["Volden_core"][1])
+    assert np.isfinite(data["Mass_core"]).all()
+
+
+def test_regression_excludes_limits_only_when_an_axis_requires_it() -> None:
+    table = Table({"x": np.arange(1., 8.), "density": 2*np.arange(1., 8.),
+                   "error": np.ones(7), "Resolvability": ["Y","N","Y","Y","N","Y","Y"]})
+    kwargs = dict(x_column="x", y_column="density", y_error_column="error", x_fractional_error=.1)
+    limited = prepare_powerlaw_data(table, **kwargs, resolved_only_columns=["density"])
+    ordinary = prepare_powerlaw_data(table, **kwargs, resolved_only_columns=["some_other_quantity"])
+    assert limited["n_valid"] == 5
+    assert ordinary["n_valid"] == 7
+    np.testing.assert_array_equal(limited["x"], [1., 3., 4., 6., 7.])
+
+
 def test_correlation_preparation_masks_invalid_log_values() -> None:
     table = Table(
         {

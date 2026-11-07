@@ -381,6 +381,10 @@ def plot_products(
         transition=float(style["transition"]),
         highlight_vmax=float(style["highlight_vmax"]),
         annotated=True,
+        primary_beam_path=paths["primary_beam"],
+        minimum_primary_beam_response=float(
+            config["primary_beam"]["minimum_response"]
+        ),
         title="H$_2$ surface density map",
         resolution_label=str(view["resolution_label"]),
         scalebar_length_deg=float(view["scalebar_length_deg"]),
@@ -419,6 +423,10 @@ def plot_products(
             WCS(freefree_header).celestial
         ),
     )
+    contours.set_paths([
+        path.cleaned(clip=overlay_axis.viewLim.extents, simplify=False)
+        for path in contours.get_paths()
+    ])
     overlay_outputs = _figure_outputs(
         output_root / "surface_density_allscale_freefree",
         output_formats,

@@ -20,6 +20,7 @@ from lancet.physical_properties import (
     core_surface_density,
     core_volume_density,
     propagate_uncertainty,
+    resolved_core_mask,
     thick_mass,
 )
 
@@ -362,7 +363,7 @@ def build_properties(
     minor = np.asarray(catalogue["Deconv_min"], dtype=float)
     ellipticity = np.sqrt(1 - minor**2 / major**2)
     output = catalogue[
-        ["ID", "WCS_ACOOR", "WCS_DCOOR", "Tenv", "Subregion"]
+        ["ID", "WCS_ACOOR", "WCS_DCOOR", "Tenv", "Subregion", "Resolvability"]
     ]
     output.add_columns(
         [
@@ -405,10 +406,28 @@ def build_properties(
         ],
     )
 
+    output.meta["upper_limit_columns_for_N"] = "FWHM_angle,FWHM_linear"
+    output.meta["lower_limit_columns_for_N"] = "Volden_core,nVolden_core"
+    output.meta["surface_density_convention"] = "Beam-averaged peak-opacity surface density, independent of deconvolved source size"
     products = output_paths(paths)
     for path in products.values():
         _prepare_output(path, overwrite=overwrite)
     output.write(products["catalogue"], format="ascii.ecsv", overwrite=True)
+
+    resolved = resolved_core_mask(output)
+    limited = set(config["statistics"]["resolved_only_columns"])
+    rows = []
+    for name in ["FWHM_angle", "FWHM_linear", "Mass_core", "Tau_core", "Surface_core",
+                 "Volden_core", "nVolden_core", "Surface_corebkg", "Surface_intercorebkg"]:
+        values = np.asarray(output[name], dtype=float)
+        valid = np.isfinite(values) & (values > 0)
+        if name in limited:
+            valid &= resolved
+        rows.append((name, "resolved" if name in limited else "all", int(valid.sum()),
+                     str(output[name].unit), float(values[valid].min()),
+                     float(np.median(values[valid])), float(values[valid].max())))
+    Table(rows=rows, names=["property", "sample", "n", "unit", "minimum", "median", "maximum"]).write(
+        paths["output_root"]/"tables/core_property_summary.ecsv", overwrite=True)
 
     publication = output[["ID", "Tenv", "FWHM_linear"]]
     for name, values, errors in (
@@ -436,15 +455,20 @@ def build_properties(
             _round_uncertainty(value, error)
             for value, error in zip(values, errors)
         ]
+        if name in {"Volden_c", "nVolden_c"}:
+            for i in np.flatnonzero(~resolved):
+                value = str(publication[name][i]).split(r"\pm")[0].strip("$ ")
+                publication[name][i] = rf"$\geq {value}$"
+    publication["FWHM_linear"] = [
+        (rf"$\leq {int(round(value, -2))}$" if not flag else f"{int(round(value, -2))}")
+        for value, flag in zip(output["FWHM_linear"], resolved)
+    ]
     publication.write(
         products["publication"],
         format="aastex",
         overwrite=True,
         formats={
             "Tenv": "%.1f",
-            "FWHM_linear": lambda value: (
-                "--" if not np.isfinite(value) else f"{int(round(value, -2)):d}"
-            ),
         },
     )
     print(f"Wrote {products['catalogue']} ({len(output)} sources)")

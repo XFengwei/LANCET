@@ -14,7 +14,8 @@ settings so later analyses use the same physical assumptions.
   retained lower-resolution column-density maps to surface density.
 - `maps` creates all-scale and intercore column- and surface-density maps.
 - `plot` creates the full-field, free-free-overlay, region-box, and three
-  subregion surface-density figures.
+  subregion surface-density figures. Full-field views include the adopted
+  12m+7m primary-beam response contour at 0.2.
 - `dense` measures mass above 1 g/cm2 and its fraction of the adopted cloud
   mass in each evolutionary subregion.
 - `all` runs the stages in dependency order.

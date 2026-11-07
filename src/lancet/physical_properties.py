@@ -10,6 +10,14 @@ from astropy import units as u
 import numpy as np
 
 
+def resolved_core_mask(catalogue: Any) -> np.ndarray:
+    """Select measured core sizes using the catalogue's explicit Y/N flag."""
+    flags = np.asarray(catalogue["Resolvability"], dtype=str)
+    if not np.all(np.isin(flags, ["Y", "N"])):
+        raise ValueError("Resolvability must contain Y or N")
+    return flags == "Y"
+
+
 def blackbody_cgs(nu: u.Quantity, temperature: u.Quantity) -> u.Quantity:
     """Planck function in cgs surface-brightness units."""
     return (
@@ -43,15 +51,17 @@ def core_optical_depth(
     temp: u.Quantity,
     Isr: u.Quantity,
     Ibg: u.Quantity,
+    environment_temp: u.Quantity | None = None,
 ) -> u.Quantity:
-    """Calculate core opacity including foreground/background emission."""
+    """Calculate core opacity, optionally keeping the environment cooler."""
     blackbody = blackbody_cgs(nu, temp)
-    foreground = Ibg / (np.sqrt(1 - Ibg / blackbody) + 1)
+    environment = blackbody_cgs(nu, environment_temp) if environment_temp is not None else blackbody
+    foreground = Ibg / (np.sqrt(1 - Ibg / environment) + 1)
     return -np.log(
         1
         - Isr
         / (blackbody - foreground)
-        * (1 - Ibg / blackbody) ** -0.5
+        * (1 - Ibg / environment) ** -0.5
     )
 
 

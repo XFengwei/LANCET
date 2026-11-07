@@ -19,6 +19,7 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
 from lancet import ProjectPaths
+from lancet.physical_properties import resolved_core_mask
 from lancet.stability import (
     bonnor_ebert_mass_external_pressure,
     bonnor_ebert_mass_pressure,
@@ -404,6 +405,8 @@ def calculate_catalogue(
             raise ValueError("radius.factor must be finite and positive")
         radius = radius_base.to(u.au) * radius_factor
         mask &= _valid_quantity(radius)
+        if radius_settings.get("resolved_only", False):
+            mask &= resolved_core_mask(catalogue)
         selected_temperature = temperature[mask]
         selected_internal = (
             None

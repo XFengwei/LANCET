@@ -62,7 +62,7 @@ def resolve_task_paths(
         "combined_continuum",
         "dust_continuum",
         "synthetic_continuum",
-        "primary_beam_regions",
+        "primary_beam",
     ):
         if not paths[name].is_file():
             raise FileNotFoundError(f"{name} not found: {paths[name]}")
@@ -88,7 +88,7 @@ def inspect_inputs(paths: Mapping[str, Path]) -> None:
     ):
         print(f"  {name}: {paths[name]}")
         print(f"    {_describe(paths[name])}")
-    print(f"  primary_beam_regions: {paths['primary_beam_regions']}")
+    print(f"  primary_beam: {paths['primary_beam']}")
     print(f"Output root: {paths['output_root']}")
 
 
@@ -174,8 +174,11 @@ def _create_figure(
                 float(view["figure_height_inches"]),
             ),
             annotated=annotated,
-            region_path=(
-                paths["primary_beam_regions"] if annotated else None
+            primary_beam_path=(
+                paths["primary_beam"] if annotated else None
+            ),
+            minimum_primary_beam_response=float(
+                config["primary_beam"]["minimum_response"]
             ),
             title=title,
             resolution_label=(

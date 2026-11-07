@@ -12,6 +12,10 @@ box_regions = "region/box2arcmin_three_regions.reg"
 dense_young_region = "region/trichotomy/trichotomy_young.reg"
 dense_intermediate_region = "region/trichotomy/trichotomy_intermediate.reg"
 dense_evolved_region = "region/trichotomy/trichotomy_evolved.reg"
+primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+
+[primary_beam]
+minimum_response = 0.20
 
 [outputs]
 root = "results/column_density"

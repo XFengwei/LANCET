@@ -3,8 +3,12 @@ name = "core_formation"
 
 [inputs]
 physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+temperature_sampling_summary = "results/paper_ii_referee_response/diagnostics/R8d/2026-11-01/temperature_sampling/regional_sampling_summary.ecsv"
 source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
 fragment_ellipse_catalogue = "extraction/astrodendro/my_dendrogram.dat"
+fragment_mass_catalogue = "extraction/astrodendro/my_catalog.dat"
+fragment_label_mask = "extraction/astrodendro/my_mask_idx.fits"
+selection_gain = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
 high_resolution_continuum = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.MJysr.fits"
 low_resolution_continuum = "results/prepare_continuum_images/converted/7M/IRDC316.8.ACA.p1.cont.image.MJysr.fits"
 
@@ -21,6 +25,9 @@ root = "results/core_formation"
 # masses are multiplied by 0.9 / 0.5 = 1.8 for consistency with this work.
 paper1_cm2_per_g = 0.9
 adopted_cm2_per_g = 0.5
+
+[selection]
+minimum_gain = 0.2
 
 [regions.young]
 label = "Young"

@@ -122,6 +122,23 @@ def _add_regions(axis: Any, path: Path) -> None:
         )
 
 
+def add_primary_beam_contour(
+    axis: Any,
+    path: str | Path,
+    *,
+    minimum_response: float = 0.2,
+) -> Any:
+    """Overlay the selection gain on its own celestial grid."""
+    response, header = fits.getdata(path, header=True, memmap=True)
+    return axis.contour(
+        image_plane(response),
+        levels=[minimum_response],
+        colors="yellow",
+        linewidths=0.8,
+        transform=axis.get_transform(WCS(header).celestial),
+    )
+
+
 def create_dual_colour_figure(
     data: np.ndarray,
     header: fits.Header,
@@ -136,6 +153,8 @@ def create_dual_colour_figure(
     figsize: tuple[float, float] = (10.0, 6.0),
     annotated: bool = False,
     region_path: str | Path | None = None,
+    primary_beam_path: str | Path | None = None,
+    minimum_primary_beam_response: float = 0.2,
     title: str | None = None,
     resolution_label: str | None = None,
     scalebar_length_deg: float = 0.02,
@@ -206,6 +225,8 @@ def create_dual_colour_figure(
     _apply_crop(overlay_axis, limits)
     overlay_axis.set_xlabel("")
     overlay_axis.set_ylabel("")
+    for coordinate in overlay_axis.coords:
+        coordinate.set_ticklabel_visible(False)
 
     if not annotated:
         background_axis.set_xlabel("")
@@ -227,6 +248,12 @@ def create_dual_colour_figure(
 
     if region_path is not None:
         _add_regions(overlay_axis, Path(region_path))
+    if primary_beam_path is not None:
+        add_primary_beam_contour(
+            overlay_axis,
+            primary_beam_path,
+            minimum_response=minimum_primary_beam_response,
+        )
     background_axis.set_xlabel("RA (ICRS)")
     background_axis.set_ylabel("Dec (ICRS)", labelpad=0)
     background_axis.tick_params(
@@ -258,11 +285,11 @@ def create_dual_colour_figure(
     )
     if resolution_label:
         overlay_axis.text(
-            0.04,
-            0.035,
+            0.96,
+            0.12,
             resolution_label,
             transform=overlay_axis.transAxes,
-            horizontalalignment="left",
+            horizontalalignment="right",
             verticalalignment="top",
             color="black",
             size=10,

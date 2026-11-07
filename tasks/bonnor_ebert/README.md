@@ -1,5 +1,10 @@
 # Bonnor–Ebert stability
 
+The radius-based profile sets `radius.resolved_only=true` and uses the 209
+resolved core sizes. Upper size limits are excluded from its point-estimate
+critical masses, instability statistics and plots. External-pressure
+profiles use their own configured environmental inputs and validity masks.
+
 This task provides selectable, isolated calculation profiles. Every profile
 writes into its own directory under `results/bonnor_ebert/`, so changing a
 formula cannot silently overwrite a different result.

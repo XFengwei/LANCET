@@ -116,6 +116,7 @@ def _configured_data(
         catalogue,
         columns,
         log_columns=sorted(log_columns),
+        resolved_only_columns=variables.get("resolved_only_columns", []),
     )
     return data, columns, log_columns, labels
 
@@ -131,6 +132,7 @@ def _regression_data(
         y_column=str(regression["y_column"]),
         y_error_column=str(regression["y_error_column"]),
         x_fractional_error=float(regression["x_fractional_error"]),
+        resolved_only_columns=_mapping(config, "variables").get("resolved_only_columns", []),
     )
 
 
@@ -266,6 +268,7 @@ def build_correlation_table(
         ),
     )
     output.meta["input_catalogue"] = str(paths["catalogue"])
+    output.meta["resolved_only_columns"] = ",".join(_mapping(config, "variables").get("resolved_only_columns", []))
     output.meta["log10_variables"] = ",".join(
         column for column in columns if column in log_columns
     )
