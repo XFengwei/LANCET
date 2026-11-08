@@ -57,3 +57,29 @@ header { height: 120px; }
   header { height: auto; }
   .hero { height: 760px; }
 }
+
+/* Observatory cards keep the full image and description within one link. */
+.telescope-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+.telescope-card { display: flex; flex-direction: column; overflow: hidden; background: #0d131b; border: 1px solid var(--line); transition: border-color .2s; }
+.telescope-card:first-child { grid-column: 1 / -1; display: grid; grid-template-columns: 1.2fr 1fr; }
+.telescope-card > img { width: 100%; height: 210px; object-fit: cover; }
+.telescope-card:first-child > img { height: 100%; min-height: 320px; }
+.telescope-copy { padding: 27px; display: flex; flex-direction: column; flex: 1; }
+.telescope-copy h3 { display: flex; justify-content: space-between; color: var(--text); }
+.telescope-copy h3 span { color: var(--gold); font-size: 17px; }
+.telescope-copy p { font-size: 14px; }
+.telescope-copy small { margin-top: auto; padding-top: 16px; color: var(--muted); font-size: 10px; }
+.telescope-card:hover, .telescope-card:focus-visible { border-color: var(--gold); text-decoration: none; }
+.telescope-card:hover h3, .telescope-card:focus-visible h3 { text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: .25em; }
+/* Clip the original plot frame while keeping both sky fields registered. */
+.recovery-animation { position: relative; aspect-ratio: 4663 / 3360; overflow: hidden; user-select: none; pointer-events: none; }
+.recovery-animation img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; transform: scale(1.045); }
+.recovery-combined, .combined-label { animation: continuum-crossfade 12s ease-in-out infinite; }
+.recovery-labels { position: relative; height: 24px; margin-top: 18px; color: var(--gold); font-size: 12px; }
+.recovery-labels span { position: absolute; inset: 0; }
+.model-label { animation: continuum-model-label 12s ease-in-out infinite; }
+@keyframes continuum-model-label { 0%,30%,100% { opacity: 1; } 45%,80% { opacity: 0; } }
+@keyframes continuum-crossfade { 0%,30%,100% { opacity: 0; } 45%,80% { opacity: 1; } }
+@media (max-width: 900px) { .telescope-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 600px) { .telescope-grid { grid-template-columns: 1fr; } .telescope-card:first-child { display: flex; } .telescope-card:first-child > img { height: 210px; min-height: 0; } }
+@media (prefers-reduced-motion: reduce) { .recovery-combined, .combined-label, .model-label { animation: none; } .model-label { opacity: 0; } }
