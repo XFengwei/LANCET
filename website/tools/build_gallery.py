@@ -12,6 +12,8 @@ m.OUT = m.BASE
 config = m.strip.load_toml(ROOT/m.strip.DEFAULT_CONFIG)
 wcs, shape = m.strip.strip_wcs(config['grid'])
 for panel in config['panels']:
+    if panel['name'] == 'mm':
+        panel = dict(panel, style='inferno')
     image = m.rgb(panel, m.strip.ProjectPaths(ROOT))
     fig = plt.figure(figsize=(14, 4), dpi=160)
     ax = fig.add_axes([0, 0, 1, 1])
@@ -24,6 +26,7 @@ for panel in config['panels']:
         tip = origin + 100*vector
         ax.annotate('', xy=tip, xytext=origin, arrowprops=dict(arrowstyle='->', color='white', lw=1.5))
         ax.text(*(origin+130*vector), label, color='white', ha='center', va='center', path_effects=outline)
+    ax.plot(*origin, marker='o', markersize=3, color='white', markeredgewidth=0, zorder=5)
     length = config['figure']['scalebar_length_deg']*3600/config['grid']['pixel_scale_arcsec']
     x, y = shape[1]*.96, shape[0]*.10
     ax.plot([x-length, x], [y,y], color='white', lw=2)
