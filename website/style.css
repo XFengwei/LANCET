@@ -85,5 +85,5 @@ header { height: 120px; }
 @media (prefers-reduced-motion: reduce) { .recovery-combined, .combined-label, .model-label { animation: none; } .model-label { opacity: 0; } }
 
 /* Fade the fixed edge of the hero image into the dark background. */
-.hero-window { -webkit-mask-image: linear-gradient(to right, transparent, #000 28%); mask-image: linear-gradient(to right, transparent, #000 28%); }
+.hero-window { -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 65%); mask-image: linear-gradient(to right, transparent 0%, #000 65%); }
 @media (max-width: 700px) { .hero-window { -webkit-mask-image: none; mask-image: none; } }
