@@ -83,3 +83,7 @@ header { height: 120px; }
 @media (max-width: 900px) { .telescope-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media (max-width: 600px) { .telescope-grid { grid-template-columns: 1fr; } .telescope-card:first-child { display: flex; } .telescope-card:first-child > img { height: 210px; min-height: 0; } }
 @media (prefers-reduced-motion: reduce) { .recovery-combined, .combined-label, .model-label { animation: none; } .model-label { opacity: 0; } }
+
+/* Fade the fixed edge of the hero image into the dark background. */
+.hero-window { -webkit-mask-image: linear-gradient(to right, transparent, #000 28%); mask-image: linear-gradient(to right, transparent, #000 28%); }
+@media (max-width: 700px) { .hero-window { -webkit-mask-image: none; mask-image: none; } }
