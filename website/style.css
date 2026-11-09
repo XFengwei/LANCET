@@ -93,3 +93,6 @@ header { height: 120px; }
 .home-page > header::before { content: ""; position: absolute; inset: 0 0 -120px; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgba(8,11,16,.96) 0%, rgba(8,11,16,.82) 30%, rgba(8,11,16,.42) 65%, rgba(8,11,16,0) 100%); }
 .home-page .hero { height: 100svh; max-height: 1220px; padding-top: 230px; }
 @media (max-width: 700px) { .home-page .hero { height: 865px; padding-top: 190px; } }
+
+/* Show the full multiwavelength strip at the width of its text column. */
+.multiwavelength-image { height: auto; max-height: none; }
