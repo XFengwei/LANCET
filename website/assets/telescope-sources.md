@@ -4,7 +4,7 @@ Official source files used by the Observations page. Credits are displayed on ea
 
 - ALMA: https://cdn.eso.org/images/screen/alma-pan1-btafreshi.jpg
 - HERSCHEL: https://www.herschel.caltech.edu/system/avm_image_sqls/binaries/118/page/nhsc2000-000c.jpg
-- APEX: https://www.eso.org/public/archives/static/teles-instr/apex/images/apex_close1.jpg
+- APEX: https://www.mpifr-bonn.mpg.de/en/apex (page header, MPIfR)
 - VISTA: https://www.eso.org/public/archives/static/teles-instr/surveytelescopes/vista/images/vista_hz_01.jpg
 - SPITZER: https://www.spitzer.caltech.edu/image/sirtf-spitzer-rendered-against-an-infrared-100-micron-sky (NASA/JPL-Caltech/R. Hurt; artist’s impression)
 - ATCA: https://www.atnf.csiro.au/wp-content/uploads/2024/04/ATCA_RS539_PA8332_Tardis-385x256.jpg
