@@ -18,7 +18,7 @@ view = tomllib.loads((ROOT/'tasks/multiwavelength_strip/task.toml').read_text())
 # Use the exact field, rotation, and sampling of the multiwavelength gallery.
 wcs, shape = strip.strip_wcs(view)
 inputs = [(name, ROOT/config['images'][key], label) for name, key, label in [('aca','aca_pbcor','ACA 7 m'), ('12m','twelve_m_pbcor','ALMA 12 m'), ('combined','combined_pbcut','ALMA 12 m + ACA 7 m')]]
-inputs += [('tp', ROOT/'results/synthesize_continuum/model/continuum_230GHz.fits', 'Total-power continuum model'), ('full', ROOT/'results/multiwavelength_strip/grid/mm_i.fits', 'Fully combined 12 m + 7 m + TP')]
+inputs += [('tp', ROOT/'results/synthesize_continuum/model/continuum_230GHz.fits', 'Total-power reconstruction model'), ('full', ROOT/'results/multiwavelength_strip/grid/mm_i.fits', 'Fully combined 12 m + 7 m + TP')]
 for name, path, label in inputs:
     with fits.open(path, memmap=True) as hdul:
         values = np.squeeze(hdul[0].data)
@@ -26,6 +26,8 @@ for name, path, label in inputs:
             # Convert Jy/beam to MJy/sr before applying the common display scale.
             beam_sr = np.pi/(4*np.log(2))*np.deg2rad(hdul[0].header['BMAJ'])*np.deg2rad(hdul[0].header['BMIN'])
             values = values / beam_sr / 1e6
+        if name == 'tp':
+            values = values * 2.7
         data, footprint = reproject_interp((values, WCS(hdul[0].header).celestial), wcs, shape_out=shape)
     fig = plt.figure(figsize=(14, 4), dpi=160, facecolor='black')
     ax = fig.add_axes([0,0,1,1]); ax.set_facecolor('black')
