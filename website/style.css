@@ -108,3 +108,5 @@ header { height: 120px; }
 @media(prefers-reduced-motion:reduce) { .gallery-frame { transition: none; } }
 
 .array-gallery-frames { aspect-ratio: 14 / 4; }
+
+.logo-story iframe { display: block; width: 66.6667%; aspect-ratio: 1.5; border: 0; background: transparent; mix-blend-mode: screen; margin: 30px auto 0; }
