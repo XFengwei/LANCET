@@ -106,3 +106,5 @@ header { height: 120px; }
 .gallery-buttons button:hover { color: var(--gold); text-decoration: underline; text-underline-offset: .25em; }
 .gallery-buttons button:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 @media(prefers-reduced-motion:reduce) { .gallery-frame { transition: none; } }
+
+.array-gallery-frames { aspect-ratio: 18 / 8; }
