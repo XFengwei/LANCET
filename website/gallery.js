@@ -1,5 +1,5 @@
 (() => {
-  const gallery = document.querySelector('.wavelength-gallery');
+  document.querySelectorAll('.wavelength-gallery').forEach(gallery => {
   const frames = [...gallery.querySelectorAll('.gallery-frame')];
   const buttons = [...gallery.querySelectorAll('button')];
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -18,4 +18,5 @@
   buttons.forEach((button, i) => button.addEventListener('click', () => { show(i); restart(); }));
   motion.addEventListener('change', restart);
   Promise.all(frames.map(frame => frame.decode())).then(restart).catch(() => {});
+  });
 })();
