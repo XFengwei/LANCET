@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pe
 from matplotlib.colors import AsinhNorm
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -34,6 +35,13 @@ for name, path, label in inputs:
     plotted = ax.imshow(data, origin='lower', cmap='inferno', norm=AsinhNorm(linear_width=100, vmin=20, vmax=1500, clip=True), interpolation='nearest')
     ax.set_axis_off()
     ax.text(.02,.95,label+' · 1.3 mm',transform=ax.transAxes,color='white',va='top',fontsize=14)
+    origin = np.array([shape[1]*.94, shape[0]*.72])
+    outline = [pe.withStroke(linewidth=2, foreground='black')]
+    for direction, vector in strip.compass_vectors(wcs, shape).items():
+        tip = origin + 100*vector
+        ax.annotate('', xy=tip, xytext=origin, arrowprops=dict(arrowstyle='->', color='white', lw=1.5))
+        ax.text(*(origin+130*vector), direction, color='white', ha='center', va='center', path_effects=outline)
+    ax.plot(*origin, marker='o', markersize=3, color='white', markeredgewidth=0, zorder=5)
     bar_ax = fig.add_axes([.03,.15,.30,.025])
     bar = fig.colorbar(plotted, cax=bar_ax, orientation='horizontal', ticks=[20,100,500,1500])
     bar.set_ticks([20,100,500,1500], labels=['20','100','500','1500'])
