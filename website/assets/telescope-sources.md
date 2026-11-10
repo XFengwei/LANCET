@@ -2,7 +2,7 @@
 
 Official source files used by the Observations page. Credits are displayed on each card.
 
-- ALMA: https://cdn.eso.org/images/screen/alma-pan1-btafreshi.jpg
+- ALMA: https://www.eso.org/public/images/ann13016a/ (ESO/C. Malin)
 - HERSCHEL: https://www.herschel.caltech.edu/system/avm_image_sqls/binaries/118/page/nhsc2000-000c.jpg
 - APEX: https://www.mpifr-bonn.mpg.de/en/apex (page header, MPIfR)
 - VISTA: https://www.eso.org/public/archives/static/teles-instr/surveytelescopes/vista/images/vista_hz_01.jpg
