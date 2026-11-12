@@ -24,9 +24,14 @@
     wordmark:  [9.8, 10.4],   // LANCET arrives with the gold logo star
     final:     [10.4, 10.6],
     pulse:     10.45,         // star flashes, then a gold shock runs back down to the filament's tail
-    pulseRun:  1.25           // seconds for the shock to travel tip -> tail
+    pulseRun:  1.25,          // seconds for the shock to travel tip -> tail
+    period:    2.6,           // pulsar period during the final hold
+    beats:     2,             // extra pulses during the final hold
+    beatStart: 0.6            // first extra pulse, seconds into the hold
   };
-  const HOLD = 5;             // seconds the finished logo stays still before the loop restarts
+  const PULSE_SPAN = 0.2 + K.pulseRun + 0.15;   // launch delay + shock run + fade
+  // Final hold: the extra pulses, then the finished logo stays still for 5 s before looping.
+  const HOLD = K.beatStart + (K.beats-1)*K.period + PULSE_SPAN + 5;
   const STAR = {x: 1039, y: 215};
   const embedded = document.documentElement.classList.contains('embed-mode');
   let finalHold = 0;
@@ -236,8 +241,9 @@
     opacity('final-emblem',settle);
     opacity('wordmark',smooth(...K.wordmark,t));
     opacity('final-logo',smooth(...K.final,t));
-    // Pulsar beat once over the emblem; the final hold stays still.
-    pulseAt(elapsed<duration?elapsed-K.pulse:-1);
+    // Pulsar beat over the emblem, then K.beats more in the hold, then stillness.
+    const beat=finalHold-K.beatStart;
+    pulseAt(elapsed<duration?elapsed-K.pulse:beat>=0&&beat<K.beats*K.period?beat%K.period:-1);
     const chapter=t<K.tools[0]?0:t<K.cut[1]?1:t<K.ignite?2:t<K.resolve[0]?3:t<K.wordmark[0]?4:5;
     $('chapter-number').textContent=`0${chapter+1} / 06`;
     $('chapter-title').textContent=elapsed===duration?'LANCET · From filament to stars':titles[chapter];
