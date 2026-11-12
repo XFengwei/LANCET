@@ -11,6 +11,6 @@ for panel in config['panels']:
  if panel['name']=='mm':continue
  rgb=m.rgb(panel,m.strip.ProjectPaths(root))
  im=Image.fromarray((np.clip(np.nan_to_num(rgb),0,1)[::-1]*255).astype('uint8'))
- im.thumbnail((2200,2200))
- im.save(root/f"website/assets/hero-{panel['name']}.jpg",quality=90)
+ im.thumbnail((1800,1800))
+ im.save(root/f"website/assets/hero-{panel['name']}.webp",quality=82,method=6)
  print(panel['name'],im.size)
