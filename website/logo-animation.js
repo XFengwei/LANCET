@@ -3,16 +3,43 @@
   const $ = id => document.getElementById(id);
   const ns = 'http://www.w3.org/2000/svg';
   const duration = 12;
+  // Keyframes, in seconds of wall-clock time. Edit here to retime the piece.
+  const K = {
+    cloudIn:   [0.0, 0.5],    // background and cloud fade in
+    contract:  [0.5, 3.0],    // cloud collapses onto the spine (slow start, fast finish)
+    filament:  [2.3, 3.0],    // filament emerges; then holds alone until tools arrive
+    cloudOut:  [2.6, 3.3],
+    tools:     [3.4, 3.7],    // lancet and dish snap in
+    cut:       [3.7, 5.0],    // blade travels lower left -> upper right at constant speed
+    withdraw:  [5.0, 5.4],    // lancet lifts away
+    morph:     [5.0, 10.0],   // the two cut halves become the logo ribbons, one continuous move
+    flow:      [4.9, 7.6],    // window in which gas streaks are launched along both ribbons
+    flowTrip:  1.4,           // seconds a streak takes from tail to star
+    flowOut:   [8.4, 9.2],
+    feed:      [6.1, 7.2],    // glow builds at the tip as gas arrives
+    ignite:    7.2,           // first star: fast attack, slow decay
+    cluster:   [7.45, 8.5],   // cluster members pop in, staccato
+    resolve:   [8.6, 10.0],   // cluster -> gold star
+    settle:    [9.9, 10.4],   // emblem holds alone
+    wordmark:  [9.8, 10.4],   // LANCET arrives with the gold logo star
+    final:     [10.4, 10.6],
+    pulse:     10.45,         // star flashes, then a gold shock runs back down to the filament's tail
+    pulseRun:  1.25,          // seconds for the shock to travel tip -> tail
+    period:    2.6            // pulsar period during the embedded hold
+  };
+  const STAR = {x: 1039, y: 215};
   const embedded = document.documentElement.classList.contains('embed-mode');
   let finalHold = 0;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const smooth = (a, b, t) => { const x = Math.max(0, Math.min(1, (t-a)/(b-a))); return x*x*x*(x*(x*6-15)+10); };
+  const lin = (a, b, t) => Math.max(0, Math.min(1, (t-a)/(b-a)));
+  const smooth = (a, b, t) => { const x = lin(a, b, t); return x*x*x*(x*(x*6-15)+10); };
+  const after = (t0, tau, t) => t < t0 ? 0 : Math.exp(-(t-t0)/tau);
   const mix = (a,b,t) => a+(b-a)*t;
   const opacity = (id,value) => $(id).setAttribute('opacity',value);
   const make = (parent,tag,attrs) => { const el=document.createElementNS(ns,tag); Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v)); $(parent).append(el); return el; };
   let seed=73;
   const random=()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646;};
-  // One continuous spine, shared by cloud contraction, both cut faces, and knife.
+  // One continuous spine, shared by cloud contraction, both cut faces, knife, and gas flow.
   function spine(s) {
     const q=1-s;
     return {x:q*q*q*414+3*q*q*s*505+3*q*s*s*846+s*s*s*995,
@@ -52,30 +79,60 @@
   const fibres=Array.from({length:13},(_,i)=>make('fibres','path',{opacity:.13+(i%3)*.07}));
   const smallStars=Array.from({length:19},(_,i)=>{
     const angle=random()*Math.PI*2,r=40+random()*100;
-    return {x:1039+Math.cos(angle)*r,y:215+Math.sin(angle)*r*.8,size:1.8+random()*3.2,
-      birth:9+random()*1.6,phase:random()*6,el:make('small-stars','path',{fill:'#f8dea0'})};
+    // Evenly staggered births with a little jitter: a staccato run, not a fade.
+    return {x:STAR.x+Math.cos(angle)*r,y:STAR.y+Math.sin(angle)*r*.8,size:1.8+random()*3.2,
+      birth:mix(K.cluster[0],K.cluster[1],(i+random()*.6)/19),phase:random()*6,el:make('small-stars','path',{fill:'#f8dea0'})};
   });
   const starPath=$('logo-star'),starLength=starPath.getTotalLength();
   const starContour=Array.from({length:128},(_,i)=>starPath.getPointAtLength(i/128*starLength));
   for(let i=0;i<45;i++)make('atmosphere','circle',{cx:230+random()*1070,cy:100+random()*640,r:.5+random()*.8,fill:'#b2c7d5',opacity:.12+random()*.2});
-  const titles=['A cloud contracts into one spine','A cut becomes a way of seeing','The first bright star','A cluster resolves into a symbol','The story becomes LANCET'];
-  let elapsed=reduced.matches?duration:0,playing=!reduced.matches,last=null,frame=null;
-  // Monotone cubic timing avoids speed jumps at the compressed phase boundaries.
-  function storyTime(value) {
-    const knots=[0,7.5,9,12],values=[0,10,14,18],slopes=[4/3,16/9,16/9,4/3];
-    const i=value<=7.5?0:value<=9?1:2;
-    const h=knots[i+1]-knots[i],u=Math.max(0,Math.min(1,(value-knots[i])/h));
-    return (2*u**3-3*u*u+1)*values[i]+(u**3-2*u*u+u)*h*slopes[i]
-      +(-2*u**3+3*u*u)*values[i+1]+(u**3-u*u)*h*slopes[i+1];
+  // Gas streaks ride INSIDE the two split halves (alternating), then leave the tip for the star.
+  // Each streak keeps a fixed fraction of the way across its half, so it follows the morph.
+  const streaks=Array.from({length:52},(_,i)=>({ribbon:i%2,phase:random(),across:.18+random()*.64,
+    width:1.8+random()*2.2,alpha:.6+random()*.4,last:i%4<2?K.flow[1]-.5:K.flow[1],
+    el:make('flow','path',{})}));
+  // Updated every frame from the current ribbon outlines: [ribbon][side] edges sorted by s.
+  const ribbonEdges=[[],[]];
+  function edgeAt(edge,s) {
+    const j=edge.findIndex(p=>p.s>=s);
+    if(j<=0)return j===0?edge[0]:edge[edge.length-1];
+    const a=edge[j-1],b=edge[j],f=(s-a.s)/(b.s-a.s||1);
+    return {x:mix(a.x,b.x,f),y:mix(a.y,b.y,f)};
   }
+  function flowPoint(ribbon,sx,across) {
+    const [a,b]=ribbonEdges[ribbon];
+    if(sx>1){const tip=edgeAt(a,1),k=Math.min(1,(sx-1)/.15);return {x:mix(tip.x,STAR.x,k),y:mix(tip.y,STAR.y,k)};}
+    const s=Math.max(0,sx),p=edgeAt(a,s),q=edgeAt(b,s);
+    return {x:mix(p.x,q.x,across),y:mix(p.y,q.y,across)};
+  }
+  // Stellar feedback: the star flashes like a pulsar, then a gold shock front runs back
+  // down the ribbons (upper right -> lower left) into the parental filament.
+  const PULSE_FROM={x:350,y:645},PULSE_DIR={x:650,y:-370},PULSE_LEN=Math.hypot(PULSE_DIR.x,PULSE_DIR.y),PULSE_HALF=140;
+  function pulseAt(c) {
+    const run=K.pulseRun,launch=.2,band=$('pulse-light');
+    // Quick attack, slow decay at the star.
+    const flash=c>0?lin(0,.12,c)*(1-smooth(.12,1.1,c)):0;
+    opacity('pulse-flash',.85*flash);$('pulse-flash').setAttribute('r',mix(40,160,lin(0,.9,c)));
+    opacity('pulse-star',flash);
+    // The shock leaves the tip fast and decelerates as it sweeps up the filament gas.
+    const x=lin(launch,launch+run,c),travel=mix(1.2,-.25,1-(1-x)**1.8);
+    const ux=PULSE_DIR.x/PULSE_LEN,uy=PULSE_DIR.y/PULSE_LEN;
+    const cx=PULSE_FROM.x+PULSE_DIR.x*travel,cy=PULSE_FROM.y+PULSE_DIR.y*travel;
+    band.setAttribute('x1',cx-ux*PULSE_HALF);band.setAttribute('y1',cy-uy*PULSE_HALF);
+    band.setAttribute('x2',cx+ux*PULSE_HALF);band.setAttribute('y2',cy+uy*PULSE_HALF);
+    const end=launch+run;
+    opacity('pulse',c>launch&&c<end+.2?smooth(launch,launch+.15,c)*(1-smooth(end-.2,end+.15,c))*(1-.35*x):0);
+  }
+  const titles=['A cloud contracts into one spine','A cut becomes a way of seeing','Gas streams toward the tip','The first bright star','A cluster resolves into a symbol','The story becomes LANCET'];
+  let elapsed=reduced.matches?duration:0,playing=!reduced.matches,last=null,frame=null;
   function render() {
-    // Preserve linear pacing, with extra compression of the former 10–14 s phase.
-    const t=storyTime(elapsed);
-    const contract=smooth(.8,4.4,t),cut=smooth(5,6.9,t),morph=.7*smooth(5,9,t)+.3*smooth(6.5,13.4,t),settle=smooth(14.2,15.6,t);
-    const cloudFade=smooth(0,.8,t)*(1-smooth(3.8,5.3,t));
-    opacity('cloud',cloudFade);
+    const t=elapsed;
+    // Collapse accelerates: slow start, fast finish, then a hold on the bare filament.
+    const contract=smooth(0,1,lin(...K.contract,t)**1.6);
+    const cut=lin(...K.cut,t),morph=smooth(...K.morph,t),settle=smooth(...K.settle,t);
+    opacity('cloud',smooth(...K.cloudIn,t)*(1-smooth(...K.cloudOut,t)));
     cloud.forEach(p=>{
-      const q=spine(p.s),n=normal(p.s),drift=(1-contract)*Math.sin(t*.35+p.phase)*4;
+      const q=spine(p.s),n=normal(p.s),drift=(1-contract)*Math.sin(t*.5+p.phase)*4;
       p.el.setAttribute('cx',mix(p.x,q.x+n.x*p.offset,contract)+drift);
       p.el.setAttribute('cy',mix(p.y,q.y+n.y*p.offset,contract));
       p.el.setAttribute('r',mix(p.r,22,contract));p.el.setAttribute('opacity',.24+.13*contract);
@@ -85,18 +142,20 @@
       p.el.setAttribute('cx',mix(p.x,q.x+n.x*p.offset,contract));
       p.el.setAttribute('cy',mix(p.y,q.y+n.y*p.offset,contract));p.el.setAttribute('opacity',.2+.15*contract);
     });
-    opacity('atmosphere',.5*(1-smooth(10,14,t)));
-    opacity('filament',smooth(3.4,4.9,t));
-    opacity('filament-haze',smooth(3,4.5,t)*(1-smooth(8,12.2,t))*.45);
+    opacity('atmosphere',.5*(1-morph));
+    opacity('filament',smooth(...K.filament,t));
+    opacity('filament-haze',smooth(K.filament[0]-.1,K.filament[1],t)*(1-morph)*.45);
     ribbons.forEach((points,index)=>{
       const shape=points.map(p=>{
         const q=spine(p.s),n=normal(p.s),width=38*Math.sin(Math.PI*p.s)**.55;
         const half=index===0?-1:1;
         // Before the cut, the two faces share a seam and read as ONE filament.
         const outer=index===0?p.side===-1:p.side===1;
-        const across=half*(outer?width:0)+half*cut*10*Math.sin(Math.PI*p.s);
+        const across=half*(outer?width:0)+half*cut*14*Math.sin(Math.PI*p.s);
         return {x:mix(q.x+n.x*across,p.target.x,morph),y:mix(q.y+n.y*across,p.target.y,morph)};
       });
+      const tagged=shape.map((p,i)=>({x:p.x,y:p.y,s:points[i].s,side:points[i].side}));
+      ribbonEdges[index]=[-1,1].map(side=>tagged.filter(p=>p.side===side).sort((a,b)=>a.s-b.s));
       const d=polygon(shape),prefix=index===0?'upper':'lower';
       $(prefix+'-morph').setAttribute('d',d);$(prefix+'-haze').setAttribute('d',d);
     });
@@ -121,41 +180,67 @@
     const visible=cut>=1?incision:[...left,at(-1,cut),at(1,cut),...right];
     $('inner-slash').setAttribute('d',visible.length>2?polygon(visible):'M0 0');
     opacity('inner-slash',cut>0?1:0);
-    opacity('fibres',smooth(3,4.6,t)*(1-smooth(5,7.4,t))*(1-settle));
+    opacity('fibres',smooth(K.filament[0],K.filament[1]+.1,t)*(1-smooth(K.cut[0],K.cut[1]+.2,t)));
     fibres.forEach((el,i)=>{
       const points=Array.from({length:46},(_,j)=>{const s=j/45,p=spine(s),n=normal(s),offset=(i-6)*5.6*Math.sin(Math.PI*s);return `${p.x+n.x*offset},${p.y+n.y*offset}`;});
       el.setAttribute('d','M '+points.join(' L '));
     });
-    // The broad blade and telescope arrive together; the seam opens during cutting.
+    // The blade and telescope snap in together; the blade lifts away once the cut is done.
     const edges=[at(-1,cut),at(1,cut)];
     const scan={x:(edges[0].x+edges[1].x)/2,y:(edges[0].y+edges[1].y)/2};
-    $('knife').setAttribute('transform',`translate(${scan.x} ${scan.y}) rotate(28)`);
-    opacity('knife',smooth(4.5,5,t)*(1-smooth(7,7.8,t)));
-    opacity('telescope',smooth(4.5,5,t));
-    const dishScale=mix(.94,1,smooth(4.5,5.4,t));
+    const withdraw=smooth(...K.withdraw,t);
+    $('knife').setAttribute('transform',`translate(${scan.x} ${scan.y}) rotate(28) translate(0 ${-70*withdraw})`);
+    opacity('knife',smooth(...K.tools,t)*(1-withdraw));
+    opacity('telescope',smooth(...K.tools,t));
+    const dishScale=mix(.94,1,smooth(K.tools[0],K.tools[1]+.2,t));
     $('telescope').setAttribute('transform',`translate(1041.17 482.11) scale(${dishScale}) translate(-1041.17 -482.11)`);
-    const starBorn=smooth(7.7,8.8,t),starResolve=smooth(10.8,14.2,t);
-    opacity('main-star',starBorn);
+    // Gas flow: carried by both split halves, accelerating toward the tip, feeding the star.
+    const flowFade=1-smooth(...K.flowOut,t);
+    opacity('flow',flowFade);
+    streaks.forEach(k=>{
+      const u=((t/K.flowTrip+k.phase)%1+1)%1,launched=t-u*K.flowTrip;
+      const show=launched>=K.flow[0]&&launched<=k.last?smooth(0,.08,u)*(1-smooth(.88,1,u))*k.alpha:0;
+      k.el.setAttribute('opacity',show);
+      if(!show||!flowFade){k.el.setAttribute('d','M0 0');return;}
+      const head=.03+1.12*u**1.7,length=.025+.075*u;
+      const points=Array.from({length:6},(_,j)=>{const p=flowPoint(k.ribbon,head-length*(1-j/5),k.across);return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;});
+      k.el.setAttribute('d','M '+points.join(' L '));
+      // Pale gas warms to gold as it nears the star-forming tip.
+      k.el.setAttribute('stroke',`rgb(${Math.round(mix(255,244,u))},${Math.round(mix(238,190,u))},${Math.round(mix(196,88,u))})`);
+      k.el.setAttribute('stroke-width',k.width*(1+.5*u));
+    });
+    const feed=smooth(...K.feed,t);
+    $('feed-glow').setAttribute('r',mix(8,26,feed));
+    opacity('feed-glow',.75*feed*(1-lin(K.ignite,K.ignite+.4,t)));
+    // Ignition is the accent of the piece: 0.15 s attack, slow decay.
+    const born=1-(1-lin(K.ignite,K.ignite+.15,t))**3,ring=after(K.ignite,.3,t);
+    const starResolve=smooth(K.resolve[0]+.1,K.resolve[1],t);
+    $('star-flash').setAttribute('r',mix(24,150,lin(K.ignite,K.ignite+.45,t)));
+    opacity('star-flash',.9*lin(K.ignite,K.ignite+.1,t)*(t<K.ignite+.1?1:after(K.ignite+.1,.35,t)));
+    opacity('main-star',born);
     $('star-morph').setAttribute('d',polygon(starContour.map(p=>{
-      const dx=p.x-1039,dy=p.y-215,angle=Math.atan2(dy,dx);
-      const radius=10+3*Math.cos(angle*4)**8;
-      return {x:1039+mix(Math.cos(angle)*radius,dx,starResolve),y:215+mix(Math.sin(angle)*radius,dy,starResolve)};
+      const dx=p.x-STAR.x,dy=p.y-STAR.y,angle=Math.atan2(dy,dx);
+      const radius=(10+3*Math.cos(angle*4)**8)*(.4+.6*born)*(1+.6*ring);
+      return {x:STAR.x+mix(Math.cos(angle)*radius,dx,starResolve),y:STAR.y+mix(Math.sin(angle)*radius,dy,starResolve)};
     })));
     $('main-star-glow').setAttribute('r',mix(30,60,starResolve));
-    opacity('main-star-glow',(1-smooth(12,14.3,t))*.9);
+    opacity('main-star-glow',(1-smooth(K.resolve[1]-.7,K.resolve[1]+.1,t))*.9);
     opacity('small-stars',1-settle);
     smallStars.forEach(s=>{
-      const disappear=smooth(11.6,13.8,t),drift=smooth(10.5,13.8,t);
-      const x=mix(s.x,1039+(s.x-1039)*.8,drift),y=mix(s.y,215+(s.y-215)*.8,drift);
-      const r=s.size*(1-.6*disappear),k=r*.22;
+      const disappear=smooth(K.resolve[0]+.4,K.resolve[1]-.1,t),drift=smooth(K.resolve[0],K.resolve[1]-.1,t);
+      const x=mix(s.x,STAR.x+(s.x-STAR.x)*.8,drift),y=mix(s.y,STAR.y+(s.y-STAR.y)*.8,drift);
+      const r=s.size*(1-.6*disappear)*(1+.9*after(s.birth,.14,t)),k=r*.22;
       s.el.setAttribute('d',`M${x-r} ${y} Q${x-k} ${y-k} ${x} ${y-r} Q${x+k} ${y-k} ${x+r} ${y} Q${x+k} ${y+k} ${x} ${y+r} Q${x-k} ${y+k} ${x-r} ${y}Z`);
-      s.el.setAttribute('opacity',smooth(s.birth,s.birth+.8,t)*(1-disappear)*(.85+.15*Math.sin(t+s.phase)));
+      s.el.setAttribute('opacity',lin(s.birth,s.birth+.12,t)*(1-disappear)*(.85+.15*Math.sin(t*1.5+s.phase)));
     });
     opacity('final-emblem',settle);
-    opacity('wordmark',smooth(15,16.8,t));
-    opacity('final-logo',smooth(16.8,17.3,t));
-    const chapter=t<4.5?0:t<7.7?1:t<10.4?2:t<14.8?3:4;
-    $('chapter-number').textContent=`0${chapter+1} / 05`;
+    opacity('wordmark',smooth(...K.wordmark,t));
+    opacity('final-logo',smooth(...K.final,t));
+    // Pulsar beat: once over the emblem, then periodically during the embedded hold.
+    const hold=finalHold-.6;
+    pulseAt(elapsed<duration?elapsed-K.pulse:embedded&&hold>=0?hold%K.period:-1);
+    const chapter=t<K.tools[0]?0:t<K.cut[1]?1:t<K.ignite?2:t<K.resolve[0]?3:t<K.wordmark[0]?4:5;
+    $('chapter-number').textContent=`0${chapter+1} / 06`;
     $('chapter-title').textContent=elapsed===duration?'LANCET · From filament to stars':titles[chapter];
     document.querySelectorAll('.chapters li').forEach((el,i)=>el.classList.toggle('active',i===chapter));
     $('seek').value=elapsed;$('seek').setAttribute('aria-valuetext',`${elapsed.toFixed(1)} seconds: ${titles[chapter]}`);
