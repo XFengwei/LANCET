@@ -4,8 +4,8 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="From filament to stars: the story behind the LANCET logo.">
 <title>A road to stars · LANCET</title>
-<link rel="stylesheet" href="logo-animation.css">
-<script src="logo-animation.js" defer></script>
+<link rel="stylesheet" href="logo-animation.css?v=2">
+<script src="logo-animation.js?v=2" defer></script>
 <script>if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed-mode");</script></head>
 <body>
 <header><a href="index.html" aria-label="LANCET home">LANCET<span> / MOTION STUDY 01</span></a><span class="edition">FROM FILAMENT TO CLUSTER</span></header>
@@ -13,11 +13,13 @@
 <div class="intro"><p class="eyebrow">THE STORY INSIDE THE MARK</p><h1>A road to <em>stars.</em></h1><p>Trace the filament. Reveal its structure. Witness the stars.</p></div>
 <section class="theatre" aria-label="Animated LANCET logo">
 <svg id="scene" viewBox="0 0 1536 1024" role="img" aria-labelledby="scene-title scene-description">
-<title id="scene-title">A cloud becomes a road to stars</title><desc id="scene-description">An irregular molecular cloud contracts into one filament. A broad lancet splits the filament as a telescope appears alongside it. One bright star appears before smaller cluster members. The filament morphs into the logo ribbons, smaller stars dissolve, and the largest becomes the gold logo star. The sequence ends with the original non-halo LANCET logo.</desc>
+<title id="scene-title">A cloud becomes a road to stars</title><desc id="scene-description">An irregular molecular cloud contracts into one filament. A broad lancet splits the filament as a telescope appears alongside it. Gas streams along both split halves from lower left to upper right, where one bright star ignites. One bright star appears before smaller cluster members. After the cut, the two halves morph into the logo ribbons, smaller stars dissolve, and the largest becomes the gold logo star. The star flashes like a pulsar and a gold shock runs back down the ribbons to the tail of the filament, a picture of stellar feedback. The sequence ends with the original non-halo LANCET logo.</desc>
 <defs>
 <filter id="cloud-soft" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12"/></filter>
 <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="5"/></filter>
 <filter id="star-halo" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="14"/></filter>
+<filter id="flow-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<linearGradient id="pulse-light" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f6cc73" stop-opacity="0"/><stop offset=".5" stop-color="#ffd88a"/><stop offset="1" stop-color="#f6cc73" stop-opacity="0"/></linearGradient>
 <radialGradient id="cloud-light"><stop stop-color="#d1dce2" stop-opacity=".8"/><stop offset=".45" stop-color="#7e929d" stop-opacity=".4"/><stop offset="1" stop-color="#354956" stop-opacity="0"/></radialGradient>
 <radialGradient id="gold"><stop stop-color="#fff4ce"/><stop offset="1" stop-color="#f6cc73"/></radialGradient>
 <clipPath id="emblem-clip"><rect width="1536" height="690"/></clipPath>
@@ -31,6 +33,8 @@
 <g id="filament-haze" filter="url(#glow)" fill="#a3becd"><path id="upper-haze"/><path id="lower-haze"/></g>
 <g id="filament" fill="#dce5ea"><path id="upper-morph"/><path id="lower-morph"/><path id="inner-slash" fill="white"/></g>
 <g id="fibres" fill="none" stroke="#e2eef3" stroke-width=".8"></g>
+<g id="flow" fill="none" stroke-linecap="round" filter="url(#flow-glow)"></g>
+<circle id="feed-glow" cx="1039" cy="215" r="10" fill="#f3cf83" filter="url(#star-halo)" opacity="0"/>
 <g id="knife">
 <path d="M-9 -184 Q-9 -192 -1 -192 H9 Q17 -192 17 -184 V-111 H-9Z" fill="#70838e" stroke="#c7d5df" stroke-width="1.5"/>
 <path d="M-3 -174 H10 M-3 -163 H10 M-3 -152 H10" stroke="#3d515d" stroke-width="3"/>
@@ -40,15 +44,19 @@
 </g>
 <g id="telescope"><image href="assets/lancet-animation-final.png" width="1536" height="1024" clip-path="url(#dish-clip)"/></g>
 <g id="small-stars"></g>
+<circle id="star-flash" cx="1039" cy="215" r="20" fill="#fff1c4" filter="url(#star-halo)" opacity="0"/>
 <g id="main-star"><circle id="main-star-glow" cx="1039" cy="215" r="46" fill="#e8bb5f" filter="url(#star-halo)"/><path id="star-morph" fill="url(#gold)"/></g>
 <image id="final-emblem" href="assets/lancet-animation-final.png" width="1536" height="1024" clip-path="url(#emblem-clip)" opacity="0"/>
 <image id="wordmark" href="assets/lancet-animation-final.png" width="1536" height="1024" clip-path="url(#wordmark-clip)" opacity="0"/>
 <image id="final-logo" href="assets/lancet-animation-final.png" width="1536" height="1024" opacity="0"/>
+<g id="pulse" fill="url(#pulse-light)" filter="url(#flow-glow)" opacity="0"><use href="#upper-target"/><use href="#lower-target"/><use href="#slash-target"/></g>
+<circle id="pulse-flash" cx="1039" cy="215" r="40" fill="#ffe7a8" filter="url(#star-halo)" opacity="0"/>
+<use id="pulse-star" href="#logo-star" fill="#fff6dc" opacity="0"/>
 </svg>
-<div class="caption" aria-hidden="true"><span id="chapter-number">01 / 05</span><span id="chapter-title">An irregular molecular cloud</span></div>
+<div class="caption" aria-hidden="true"><span id="chapter-number">01 / 06</span><span id="chapter-title">An irregular molecular cloud</span></div>
 </section>
 <div class="transport"><button id="play" type="button" aria-label="Pause animation">Pause <span aria-hidden="true">Ⅱ</span></button><button id="replay" type="button">Replay <span aria-hidden="true">↺</span></button><label class="scrubber"><span class="sr-only">Animation position</span><input id="seek" type="range" min="0" max="12" step="0.01" value="0"></label><output id="time">00.0 / 12.0</output></div>
-<ol class="chapters"><li><span>01</span>Cloud to filament</li><li><span>02</span>Tomography</li><li><span>03</span>First star</li><li><span>04</span>Cluster to symbol</li><li><span>05</span>LANCET</li></ol>
+<ol class="chapters"><li><span>01</span>Cloud to filament</li><li><span>02</span>Tomography</li><li><span>03</span>Gas flow</li><li><span>04</span>First star</li><li><span>05</span>Cluster to symbol</li><li><span>06</span>LANCET</li></ol>
 <p class="note">Linear Filament and Nested Cluster Evolution Tomography<span>A visual metaphor for revealing the structure of star formation.</span></p>
 <p class="sr-only" id="status" role="status"></p>
 </main>
