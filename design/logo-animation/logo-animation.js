@@ -24,9 +24,9 @@
     wordmark:  [9.8, 10.4],   // LANCET arrives with the gold logo star
     final:     [10.4, 10.6],
     pulse:     10.45,         // star flashes, then a gold shock runs back down to the filament's tail
-    pulseRun:  1.25,          // seconds for the shock to travel tip -> tail
-    period:    2.6            // pulsar period during the embedded hold
+    pulseRun:  1.25           // seconds for the shock to travel tip -> tail
   };
+  const HOLD = 5;             // seconds the finished logo stays still before the loop restarts
   const STAR = {x: 1039, y: 215};
   const embedded = document.documentElement.classList.contains('embed-mode');
   let finalHold = 0;
@@ -236,9 +236,8 @@
     opacity('final-emblem',settle);
     opacity('wordmark',smooth(...K.wordmark,t));
     opacity('final-logo',smooth(...K.final,t));
-    // Pulsar beat: once over the emblem, then periodically during the embedded hold.
-    const hold=finalHold-.6;
-    pulseAt(elapsed<duration?elapsed-K.pulse:embedded&&hold>=0?hold%K.period:-1);
+    // Pulsar beat once over the emblem; the final hold stays still.
+    pulseAt(elapsed<duration?elapsed-K.pulse:-1);
     const chapter=t<K.tools[0]?0:t<K.cut[1]?1:t<K.ignite?2:t<K.resolve[0]?3:t<K.wordmark[0]?4:5;
     $('chapter-number').textContent=`0${chapter+1} / 06`;
     $('chapter-title').textContent=elapsed===duration?'LANCET · From filament to stars':titles[chapter];
@@ -252,20 +251,20 @@
     if (!playing) return;
     if(last!==null) {
       const delta = (now-last)/1000;
-      if (embedded && elapsed >= duration) {
+      // Hold the finished logo, still, for HOLD seconds, then loop.
+      if (elapsed >= duration) {
         finalHold += delta;
-        if (finalHold >= 5) { elapsed = 0; finalHold = 0; }
+        if (finalHold >= HOLD) { elapsed = 0; finalHold = 0; }
       } else elapsed=Math.min(duration,elapsed+delta);
     }
     last=now;
-    if(elapsed>=duration && !embedded){playing=false;$('status').textContent='Animation complete. Original LANCET logo displayed.';}
     render(); frame=playing?requestAnimationFrame(tick):null;
   }
-  function start(){if(elapsed>=duration)elapsed=0;playing=true;last=null;cancelAnimationFrame(frame);frame=requestAnimationFrame(tick);render();}
+  function start(){if(elapsed>=duration)elapsed=0;finalHold=0;playing=true;last=null;cancelAnimationFrame(frame);frame=requestAnimationFrame(tick);render();}
   function pause(){playing=false;cancelAnimationFrame(frame);frame=null;last=null;render();}
   $('play').addEventListener('click',()=>playing?pause():start());
   $('replay').addEventListener('click',()=>{elapsed=0;$('status').textContent='Animation replaying.';start();});
-  $('seek').addEventListener('input',()=>{elapsed=Number($('seek').value);pause();});
+  $('seek').addEventListener('input',()=>{elapsed=Number($('seek').value);finalHold=0;pause();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing)pause();else if(embedded&&!document.hidden&&!reduced.matches)start();});
   reduced.addEventListener('change',()=>{if(reduced.matches){elapsed=duration;pause();}});
   render();if(playing)start();
