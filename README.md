@@ -6,6 +6,11 @@ G316 analysis.
 G316 is the single scientific target of LANCET. It is therefore not repeated in
 package names, configuration layers, or output directory names.
 
+## AI assistance
+
+Development of LANCET and its website has been assisted by OpenAI Codex and
+Claude.
+
 ## Repository layout
 
 - Reusable Python code lives under `src/lancet/`.
