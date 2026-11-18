@@ -76,7 +76,7 @@ def combine_sampling_cells(aca, alma, n_pairs, n_bins, sectors):
     return result
 
 
-def separate_array_profiles(statistics, n_bins, sectors):
+def separate_array_profiles(statistics, n_bins, sectors, model="allscale"):
     """Compare arrays on common cells where possible, retaining unique modes.
 
     Common cells must have at least four rows in every array present in that
@@ -99,7 +99,7 @@ def separate_array_profiles(statistics, n_bins, sectors):
             error = float(np.sqrt(np.sum(data["cross_variance"][use]))/use.sum())
             factor = 1.0
             if name == "aca_7m":
-                factor = float(np.sqrt(np.mean(data["allscale_target"][use])/np.mean(data["allscale_native"][use])))
+                factor = float(np.sqrt(np.mean(data[model+"_target"][use])/np.mean(data[model+"_native"][use])))
             records.append({"array": name, "bin": i, "matched_arrays": bool(matched),
                 "cells": int(use.sum()), "rows": int(data["count"][use].sum()),
                 "uv_klambda": float(np.mean(data["radius"][use])),

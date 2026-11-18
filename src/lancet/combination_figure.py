@@ -84,7 +84,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     root = Path(paths["output_root"])
     settings = config["figure1"]
     tp_display_scale = float(settings.get("tp_display_scale", 1.0))
-    stem = "Figure1_combination_diagnostics" + ("_three_panel" if three_panel else "")
+    stem = "Figure1_combination_diagnostics" + ("_three_panel" if three_panel else "") + settings.get("output_suffix", "")
     outputs = [root/"figures"/f"{stem}.{suffix}" for suffix in settings["output_formats"]]
     for output in outputs:
         if output.exists() and not overwrite:
@@ -142,9 +142,26 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     tp_u, tp_amp, tp_meta = tp_amplitude_reference(
         paths["reduction_inputs"]["total_power"], sampling/"cell_statistics.npz",
         coverage, float(settings["tp_minimum_response"]))
+    tp_fixed = None
+    amplitude_source = settings.get("amplitude_source", "full_sampling")
+    if amplitude_source == "amplitude_alignment":
+        # 7 m translated with the 12m+7m image; TP with and without its beam.
+        from .amplitude_alignment import read_products
+
+        array_profiles, _, curves, alignment = read_products(root/"amplitude_alignment")
+        tp_u, tp_amp, tp_fixed = (curves["uv_klambda"], curves["tp_raw_common_mjy"],
+                                  curves["tp_corrected_common_mjy"])
+        tp_meta = {**tp_meta, "amplitude_source": "results/combination_diagnostic/amplitude_alignment",
+                   "translation_sky_model": alignment["sky_model"],
+                   "tp_response_limit_klambda": alignment["tp_response_limit_klambda"],
+                   "description": alignment["method"]}
     tp_table = root/"figures"/(stem+"_tp_reference.csv" if three_panel else "Figure1_tp_reference.csv")
-    np.savetxt(tp_table, np.column_stack([tp_u, tp_amp]), delimiter=",",
-               header="uv_klambda,tp_model_rms_mjy", comments="")
+    if tp_fixed is None:
+        np.savetxt(tp_table, np.column_stack([tp_u, tp_amp]), delimiter=",",
+                   header="uv_klambda,tp_model_rms_mjy", comments="")
+    else:
+        np.savetxt(tp_table, np.column_stack([tp_u, tp_amp, tp_fixed]), delimiter=",",
+                   header="uv_klambda,tp_model_rms_mjy,tp_beam_corrected_rms_mjy", comments="")
     plt.rcParams.update({"font.family": "sans-serif", "font.size": 10,
         "axes.linewidth": 0.7, "axes.spines.top": True, "axes.spines.right": True,
         "pdf.fonttype": 42, "svg.fonttype": "none", "legend.frameon": False})
@@ -183,7 +200,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     title(a, "(a)")
     a.legend(loc="upper left", bbox_to_anchor=(0.03, 0.88), fontsize=10, labelspacing=0.35, handletextpad=0.4)
 
-    values = list(tp_amp*tp_display_scale)
+    values = list(tp_amp*tp_display_scale) + ([] if tp_fixed is None else list(tp_fixed))
     for name, marker, label in [("aca_7m", "o", "7 m (12 m PB)"),
                                 ("configuration_c2", "s", "12 m C2"),
                                 ("configuration_c5", "^", "12 m C5")]:
@@ -203,6 +220,9 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
         values.extend(upper[~detected])
     positive_tp = tp_u >= 1 if three_panel else tp_u > 0
     b.plot(tp_u[positive_tp], tp_amp[positive_tp]*tp_display_scale, color="0.45", linestyle="-.", linewidth=.9 if three_panel else 1.2, label="TP" if three_panel else "TP (12 m PB)")
+    if tp_fixed is not None:
+        b.plot(tp_u[positive_tp], tp_fixed[positive_tp], color="0.1", linewidth=1.1 if three_panel else 1.4,
+               label="TP, beam-corrected")
     b.set(xlabel=r"uv distance (k$\lambda$)", ylabel="Amplitude (mJy)", xlim=(1, 1000))
     b.set_xscale("log")
     b.set_xticks([1, 10, 100, 1000], labels=["1", "10", "100", "1000"])
@@ -224,20 +244,31 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
         b.scatter(density_centres[occupied], np.full(occupied.sum(), y),
                   s=(4 if three_panel else 10)*counts[occupied]/maximum_count, color=COLORS[name], linewidths=0,
                   transform=b.get_xaxis_transform(), zorder=3)
-    for name in (() if three_panel else observation_sources):
+    track_labels = observation_sources if (not three_panel or tp_fixed is not None) else ()
+    for name in track_labels:
         indices = [i for i, (array, _, _) in enumerate(observation_density) if array == name]
         label = {"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}[name]
-        b.text(0.025, track_y[indices].mean(), label, color=COLORS[name], fontsize=10,
+        x = 0.025 + (0.12 if three_panel and name == "configuration_c5" else 0)
+        b.text(x, track_y[indices].mean(), label, color=COLORS[name], fontsize=10,
                va="center", transform=b.transAxes)
     b.plot([0, 1], [count_top, count_top], color="0.8", linewidth=0.5, transform=b.transAxes)
     b.text(0.025, .30 if three_panel else .29, "Visibility counts", transform=b.transAxes, fontsize=10)
     if three_panel:
         b.get_xticklabels()[-1].set_horizontalalignment("right")
     title(b, "(c)" if three_panel else "(b)")
-    b.legend(loc="upper right", bbox_to_anchor=(0.99, 0.98), fontsize=10, labelspacing=0.25,
-             ncol=2 if three_panel else 1, columnspacing=.4,
-             borderpad=.2 if three_panel else .3, handlelength=1.1 if three_panel else 1.8,
-             handletextpad=0.4, frameon=True, facecolor="white", framealpha=1, edgecolor="none")
+    if tp_fixed is not None:
+        # Array colours are keyed in panel (b) and labelled on the count tracks;
+        # the two TP curves are labelled directly.
+        end = np.flatnonzero(positive_tp)[-1]
+        b.text(tp_u[end]*1.03, tp_amp[end]*.5, "TP", color="0.45", fontsize=10, ha="left", va="center")
+        b.annotate("TP, beam-corrected", xy=(2.5, np.interp(2.5, tp_u, tp_fixed)), xytext=(3.4, tp_fixed.max()*1.7),
+                   fontsize=10, ha="left", va="bottom", color="0.1",
+                   arrowprops=dict(arrowstyle="-", color="0.1", linewidth=.6, shrinkA=1, shrinkB=1))
+    if tp_fixed is None:
+        b.legend(loc="upper right", bbox_to_anchor=(0.99, 0.98), fontsize=10, labelspacing=0.25,
+                 ncol=2 if three_panel else 1, columnspacing=.4,
+                 borderpad=.2 if three_panel else .3, handlelength=1.1 if three_panel else 1.8,
+                 handletextpad=0.4, frameon=True, facecolor="white", framealpha=1, edgecolor="none")
 
     zoom = 25.0 if three_panel else float(config["uv_plot"]["zoom_limit_metres"])
     limit = 1.10*max(np.abs(np.r_[u, v]).max() for u, v in coords.values())
@@ -299,6 +330,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
                 "figure_width_mm": settings["width_inches"]*25.4, "base_font_pt": 10,
                 "interferometer_display_scale": 1.0,
                 "tp_display_scale": tp_display_scale,
+                "amplitude_source": amplitude_source,
                 "tp_display_scale_scope": f"Panel {amplitude_panel} curve only; native TP source CSV is unscaled. Disclosed as a display normalization in the manuscript caption; no adopted calibration correction.",
                 "amplitude_ranges_klambda": coverage["ranges_klambda"], "amplitude_overlap_klambda": overlap,
                 f"panel_{amplitude_panel}_xscale": "log; 1-1000 klambda; zero spacing remains in the short-baseline view and the source CSV",

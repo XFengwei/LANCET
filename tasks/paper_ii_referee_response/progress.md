@@ -1593,3 +1593,112 @@ Updated marked and selective latexdiff sources from the latest clean text,
 preserving the 90 existing referee-related selections, the title-page fix and
 Appendix A figure placement. Both content projections match the clean text
 and both variants compile successfully. Evidence and backups: `results/paper_ii_referee_response/diagnostics/finalization/2026-11-05/author_sync_195513`.
+
+## 2026-11-08 — synchronize author revisions
+
+Synchronized marked and selective latexdiff versions from the current clean
+source, preserving referee-related selections and title-page layout fixes.
+Both content projections match and both variants compile successfully.
+Backups, generator and verification: `results/paper_ii_referee_response/diagnostics/finalization/2026-11-08/author_sync_145018`.
+
+## 2026-11-08 — extend printed catalogue tables
+
+Extended Tables 1 and 2 to ten rows in clean, marked and selective latexdiff
+versions, using rows 6–10 verbatim from
+`results/source_catalogue/tables/source_catalogue.tex` and
+`results/physical_properties/tables/core_physical_properties.tex`.
+Updated the sample-table notes to ten rows and preserved existing source-2
+unresolved limits. This author-requested extension adds no diff highlighting.
+All three built-in compilations pass. Backups: diagnostics/finalization/
+2026-11-08/ten_row_tables/.
+
+## 2026-11-10 — synchronize online clean edits
+
+Synchronized the marked and selective latexdiff versions with the latest clean
+source. Preserved all 90 existing referee-related revision spans. Updated the
+author-list formatting in the marked source and inserted the same author-only
+formatting unmarked in the latexdiff; the ten-row tables were already current.
+The marked source unwraps to the exact clean body, and the selective latexdiff
+projection matches all 24,091 clean-body tokens with no additional marked
+regions. Both variants compile successfully with the desktop editor compiler.
+Backups, synchronization scripts and verification are in
+`results/paper_ii_referee_response/diagnostics/finalization/2026-11-10/online_clean_sync/`.
+
+## 2026-11-13 — TP/interferometer factor of 2.8 (R4c follow-up)
+
+- At 24 arcsec the delivered J-comb image is 2.84 x the TP model and 3-4 x
+  SIMBA in bright regions; the TP model agrees with SIMBA to ~25%.
+- Added the `aca-forward-test` stage to `combination_diagnostic`: sky images
+  through the native 7 m PB at measured ACA uv points, without PB translation
+  or fitted factors. The 12m+7m image alone reproduces the ACA amplitudes
+  within 5%; feather with TP x1 already over-predicts them by 12-38% in the
+  overlap, and x2-x3 by 26-115%. The ALMA data do not require a brighter TP.
+- An earlier same-day note inferring a ~22-arcsec TP beam from the Fig. 2
+  uv trend was wrong and is corrected in the report.
+- See `diagnostics/R4c/2026-11-13/report.md`. No manuscript, response or
+  adopted product was changed. The declared `ms/combine_cont.sh` is missing
+  from `data/reduction`; the run used a temporary config pointing at the
+  existing `script/combine_cont.sh` (not read by this stage). A byte-identical
+  copy of the original is in `results/combination_diagnostic/provenance/`.
+
+## 2026-11-13 — Fig. 2 amplitudes without the TP factor
+
+- Rendered the three-panel combination figure (manuscript Fig. 2, task stage
+  `figure1-three-panel`) with `tp_display_scale = 1` as a separate
+  `_tp_unscaled` variant; the adopted figure files are unchanged.
+- Added the `amplitude-alignment` stage to `combination_diagnostic`: 7 m
+  translated to the 12 m PB with the 12m+7m image (no TP), TP sampled through
+  the same PBs, and the TP beam removed. In the native 7 m PB, TP/7 m rises
+  from 0.15-0.40 with the beam kept to 0.6-1.2 after removing it. A draft
+  caption is saved beside the figure; no manuscript change was made.
+
+## 2026-11-13 — adopt the corrected amplitude panel in Fig. 2
+
+- At the author's request, panel (c) of the continuum combination figure now
+  shows the 7 m/C2/C5 profiles on the 12 m PB (7 m translated with the 12m+7m
+  image) and the TP with and without its 18.1-arcsec beam, with no TP display
+  factor. The visibility-count strip is retained.
+- Copied the verified figure to the v2 figure folder, updated the panel (c)
+  caption in the clean, marked and latexdiff sources, and compiled all three
+  with Tectonic. Provenance: `evidence/R4a/2026-11-13/figure1_adoption.json`.
+
+## 2026-11-14 — explanatory figure for the TP beam correction (R4c)
+
+- Added a six-panel diagnostic showing why the TP amplitude curve changes after
+  removing its 18.1-arcsec beam: the beam transfer and the PB uv windows, how the
+  effective transfer T(u) is measured from the 12m+7m image, T(u) against the
+  Gaussian in both PB frames, and the resulting TP curves and TP/7 m ratios.
+  It reads the existing `amplitude-alignment` products only.
+- See `diagnostics/R4c/2026-11-14/tp_beam_correction_explained.{py,pdf,png}`.
+  No manuscript, response or adopted product was changed.
+
+## 2026-11-15 — Planck zero-spacing check of the TP flux scale (R4c)
+
+- Fetched Planck PR3 143/217/353 GHz and PR2 Type-1 CO maps within 1 deg of the
+  field from IRSA (HTTP range requests on the HEALPix tables). The fetched
+  353 GHz map reproduces the delivered IRSA cutout to 0.02%.
+- At the 5-arcmin Planck beam and 230 GHz (CO(2-1) removed, RIMO bandpass colour
+  conversion), TP model / Planck = 0.81 (0.64-0.96) where the TP footprint covers
+  at least 90% of the beam. J-comb / Planck is about 2.6 and 12m+7m / Planck about
+  0.12. Planck supports a TP scale of x1, not x2.8.
+- Side finding: the ATLASGAL+Planck 870 um map used in the SED fits is 1.6 x
+  Planck 353 GHz; flagged for checking.
+- See `diagnostics/R4c/2026-11-15/report.md`. No manuscript, response or adopted
+  product was changed.
+
+## 2026-11-15 — TP model frequency and Planck intercept (R4c)
+
+- The dust part of the TP model (Paper I `TP_SEDsynthetic230GHz_cont.fits`) is
+  reproduced from the Paper I 18-arcsec N(H2), T fit only at 224.4 GHz
+  (±0.3 % scatter), not 230 GHz. TP and ALMA are both at ~224 GHz, so J-comb
+  needs no frequency scaling. `synthesize_continuum` assumes 230 GHz, which
+  makes its 250 GHz SIMBA-benchmark model 9 % faint; not changed.
+- Reran the Planck check at 224 GHz and fitted TP = 1.15 x Planck - 4.7 MJy/sr
+  (gain 1.07-1.18 across selections). Author's note: the intercept is
+  line-of-sight fore/background, not relevant to the combination; the TP flux
+  scale is confirmed by Planck and this should be stated in the paper once the
+  combination is final. With the intercept removed, TP/Planck = 1.12
+  (0.98-1.32); J-comb/Planck is about 3.
+- See `diagnostics/R4c/2026-11-15/report.md` and
+  `planck_zero_spacing_background_removed.png`. No manuscript, response or
+  adopted product was changed.

@@ -1,0 +1,832 @@
+#!/usr/bin/env python
+"""Linear uv-plane combination of the 12m+7m continuum image with the SED-based TP models.
+
+Stages: ``prepare`` (inputs on a common grid), ``tp_factor`` (how the TP factor is set),
+``jcomb`` and ``feather`` (combined images with their comparison and diagnostics),
+``box_spectrum`` (power spectra in one box), ``planck_calibration`` (TP model against Planck),
+``all``.
+"""
+
+from __future__ import annotations
+
+import argparse
+from collections.abc import Callable, Mapping, Sequence
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+import tomllib
+
+from astropy.io import fits
+from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
+import numpy as np
+from scipy import ndimage
+
+from lancet import ProjectPaths
+from lancet.combination import gaussian_transfer, uv_distance_klambda
+from lancet import planck_calibration as pc
+from lancet.combination_figures import (
+    ARCSEC_PER_KLAMBDA,
+    plot_comparison,
+    plot_box_spectrum,
+    plot_planck_maps,
+    plot_planck_scatter,
+    plot_power_spectrum,
+    plot_tp_factor,
+    plot_zero_spacing,
+)
+from lancet.combination_prep import (
+    azimuthal_power,
+    beam_parameters,
+    combine_prepared,
+    derive_gain,
+    footprint_margin_arcsec,
+    jybeam_to_mjysr,
+    mjysr_to_jybeam,
+    read_plane,
+    regrid_to,
+    taper_edge,
+    write_product,
+)
+from lancet.combination_validation import (
+    cross_spectrum_slopes,
+    remove_window_mean,
+    beam_volume_outside,
+    core_contrast_ratio,
+    large_scale_ratio,
+    mosaic_window,
+    negative_fraction,
+    psd_match_factor,
+    smooth_to,
+    synthetic_gate,
+    tapered_window,
+    tp_at_high_resolution,
+    tp_only_ratio,
+    windowed_amplitude_ratio,
+    windowed_power,
+    zero_spacing_check,
+)
+
+DEFAULT_CONFIG = Path("tasks/linear_combine_continuum/task.toml")
+DELIVERED_INPUTS = ("interferometer", "interferometer_attenuated", "tp_dust", "tp_dust_ff")
+TP_FLAVOURS = ("dust", "dust_ff")
+TP_LABELS = {"dust": "TP dust", "dust_ff": "TP dust+free-free"}
+METHOD_LABELS = {"jcomb": "J-comb", "feather": "Feather"}
+PADDING_MODE = "TP: mirror reflection with a cosine roll-off; 12m+7m: zeros"
+
+
+# ---------------------------------------------------------------- configuration and bookkeeping
+
+def load_task_config(path: Path) -> dict:
+    if not Path(path).is_file():
+        raise FileNotFoundError(f"Task configuration not found: {path}")
+    with open(path, "rb") as handle:
+        return tomllib.load(handle)
+
+
+def _project_path(project: ProjectPaths, value: object) -> Path:
+    path = Path(str(value)).expanduser()
+    return (path if path.is_absolute() else project.root / path).resolve()
+
+
+def resolve_task_paths(project: ProjectPaths, config: Mapping) -> dict[str, Path]:
+    """Resolve inputs (delivered where required) and the policy-safe output root."""
+    paths = {name: _project_path(project, value) for name, value in config["inputs"].items()}
+    for name in DELIVERED_INPUTS:
+        if not paths[name].is_relative_to(project.delivered.resolve()):
+            raise ValueError(f"{name} must be a delivered input: {paths[name]}")
+    paths["output_root"] = project.validate_output(str(config["outputs"]["root"]))
+    for name, path in paths.items():
+        if name != "output_root" and not path.is_file():
+            raise FileNotFoundError(f"{name} not found: {path}")
+    return paths
+
+
+def guard_outputs(paths: Sequence[Path], overwrite: bool) -> None:
+    existing = [str(p) for p in paths if Path(p).exists()]
+    if existing and not overwrite:
+        raise FileExistsError("Outputs exist (pass --overwrite to replace): " + ", ".join(existing))
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1 << 24), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def input_hashes(paths: Mapping[str, Path], names: Sequence[str]) -> dict[str, str]:
+    return {name: sha256(paths[name]) for name in names}
+
+
+def write_json(path: Path, payload: Mapping) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=1, default=str) + "\n")
+
+
+def output_paths(result) -> list[str]:
+    """Paths found in a stage's return value (a path, or a mapping of paths)."""
+    if isinstance(result, Path):
+        return [str(result)]
+    if isinstance(result, Mapping):
+        return [p for value in result.values() for p in output_paths(value)]
+    return []
+
+
+def append_manifest(root: Path, entry: Mapping) -> None:
+    """Append one stage record to ``manifest.json`` in the output root."""
+    path = Path(root) / "manifest.json"
+    entries = json.loads(path.read_text()) if path.exists() else []
+    record = {"stage": entry["stage"], "utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    record.update({k: ([str(x) for x in v] if k == "outputs" else v) for k, v in entry.items() if k != "stage"})
+    entries.append(record)
+    write_json(path, entries)
+
+
+def ratio_check(value: float, tolerance: float) -> dict:
+    """A ratio expected to be 1, its tolerance and whether it is exceeded."""
+    return {"value": float(value), "tolerance": float(tolerance), "flag": bool(abs(value - 1.0) > tolerance)}
+
+
+# ---------------------------------------------------------------- prepare
+
+def _pixel_arcsec(wcs) -> float:
+    return float(proj_plane_pixel_scales(wcs)[0] * 3600.0)
+
+
+def _finer_wcs(wcs, shape, pixel_arcsec):
+    """Same extent as ``wcs``/``shape`` with a finer pixel."""
+    factor = _pixel_arcsec(wcs) / pixel_arcsec
+    fine = wcs.deepcopy()
+    fine.wcs.cdelt = wcs.wcs.cdelt / factor
+    fine.wcs.crpix = (wcs.wcs.crpix - 0.5) * factor + 0.5
+    return fine, (int(round(shape[0] * factor)), int(round(shape[1] * factor)))
+
+
+def regrid_power_deviation(tp, tp_wcs, settings) -> float:
+    """Max |power ratio - 1| between the tapered native TP and its spline regrid."""
+    pix = _pixel_arcsec(tp_wcs)
+    tapered = taper_edge(tp, np.isfinite(tp), settings["edge_taper_arcsec"], pix)
+    fine_wcs, fine_shape = _finer_wcs(tp_wcs, tp.shape, settings["regrid_check_pixel_arcsec"])
+    fine = regrid_to(tapered, tp_wcs, fine_wcs, fine_shape, order=settings["regrid_order"])
+    edges = settings["regrid_check_edges_klambda"]
+    native = azimuthal_power(tapered, pix, edges)
+    regridded = azimuthal_power(np.nan_to_num(fine), settings["regrid_check_pixel_arcsec"], edges)
+    return float(np.max(np.abs(regridded / native - 1.0)))
+
+
+def tp_footprint_on_grid(tp, tp_wcs, target_wcs, shape) -> np.ndarray:
+    """Pixels of the target grid where the native TP model is defined."""
+    marker = np.where(np.isfinite(tp), 1.0, np.nan).astype(np.float32)
+    return np.isfinite(regrid_to(marker, tp_wcs, target_wcs, shape, order=0))
+
+
+def interferometer_within_gain(clean, gain) -> np.ndarray:
+    """The 12m+7m image where the mosaic gain is defined (>= 0.2), zero elsewhere.
+
+    The delivered clean image extends beyond the gain-attenuated one; that rim has
+    no known gain and is left out, so the products are TP-only there.
+    """
+    return np.where(np.asarray(gain) > 0, clean, 0.0).astype(np.float32)
+
+
+def check_tp(tp, tp_wcs, gain, wcs, settings) -> dict:
+    """Footprint margin around the mosaic and the regridding power deviation of one TP model."""
+    step = int(settings["margin_decimation"])
+    coarse_wcs, mosaic = wcs[::step, ::step], gain[::step, ::step] > 0
+    footprint = tp_footprint_on_grid(tp, tp_wcs, coarse_wcs, mosaic.shape)
+    margin = footprint_margin_arcsec(footprint, mosaic, _pixel_arcsec(wcs) * step)
+    deviation = regrid_power_deviation(tp, tp_wcs, settings)
+    problems = []
+    if margin < settings["minimum_margin_arcsec"]:
+        problems.append(f"footprint margin {margin:.1f} arcsec < {settings['minimum_margin_arcsec']} arcsec")
+    if deviation > settings["regrid_power_tolerance"]:
+        problems.append(f"regrid power deviation {deviation:.3f} > {settings['regrid_power_tolerance']}")
+    return {"margin_arcsec": margin, "regrid_power_deviation": deviation, "problems": problems}
+
+
+def prepared_paths(root: Path) -> dict[str, Path]:
+    prepared = Path(root) / "prepared"
+    out = {"interferometer": prepared / "interferometer_mjysr.fits", "gain": prepared / "gain.fits",
+           "report": prepared / "input_check.json"}
+    for flavour in TP_FLAVOURS:
+        out[f"tp_{flavour}"] = prepared / f"tp_{flavour}_mjysr.fits"
+        out[f"tp_{flavour}_footprint"] = prepared / f"tp_{flavour}_footprint.fits"
+    return out
+
+
+def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
+    """Check the inputs and write them on the interferometer grid in MJy/sr, plus the mosaic gain."""
+    settings = config["prepare"]
+    out = prepared_paths(paths["output_root"])
+    guard_outputs(list(out.values()), overwrite)
+    clean, header, wcs = read_plane(paths["interferometer"])
+    attenuated, _, _ = read_plane(paths["interferometer_attenuated"])
+    high_beam = beam_parameters(header)
+    gain = derive_gain(clean, attenuated, settings["gain_maximum"])
+    del attenuated
+    report = {"interferometer": {"path": str(paths["interferometer"]), "shape": list(clean.shape),
+                                 "beam_arcsec_deg": high_beam, "pixel_arcsec": _pixel_arcsec(wcs)},
+              "gain": {"min_nonzero": float(gain[gain > 0].min()), "max": float(gain.max())}}
+    tp_planes, problems = {}, []
+    for flavour in TP_FLAVOURS:
+        tp, tp_header, tp_wcs = read_plane(paths[f"tp_{flavour}"])
+        check = check_tp(tp, tp_wcs, gain, wcs, settings)
+        problems += [f"tp_{flavour}: {p}" for p in check.pop("problems")]
+        report[f"tp_{flavour}"] = {"path": str(paths[f"tp_{flavour}"]), "shape": list(tp.shape),
+                                   "beam_arcsec_deg": beam_parameters(tp_header), **check}
+        tp_planes[flavour] = (tp, tp_header, tp_wcs)
+    print(json.dumps(report, indent=1, default=str), flush=True)
+    if problems:
+        raise RuntimeError("; ".join(problems))
+
+    hashes = input_hashes(paths, ["interferometer", "interferometer_attenuated"])
+    write_product(out["gain"], gain, header,
+                  {"stage": "prepare", "quantity": "12m+7m mosaic gain; 0 where undefined (< 0.2)"}, hashes, bunit="")
+    write_product(out["interferometer"], jybeam_to_mjysr(interferometer_within_gain(clean, gain), *high_beam[:2]),
+                  header, {"stage": "prepare", "quantity": "12m+7m image where the gain is defined"}, hashes,
+                  bunit="MJy/sr")
+    for flavour, (tp, tp_header, tp_wcs) in tp_planes.items():
+        tp_beam = beam_parameters(tp_header)
+        tapered = taper_edge(tp, np.isfinite(tp), settings["edge_taper_arcsec"], _pixel_arcsec(tp_wcs))
+        grid = np.nan_to_num(regrid_to(tapered, tp_wcs, wcs, clean.shape, order=settings["regrid_order"]))
+        tp_hash = input_hashes(paths, [f"tp_{flavour}"])
+        meta = {"stage": "prepare", "tp_frequency_ghz": settings["tp_frequency_ghz"],
+                "edge_taper_arcsec": settings["edge_taper_arcsec"]}
+        write_product(out[f"tp_{flavour}"], jybeam_to_mjysr(grid, *tp_beam[:2]), header, meta, tp_hash,
+                      bunit="MJy/sr", beam=tp_beam)
+        footprint = tp_footprint_on_grid(tp, tp_wcs, wcs, clean.shape).astype(np.float32)
+        write_product(out[f"tp_{flavour}_footprint"], footprint, header,
+                      {"stage": "prepare", "quantity": "TP model defined (1) or not (0)"}, tp_hash, bunit="")
+    write_json(out["report"], report)
+    return out
+
+
+def load_prepared(paths: Mapping[str, Path], flavour: str):
+    """(tp MJy/sr, interferometer MJy/sr, gain, header, pixel", high beam, low beam)."""
+    prep = prepared_paths(paths["output_root"])
+    missing = [str(p) for name, p in prep.items() if name != "report" and not p.is_file()]
+    if missing:
+        raise FileNotFoundError("Run --stage prepare first; missing: " + ", ".join(missing))
+    high = fits.getdata(prep["interferometer"]).astype(np.float32)
+    header = fits.getheader(prep["interferometer"])
+    low = fits.getdata(prep[f"tp_{flavour}"]).astype(np.float32)
+    low_beam = beam_parameters(fits.getheader(prep[f"tp_{flavour}"]))
+    gain = fits.getdata(prep["gain"]).astype(np.float32)
+    return low, high, gain, header, _pixel_arcsec(WCS(header)), beam_parameters(header), low_beam
+
+
+# ---------------------------------------------------------------- TP factor
+
+def measure_tp_factor(tp, interferometer_at_tp, mask, pix, settings) -> dict:
+    """TP factor that lifts the TP power spectrum onto that of the 12m+7m image at the TP resolution.
+
+    Both spectra are taken inside ``mask`` tapered at its edge; the factor is the 12m+7m / TP
+    amplitude ratio at the TP's lowest point within the matching range.
+    """
+    window = tapered_window(mask, pix, settings["window_taper_arcsec"])
+    lo, hi, n = settings["bins_klambda"]
+    edges = np.geomspace(lo, hi, int(n) + 1)
+    centres = np.sqrt(edges[:-1] * edges[1:])
+    p_high = windowed_power(interferometer_at_tp, window, pix, edges)
+    p_tp = windowed_power(tp, window, pix, edges)
+    band = sorted(float(x) for x in ARCSEC_PER_KLAMBDA / np.asarray(settings["matching_range_arcsec"], dtype=float))
+    match = psd_match_factor(p_high, p_tp, centres, band)
+    return {"factor": match["factor"], "at_klambda": match["at_klambda"], "matching_range_klambda": band,
+            "window_area_arcsec2": float(np.sum(mask) * pix**2), "bin_centres_klambda": centres.tolist(),
+            "power_interferometer_at_tp_resolution": p_high.tolist(), "power_tp": p_tp.tolist(),
+            "power_unit": "MJy2 sr-2 arcsec2"}
+
+
+TP_FACTOR_VARIANTS = {
+    "as_determined": "Procedure that gave the factor 1.4: all non-zero 12m+7m pixels, including the rim "
+                     "where the mosaic gain is undefined (< 0.2); smoothing counts blank pixels as zero; TP "
+                     "regridded bilinearly.",
+    "prepared": "Same measurement on the prepared inputs used for the combination: 12m+7m only where the gain "
+                "is defined, smoothing normalised at the edge, TP regridded with the task's spline.",
+}
+
+
+def run_tp_factor(paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
+    """Document how the power-spectrum-matched TP factor arises, and what the prepared inputs give with the same method."""
+    settings = config["tp_factor"]
+    root = paths["output_root"] / "tp_factor"
+    out = {"summary": root / "tp_factor.json",
+           **{f"figure_{f}_{v}_{ext}": root / f"tp_factor_{f}_{v}.{ext}"
+              for f in [settings["determined_from"]] for v in TP_FACTOR_VARIANTS for ext in ("pdf", "png")}}
+    guard_outputs(list(out.values()), overwrite)
+    tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
+    clean, header, wcs = read_plane(paths["interferometer"])
+    high_beam, pix = beam_parameters(header), _pixel_arcsec(wcs)
+    clean = np.nan_to_num(jybeam_to_mjysr(clean, *high_beam[:2])).astype(np.float32)
+    gain = fits.getdata(prepared_paths(paths["output_root"])["gain"])
+    defined = gain > 0
+    smoothed = {"as_determined": np.nan_to_num(smooth_to(clean, pix, high_beam, tp_fwhm)).astype(np.float32),
+                "prepared": np.nan_to_num(smooth_to(np.where(defined, clean, np.nan), pix, high_beam,
+                                                    tp_fwhm)).astype(np.float32)}
+    nonzero = clean != 0
+    del clean
+    summary = {"psd_matched": settings["psd_matched"], "value_combined": settings["value"], "settings": dict(settings), "variants": TP_FACTOR_VARIANTS,
+               "note": "The factor in value is applied to every TP model. This stage documents where the "
+                       "power-spectrum-matched factor (psd_matched) comes from; it is not applied."}
+    if settings["determined_from"] not in TP_FLAVOURS:
+        raise ValueError(f"determined_from must be one of {TP_FLAVOURS}")
+    for flavour in [settings["determined_from"]]:
+        tp, tp_header, tp_wcs = read_plane(paths[f"tp_{flavour}"])
+        bilinear = regrid_to(tp, tp_wcs, wcs, gain.shape, order=1)
+        inputs = {
+            "as_determined": (jybeam_to_mjysr(np.nan_to_num(bilinear), *beam_parameters(tp_header)[:2]),
+                              nonzero & np.isfinite(bilinear)),
+            "prepared": (load_prepared(paths, flavour)[0], defined),
+        }
+        del tp, bilinear
+        summary[flavour] = {}
+        for variant, (tp_plane, mask) in inputs.items():
+            m = measure_tp_factor(tp_plane, smoothed[variant], mask, pix, settings)
+            summary[flavour][variant] = m
+            plot_tp_factor(root / f"tp_factor_{flavour}_{variant}", m["bin_centres_klambda"],
+                           m["power_interferometer_at_tp_resolution"], m["power_tp"], m["matching_range_klambda"],
+                           settings["psd_matched"], m["factor"])
+            print(flavour, variant, "factor", round(m["factor"], 3), "at", round(m["at_klambda"], 2), "klambda",
+                  flush=True)
+        del inputs
+    write_json(out["summary"], summary)
+    return out
+
+
+# ---------------------------------------------------------------- combination and its measurements
+
+def combine_settings(config: Mapping, method: str, tp_factor: float) -> dict:
+    settings = {"tp_factor": float(tp_factor), "padding_arcsec": config["prepare"]["padding_arcsec"]}
+    if method == "jcomb":
+        section = config["jcomb"]
+        settings.update(k1=section["k1_klambda"], k2=section["k2_klambda"], order=section["butterworth_order"],
+                        minimum_tp_response=section["minimum_tp_response"])
+    return settings
+
+
+def product_metadata(config: Mapping, method: str, flavour: str, settings: Mapping) -> dict:
+    """Header settings (COMB_*) of one combined product."""
+    return {"method": method, "tp_flavour": flavour, "tp_frequency_ghz": config["prepare"]["tp_frequency_ghz"],
+            "working_unit": "MJy/sr", "fill_outside_mosaic": bool(config["combine"]["fill_outside_mosaic"]),
+            "padding_mode": PADDING_MODE, "absolute_scale": config["absolute_scale"]["status"], **settings}
+
+
+def product_blank(gain, tp_footprint, fill_outside_mosaic: bool) -> np.ndarray:
+    """Pixels left blank in a product.
+
+    Always outside the TP model. With ``fill_outside_mosaic`` the product keeps
+    the TP-only region; otherwise it is also blank where the mosaic gain is undefined.
+    """
+    blank = ~np.asarray(tp_footprint, dtype=bool)
+    if not fill_outside_mosaic:
+        blank |= np.asarray(gain) == 0
+    return blank
+
+
+def catalogue_positions(px, py, gain, min_gain) -> list[tuple[float, float]]:
+    """Catalogue pixel positions whose nearest pixel is on the grid with gain >= ``min_gain``."""
+    ny, nx = np.shape(gain)
+    out = []
+    for x, y in zip(np.asarray(px, dtype=float), np.asarray(py, dtype=float)):
+        ix, iy = int(round(x)), int(round(y))
+        if 0 <= ix < nx and 0 <= iy < ny and gain[iy, ix] >= min_gain:
+            out.append((float(x), float(y)))
+    return out
+
+
+def measurement_context(paths: Mapping[str, Path], config: Mapping, flavour: str) -> dict:
+    """Arrays and reference quantities shared by the measurements of one TP flavour."""
+    from astropy.table import Table
+    low, high, gain, header, pix, high_beam, low_beam = load_prepared(paths, flavour)
+    m = config["measure"]
+    clean, _, _ = read_plane(paths["interferometer"])
+    x0, y0, x1, y1 = m["noise_box_pix"]
+    box = clean[y0:y1, x0:x1]
+    sigma = float(1.4826 * np.median(np.abs(box - np.median(box))))
+    table = Table.read(paths["core_catalogue"])
+    px, py = WCS(header).celestial.world_to_pixel_values(np.asarray(table["WCS_ACOOR"]),
+                                                         np.asarray(table["WCS_DCOOR"]))
+    edges = np.asarray(m["profile_edges_klambda"], dtype=float)
+    footprint = fits.getdata(prepared_paths(paths["output_root"])[f"tp_{flavour}_footprint"]) > 0.5
+    tp_native, tp_header, tp_wcs = read_plane(paths[f"tp_{flavour}"])
+    tp_native = jybeam_to_mjysr(tp_native.astype(float), *beam_parameters(tp_header)[:2])
+    return {"tp_native": tp_native, "tp_header": tp_header, "tp_wcs": tp_wcs, "low": low, "high": high, "gain": gain, "header": header, "pix": pix, "high_beam": high_beam,
+            "low_beam": low_beam, "clean": interferometer_within_gain(clean, gain), "sigma": sigma,
+            "positions": catalogue_positions(px, py, gain, m["min_gain"]), "mask": gain >= m["min_gain"],
+            "edges": edges, "centres": np.sqrt(edges[:-1] * edges[1:]),
+            "window": mosaic_window(gain, m["min_gain"], pix, m["window_smooth_arcsec"]),
+            "tp_high": tp_at_high_resolution(low, pix, low_beam, high_beam, config["jcomb"]["k2_klambda"],
+                                             config["prepare"]["padding_arcsec"]),
+            "blank": product_blank(gain, footprint, bool(config["combine"]["fill_outside_mosaic"]))}
+
+
+def measure_product(product: np.ndarray, ctx: Mapping, config: Mapping, tp_factor: float) -> dict:
+    """Measurements of one combined image (Jy/beam) against its two inputs; see the task README."""
+    m = config["measure"]
+    surface = jybeam_to_mjysr(np.nan_to_num(product), ctx["high_beam"][0], ctx["high_beam"][1])
+    to_interferometer = windowed_amplitude_ratio(surface, ctx["high"], ctx["window"], ctx["pix"], ctx["edges"])
+    k2 = config["jcomb"]["k2_klambda"]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        to_tp = windowed_amplitude_ratio(surface, tp_factor * ctx["tp_high"], ctx["window"], ctx["pix"], ctx["edges"])
+    to_tp = [float(r) if hi <= k2 else None for r, hi in zip(to_tp, ctx["edges"][1:])]   # TP term ends at k2
+    join = (ctx["edges"][:-1] >= k2) & (ctx["edges"][1:] <= m["high_k_join_max_klambda"])
+    large = large_scale_ratio(product, tp_factor * ctx["low"], ctx["pix"], ctx["high_beam"],
+                              config["prepare"]["tp_fwhm_arcsec"], ctx["mask"])
+    cores = core_contrast_ratio(product, ctx["clean"], ctx["positions"], ctx["pix"], m["core_annulus_arcsec"])
+    high_k = float(np.median(to_interferometer[join]))
+    return {
+        "tp_factor": tp_factor,
+        "large_scale_ratio_to_scaled_tp": large,
+        "tp_only_ratio_to_scaled_tp": tp_only_ratio(product, tp_factor * ctx["low"], ctx["high_beam"],
+                                                    ~ctx["blank"] & (ctx["gain"] == 0)),
+        "high_k_join": high_k,
+        "core_contrast": cores,
+        "negative_fraction": negative_fraction(product, ctx["sigma"], ctx["mask"], m["negative_sigma"]),
+        "negative_fraction_interferometer": negative_fraction(ctx["clean"], ctx["sigma"], ctx["mask"],
+                                                              m["negative_sigma"]),
+        "sigma_jybeam": ctx["sigma"],
+        "uv_bins_klambda": ctx["centres"].tolist(),
+        "amplitude_ratio_to_interferometer": to_interferometer.tolist(),
+        "amplitude_ratio_to_scaled_tp_at_high_beam": to_tp,
+        "power": {"interferometer": windowed_power(ctx["high"], ctx["window"], ctx["pix"], ctx["edges"]).tolist(),
+                  "scaled_tp": windowed_power(tp_factor * ctx["low"], ctx["window"], ctx["pix"],
+                                              ctx["edges"]).tolist(),
+                  "combined": windowed_power(surface, ctx["window"], ctx["pix"], ctx["edges"]).tolist(),
+                  "unit": "MJy2 sr-2 arcsec2"},
+        "checks": {"large_scale_ratio": ratio_check(large["median"], m["large_scale_tolerance"]),
+                   "high_k_join": ratio_check(high_k, m["high_k_join_tolerance"]),
+                   "core_contrast": ratio_check(cores["median"], m["core_contrast_tolerance"])},
+    }
+
+
+def _feather_beam_outside(pix, high_beam, low_beam, size=2048) -> float:
+    u, v, _ = uv_distance_klambda((size, size), pix)
+    g_low, g_high = gaussian_transfer(u, v, *low_beam), gaussian_transfer(u, v, *high_beam)
+    return beam_volume_outside(g_low + (1.0 - g_low) * g_high, g_high, (size, size))
+
+
+def zero_spacing(product, ctx: Mapping, config: Mapping, tp_factor: float):
+    """Smooth a combined image to the TP beam and compare it with the TP on the TP's own grid.
+
+    Returns (summary, combined image at the TP beam on the TP grid, ratio map, mosaic mask,
+    TP-only mask). Only positions with a full TP beam inside the product are compared.
+    """
+    from reproject import reproject_interp
+    tp_fwhm, pix, wcs = config["prepare"]["tp_fwhm_arcsec"], ctx["pix"], WCS(ctx["header"]).celestial
+    surface = jybeam_to_mjysr(np.where(np.isfinite(product), product, np.nan), *ctx["high_beam"][:2])
+    smooth = smooth_to(surface, pix, ctx["high_beam"], tp_fwhm)
+    size = 2 * int(round(tp_fwhm / pix)) + 1
+    inside = ndimage.uniform_filter((~ctx["blank"]).astype(np.float32), size=size, mode="constant") > 0.999
+    shape = ctx["tp_native"].shape
+    on_tp = lambda data, order: reproject_interp((data, wcs), ctx["tp_wcs"], shape_out=shape, order=order)[0]
+    combined_tp = on_tp(np.where(inside, smooth, np.nan), "bilinear")
+    gain_tp = np.nan_to_num(on_tp(ctx["gain"].astype(float), "nearest-neighbor"))
+    inside_tp = np.nan_to_num(on_tp(inside.astype(float), "nearest-neighbor")) > 0.5
+    tp = tp_factor * ctx["tp_native"]
+    valid = inside_tp & np.isfinite(combined_tp) & np.isfinite(tp)
+    mosaic, tp_only = valid & (gain_tp >= config["measure"]["min_gain"]), valid & (gain_tp == 0)
+    summary = zero_spacing_check(combined_tp, tp, {"mosaic": mosaic, "tp_only": tp_only, "all": valid})
+    summary["note"] = ("Combined image smoothed to the TP beam, sampled on the TP grid, against the TP times the "
+                       "TP factor. flux_ratio is the ratio of summed brightness; 1 means the zero-spacing "
+                       "(total-flux) information of the TP is kept.")
+    with np.errstate(invalid="ignore", divide="ignore"):
+        ratio = np.where(valid, combined_tp / tp, np.nan)
+    return summary, np.where(valid, combined_tp, np.nan), ratio, mosaic, tp_only
+
+
+def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
+    """Combined images of one method for both TP models, each with the zero-spacing check
+    (combined image at the TP beam against the TP), measurements and figures."""
+    root = paths["output_root"] / method
+    out = {"measurements": root / "measurements.json"}
+    for flavour in TP_FLAVOURS:
+        out[f"image_{flavour}"] = root / f"{method}_{flavour}.fits"
+        out[f"at_tp_beam_{flavour}"] = root / f"{method}_{flavour}_at_tp_beam.fits"
+        out[f"ratio_{flavour}"] = root / f"zero_spacing_ratio_{flavour}.fits"
+        for name in ("comparison", "zero_spacing", "power_spectrum"):
+            for ext in ("pdf", "png"):
+                out[f"{name}_{flavour}_{ext}"] = root / f"{name}_{flavour}.{ext}"
+    guard_outputs(list(out.values()), overwrite)
+    factor = float(config["tp_factor"]["value"])
+    settings = combine_settings(config, method, factor)
+    measurements = {"method": method, "settings": settings, "absolute_scale": config["absolute_scale"]["status"]}
+    tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
+    k1, k2 = config["jcomb"]["k1_klambda"], config["jcomb"]["k2_klambda"]
+    for flavour in TP_FLAVOURS:
+        ctx = measurement_context(paths, config, flavour)
+        hashes = input_hashes(paths, ["interferometer", "interferometer_attenuated", f"tp_{flavour}"])
+        product = combine_prepared(ctx["low"], ctx["high"], ctx["pix"], ctx["high_beam"], ctx["low_beam"], method,
+                                   settings, blank=ctx["blank"])
+        write_product(out[f"image_{flavour}"], product, ctx["header"],
+                      product_metadata(config, method, flavour, settings), hashes, beam=ctx["high_beam"])
+        m = measure_product(product, ctx, config, factor)
+        check, at_tp_beam, ratio, mosaic, tp_only = zero_spacing(product, ctx, config, factor)
+        m["zero_spacing"] = check
+        m["checks"]["zero_spacing_flux_in_mosaic"] = ratio_check(check["mosaic"]["flux_ratio"],
+                                                                 config["measure"]["large_scale_tolerance"])
+        if method == "feather":
+            m["beam_volume_outside_high_beam"] = _feather_beam_outside(ctx["pix"], ctx["high_beam"], ctx["low_beam"])
+        measurements[flavour] = m
+        meta = {"stage": method, "tp_flavour": flavour, "tp_factor": factor}
+        write_product(out[f"at_tp_beam_{flavour}"], at_tp_beam, ctx["tp_header"],
+                      {**meta, "quantity": "combined image smoothed to the TP beam, on the TP grid"}, hashes,
+                      bunit="MJy/sr", beam=(tp_fwhm, tp_fwhm, 0.0))
+        write_product(out[f"ratio_{flavour}"], ratio, ctx["tp_header"],
+                      {**meta, "quantity": "combined image at the TP beam / (TP factor x TP)"}, hashes, bunit="",
+                      beam=(tp_fwhm, tp_fwhm, 0.0))
+        tp_label = TP_LABELS[flavour] + ("" if factor == 1.0 else f" × {factor:g}")
+        plot_comparison(root / f"comparison_{flavour}", ctx["clean"],
+                        mjysr_to_jybeam(factor * ctx["low"], *ctx["high_beam"][:2]), product, ctx["gain"] > 0,
+                        METHOD_LABELS[method], tp_label)
+        plot_zero_spacing(root / f"zero_spacing_{flavour}", factor * ctx["tp_native"], at_tp_beam, mosaic, tp_only,
+                          METHOD_LABELS[method], tp_label, check)
+        plot_power_spectrum(root / f"power_spectrum_{flavour}", ctx["centres"],
+                            {"interferometer": m["power"]["interferometer"], "tp": m["power"]["scaled_tp"],
+                             "combined": m["power"]["combined"]},
+                            {"interferometer": m["amplitude_ratio_to_interferometer"],
+                             "tp": m["amplitude_ratio_to_scaled_tp_at_high_beam"]},
+                            k2, (k1, k2) if method == "jcomb" else (), METHOD_LABELS[method], tp_label)
+        print(method, flavour, {k: round(c["value"], 4) for k, c in m["checks"].items()},
+              "zero spacing", {r: round(v["flux_ratio"], 4) for r, v in check.items() if isinstance(v, dict) and v.get("n")},
+              flush=True)
+        if method == "jcomb" and flavour == TP_FLAVOURS[-1]:
+            v = config["measure"]
+            measurements["mock_sky_test"] = synthetic_gate(
+                ctx["gain"], ctx["pix"], ctx["high_beam"], ctx["low_beam"], combine_settings(config, method, 1.0),
+                v["aca_shortest_klambda"], v["min_gain"], flux_tolerance=v["gate_flux_tolerance"],
+                rms_tolerance=v["gate_rms_tolerance"])
+            print("mock sky test", measurements["mock_sky_test"], flush=True)
+        del ctx, product
+    measurements["flags"] = sorted(f"{flavour}/{name}" for flavour in TP_FLAVOURS
+                                   for name, c in measurements[flavour]["checks"].items() if c["flag"])
+    write_json(out["measurements"], measurements)
+    return out
+
+
+def run_jcomb(paths, config, overwrite=False):
+    return run_method("jcomb", paths, config, overwrite)
+
+
+def run_feather(paths, config, overwrite=False):
+    return run_method("feather", paths, config, overwrite)
+
+
+# ---------------------------------------------------------------- power spectra in one box
+
+def box_estimates(tp, interferometer, defined, pix, high_beam, low_beam, tp_fwhm, core, settings, k2, padding) -> dict:
+    """TP factors that align the TP with the 12m+7m image inside the ``core`` slice of a cutout.
+
+    The cutout is larger than the box so that smoothing and the TP beam correction are
+    not affected by the box edge. Three estimates per uv bin (bin width = 1 / box size):
+    ``psd_tp_res``: sqrt(P_12m+7m / P_TP) with the 12m+7m image smoothed to the TP beam;
+    ``amplitude_high_res`` and ``cross_high_res``: the same amplitude ratio, and the
+    cross-spectrum (shared signal only), with the TP brought to the 12m+7m beam instead.
+    """
+    high_tp = np.nan_to_num(smooth_to(np.where(defined, interferometer, np.nan), pix, high_beam, tp_fwhm))[core]
+    tp_high = tp_at_high_resolution(tp, pix, low_beam, high_beam, k2, padding)[core]
+    tp_box, int_box, mask = tp[core], interferometer[core], defined[core]
+    window = tapered_window(mask, pix, settings["window_taper_arcsec"])
+    step = ARCSEC_PER_KLAMBDA / (min(tp_box.shape) * pix)      # bin width set by the shorter side
+    edges = step * (0.5 + np.arange(0, int(20.0 / step) + 1))
+    centres = 0.5 * (edges[:-1] + edges[1:])
+    spectra = {"interferometer_tp_res": windowed_power(high_tp, window, pix, edges),
+               "tp": windowed_power(tp_box, window, pix, edges),
+               "interferometer": windowed_power(int_box, window, pix, edges),
+               "tp_high_res": windowed_power(tp_high, window, pix, edges)}
+    band = sorted(float(x) for x in ARCSEC_PER_KLAMBDA / np.asarray(settings["matching_range_arcsec"], dtype=float))
+    in_band = (centres >= band[0]) & (centres <= band[1])
+    a, b = remove_window_mean(tp_high, window), remove_window_mean(int_box, window)
+    s_ab, s_aa = cross_spectrum_slopes(a, b, window, pix, edges)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        psd = np.sqrt(spectra["interferometer_tp_res"] / spectra["tp"])
+        amplitude = np.sqrt(spectra["interferometer"] / spectra["tp_high_res"])
+        cross = 1.0 / s_aa
+    usable = centres <= k2                      # the TP beam correction ends at k2
+    band_ab, band_aa = (float(x[0]) for x in cross_spectrum_slopes(a, b, window, pix, band))
+    clean = lambda v, keep: [float(x) if ok and np.isfinite(x) else None for x, ok in zip(v, keep)]
+    return {"bin_centres_klambda": centres.tolist(), "bin_width_klambda": float(step),
+            "matching_range_klambda": band, "window": window, "interferometer_tp_res": high_tp,
+            "spectra": {k: v.tolist() for k, v in spectra.items()},
+            "factor_per_bin": {"psd_tp_res": clean(psd, np.ones(len(psd), bool)),
+                               "amplitude_high_res": clean(amplitude, usable), "cross_high_res": clean(cross, usable)},
+            "factor_in_matching_range": {
+                "psd_tp_res_lowest_tp_point": float(np.max(psd[in_band])),
+                "psd_tp_res_median": float(np.median(psd[in_band])),
+                "amplitude_high_res_median": float(np.median(amplitude[in_band & usable])),
+                "cross_high_res": 1.0 / band_aa,
+                "correlation": float(np.sqrt(band_ab / band_aa))},
+            "bins_in_matching_range": int(np.sum(in_band)),
+            "fraction_of_box_with_gain_defined": float(np.mean(mask))}
+
+
+def run_box_spectrum(paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
+    """Power spectra of the TP and the 12m+7m image inside each box, and the factor that aligns them."""
+    from astropy.coordinates import SkyCoord
+    import astropy.units as u
+    from scipy import fft as _fft
+    s = config["box_spectrum"]
+    root = paths["output_root"] / "box_spectrum"
+    out = {f"{box['name']}_{ext}": root / f"box_{box['name']}.{ext}" for box in s["boxes"]
+           for ext in ("json", "pdf", "png")}
+    guard_outputs(list(out.values()), overwrite)
+    flavour = config["tp_factor"]["determined_from"]
+    low, high, gain, header, pix, high_beam, low_beam = load_prepared(paths, flavour)
+    tp_fwhm, k2 = config["prepare"]["tp_fwhm_arcsec"], config["jcomb"]["k2_klambda"]
+    margin = int(np.ceil(3.0 * tp_fwhm / pix))
+    truth_path = paths["output_root"] / "jcomb" / f"jcomb_{flavour}.fits"
+    truth_full = fits.getdata(truth_path) if truth_path.is_file() else None
+    for box in s["boxes"]:
+        centre = SkyCoord(box["centre"], unit=(u.hourangle, u.deg))
+        x, y = (int(round(float(v))) for v in WCS(header).celestial.world_to_pixel(centre))
+        half_x, half_y = (int(round(side / pix / 2)) for side in box["size_arcsec"])
+        if y - half_y < 0 or x - half_x < 0 or y + half_y > gain.shape[0] or x + half_x > gain.shape[1]:
+            raise ValueError(f"Box {box['name']} does not fit on the grid")
+        # Cutout = box plus a three-beam margin for the smoothing, clipped at the grid edge.
+        y0, x0 = max(y - half_y - margin, 0), max(x - half_x - margin, 0)
+        y1, x1 = min(y + half_y + margin, gain.shape[0]), min(x + half_x + margin, gain.shape[1])
+        cut = np.s_[y0:y1, x0:x1]
+        core = np.s_[y - half_y - y0:y + half_y - y0, x - half_x - x0:x + half_x - x0]
+        defined = gain[cut] > 0
+        args = (pix, high_beam, low_beam, tp_fwhm, core, s, k2, config["prepare"]["padding_arcsec"])
+        data = box_estimates(low[cut], high[cut], defined, *args)
+        window = data.pop("window")
+        interferometer_tp_res = data.pop("interferometer_tp_res")
+        summary = {"name": box["name"], "tp_model": flavour, "centre": box["centre"],
+                   "centre_deg": [float(centre.ra.deg), float(centre.dec.deg)], "size_arcsec": box["size_arcsec"],
+                   "distance_to_grid_edge_arcsec": float(min(y - half_y, x - half_x, gain.shape[0] - y - half_y,
+                                                             gain.shape[1] - x - half_x) * pix),
+                   **data}
+        # Known-answer check: truth = the J-comb image (unit factor); mock TP = truth at the TP beam / F.
+        if truth_full is not None:
+            f_true = float(s["mock_true_factor"])
+            truth = np.nan_to_num(jybeam_to_mjysr(truth_full[cut], *high_beam[:2]))
+            mock_tp = np.nan_to_num(smooth_to(truth, pix, high_beam, tp_fwhm)) / f_true
+            _, _, k = uv_distance_klambda(truth.shape, pix)
+            cutoff = float(s["mock_missing_below_klambda"])
+            filtered = _fft.irfft2(_fft.rfft2(truth) * (1.0 - 1.0 / (1.0 + (k / cutoff) ** 10)), s=truth.shape)
+            summary["mock_check"] = {"true_factor": f_true}
+            for name, mock_int in (("interferometer_complete", truth),
+                                   ("interferometer_without_large_scales", filtered)):
+                mock = box_estimates(mock_tp, mock_int * defined, defined, *args)
+                summary["mock_check"][name] = mock["factor_in_matching_range"]
+            summary["mock_check"]["note"] = (
+                "Mock TP = the J-comb image at the TP beam divided by the true factor. Mock 12m+7m = the J-comb "
+                f"image inside the mosaic, as is and with scales below {cutoff:g} klambda removed.")
+        write_json(out[f"{box['name']}_json"], summary)
+        aligned = data["factor_in_matching_range"]["psd_tp_res_lowest_tp_point"]
+        plot_box_spectrum(root / f"box_{box['name']}", np.where(defined[core], high[cut][core], np.nan),
+                          low[cut][core], np.where(defined[core], interferometer_tp_res, np.nan), window,
+                          (half_x * pix, half_y * pix), data["bin_centres_klambda"], data["spectra"],
+                          {**data["factor_per_bin"], "aligned": aligned}, data["matching_range_klambda"], k2)
+        print(box["name"], json.dumps({k: summary[k] for k in ("factor_in_matching_range",
+                                                                "fraction_of_box_with_gain_defined")}
+                                      | {"mock_check": summary.get("mock_check")}, indent=1), flush=True)
+    return out
+
+
+# ---------------------------------------------------------------- Planck calibration
+
+def run_planck_calibration(paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
+    """Compare the TP model with Planck at the TP frequency: over the well-covered area (linear
+    fit with a uniform background) and in the brightest Planck beam alone."""
+    from astropy.wcs import WCS as _WCS
+    from reproject import reproject_exact, reproject_interp
+    s = config["planck_calibration"]
+    root = paths["output_root"] / "planck_calibration"
+    out = {"summary": root / "planck_calibration.json", "planck": root / "planck_at_tp_frequency.fits",
+           "model": root / "tp_at_planck_beam.fits", "coverage": root / "tp_coverage_of_planck_beam.fits",
+           **{f"{name}_{ext}": root / f"{name}.{ext}" for name in ("planck_maps", "planck_scatter")
+              for ext in ("pdf", "png")}}
+    guard_outputs(list(out.values()), overwrite)
+    flavour, band, pix = s["tp_model"], s["band"], s["pixel_arcsec"]
+    nu_tp = config["prepare"]["tp_frequency_ghz"] * 1e9
+    tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
+
+    # Planck: K_CMB -> CO(2-1) removed -> MJy/sr at the TP frequency, on the working grid.
+    tp, tp_header, tp_wcs = read_plane(paths[f"tp_{flavour}"])
+    tp = jybeam_to_mjysr(tp.astype(float), *beam_parameters(tp_header)[:2])
+    ra, dec = tp_wcs.wcs_pix2world([[tp.shape[1] / 2 - 0.5, tp.shape[0] / 2 - 0.5]], 0)[0]
+    grid = pc.grid_header(float(ra), float(dec), pix, s["width_arcmin"])
+    record = json.loads(paths["planck_fetch_record"].read_text())
+    nside = int(record["nside"])
+    co_factor = float(record["maps"]["co_type1"]["header"]["CNV2-1"])
+    rimo = fits.getdata(paths["planck_rimo"], "MAP_PARAMS")
+    planck_fwhm = {str(r["FREQUENCY"][0]).strip(): float(r["FWHM"]) * 60 for r in rimo}[band]
+    nu, tau = pc.read_bandpass(paths["planck_rimo"], band)
+    factor = pc.kcmb_to_mjysr(nu, tau, nu_tp, s["dust_beta"], s["dust_temperature_k"])
+    z, zco = np.load(paths["planck_217"]), np.load(paths["planck_co"])
+    t_map = pc.healpix_on_grid(z["pixel"], z["I_STOKES"], nside, grid)
+    co = pc.healpix_on_grid(zco["pixel"], zco["INTEN21"], nside, grid) * co_factor
+    planck, planck_with_co = (t_map - co) * factor, t_map * factor
+
+    # TP model at the Planck beam, with the fraction of each beam inside its footprint.
+    shape = (grid["NAXIS2"], grid["NAXIS1"])
+    kernel_fwhm = float(np.sqrt(planck_fwhm**2 - tp_fwhm**2))
+    tp_grid, _ = reproject_exact((tp, tp_wcs), grid, shape_out=shape)
+    model, coverage = pc.smooth_with_coverage(tp_grid, kernel_fwhm, pix)
+    # Variant: outside the footprint, the 870 um map scaled by the median TP / 870 um ratio.
+    atl, atl_header = fits.getdata(paths["atlasgal_870"], header=True)
+    atl = jybeam_to_mjysr(np.squeeze(atl).astype(float), atl_header["BMAJ"] * 3600, atl_header["BMIN"] * 3600)
+    atl_on_tp, _ = reproject_interp((atl, _WCS(atl_header).celestial), tp_wcs, shape_out=tp.shape)
+    fill_scale = float(np.nanmedian(tp / atl_on_tp))
+    filled_grid, _ = reproject_exact((np.where(np.isfinite(tp), tp, atl_on_tp * fill_scale), tp_wcs), grid,
+                                     shape_out=shape)
+    filled, coverage_filled = pc.smooth_with_coverage(filled_grid, kernel_fwhm, pix)
+
+    finite = np.isfinite(planck)
+    selected = (coverage >= s["coverage_min"]) & finite
+    beam_pixels = 1.1331 * planck_fwhm**2 / pix**2
+    selections = {f"coverage_ge_{s['coverage_min']:g}": (model, planck, selected),
+                  "coverage_ge_0.8": (model, planck, (coverage >= 0.8) & finite),
+                  "coverage_ge_0.7": (model, planck, (coverage >= 0.7) & finite),
+                  "filled_with_870um": (filled, planck, (coverage_filled >= 0.99) & finite & (coverage >= 0.5)),
+                  f"no_co_removal_coverage_ge_{s['coverage_min']:g}": (model, planck_with_co, selected)}
+    fits_ = {}
+    for name, (m, p, sel) in selections.items():
+        fits_[name] = {**pc.linear_fit(m, p, sel), "independent_beams": float(sel.sum() / beam_pixels),
+                       "ratio_direct": pc.ratio_stats(m, p, sel)}
+        fits_[name]["ratio_background_removed"] = pc.ratio_stats(m, p - fits_[name]["background_mjysr"], sel)
+    main_fit = fits_[f"coverage_ge_{s['coverage_min']:g}"]
+
+    # Brightest beam (southern and middle part of the filament), on its own.
+    radius = s["bright_radius_arcmin"] * 60.0 / pix
+    peak, region = pc.bright_region(model, selected, radius)
+    threshold = np.quantile(planck[selected], s["reference_fraction"])
+    reference = selected & (planck <= threshold)
+    bright = pc.bright_region_calibration(model, planck, peak, region, reference, main_fit["background_mjysr"])
+    bright_with_co = pc.bright_region_calibration(
+        model, planck_with_co, peak, region, reference,
+        fits_[f"no_co_removal_coverage_ge_{s['coverage_min']:g}"]["background_mjysr"])
+    peak_ra, peak_dec = _WCS(grid).wcs_pix2world([[peak[1], peak[0]]], 0)[0]
+    bright.update({"peak_ra_dec_deg": [float(peak_ra), float(peak_dec)], "radius_arcmin": s["bright_radius_arcmin"],
+                   "coverage_at_peak": float(coverage[peak]), "coverage_min_in_region": float(coverage[region].min()),
+                   "independent_beams": float(region.sum() / beam_pixels),
+                   "co_fraction_of_planck_at_peak": float((planck_with_co[peak] - planck[peak]) / planck_with_co[peak]),
+                   "without_co_removal": bright_with_co["ratio_model_over_planck"]})
+    ratios = bright["ratio_model_over_planck"]["region_mean"]
+    summary = {
+        "tp_model": flavour, "tp_frequency_ghz": nu_tp / 1e9, "planck_band": band, "planck_fwhm_arcsec": planck_fwhm,
+        "kcmb_to_mjysr_at_tp_frequency": factor,
+        "kcmb_to_mjysr_iras_convention_check": pc.kcmb_to_mjysr_iras(nu, tau, float(band) * 1e9),
+        "co21_kcmb_per_k_kms": co_factor, "fill_scale_tp_over_870um": fill_scale,
+        "linear_fits_tp_vs_planck": fits_,
+        "ratio_by_coverage": {f"{lo:.1f}-{hi:.1f}": pc.ratio_stats(model, planck - main_fit["background_mjysr"],
+                                                                  (coverage >= lo) & (coverage < hi) & finite)
+                              for lo, hi in ((0.5, 0.7), (0.7, 0.8), (0.8, 0.9), (0.9, 1.01))},
+        "brightest_beam": bright,
+        "implied_tp_factor": {
+            "linear_fit_with_background (1/gain)": 1.0 / main_fit["gain"],
+            "brightest_beam_direct": 1.0 / ratios["direct"],
+            "brightest_beam_background_removed": 1.0 / ratios["background_removed"],
+            "brightest_beam_differential": 1.0 / ratios["differential"]},
+        "note": "The factor is what the TP model would be multiplied by to match Planck. Nothing is applied.",
+    }
+    write_json(out["summary"], summary)
+    hashes = input_hashes(paths, ["planck_217", "planck_co", "planck_rimo", f"tp_{flavour}"])
+    for key, data, quantity, beam in (
+            ("planck", planck, f"Planck {band} GHz, CO(2-1) removed, at {nu_tp / 1e9:g} GHz", planck_fwhm),
+            ("model", np.where(coverage >= 0.5, model, np.nan), f"TP {flavour} at the Planck beam", planck_fwhm),
+            ("coverage", coverage, "fraction of the Planck beam inside the TP model", planck_fwhm)):
+        header = grid.copy()
+        header["BUNIT"] = "" if key == "coverage" else "MJy/sr"
+        header["BMAJ"] = header["BMIN"] = beam / 3600.0
+        header["BPA"] = 0.0
+        write_product(out[key], data, header, {"stage": "planck_calibration", "quantity": quantity}, hashes,
+                      bunit=header["BUNIT"], beam=(beam, beam, 0.0))
+    label = TP_LABELS[flavour]
+    plot_planck_maps(root / "planck_maps", planck, model, coverage, s["coverage_min"], peak, radius, pix, label)
+    plot_planck_scatter(root / "planck_scatter", planck, model, selected, region, reference, main_fit, bright, label)
+    print(json.dumps({"fits": {k: (round(v["gain"], 3), round(v["offset_mjysr"], 2)) for k, v in fits_.items()},
+                      "brightest_beam": bright, "implied_tp_factor": summary["implied_tp_factor"]}, indent=1), flush=True)
+    return out
+
+
+STAGES: dict[str, Callable] = {"prepare": run_prepare, "tp_factor": run_tp_factor, "jcomb": run_jcomb,
+                               "feather": run_feather, "box_spectrum": run_box_spectrum,
+                               "planck_calibration": run_planck_calibration}
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--stage", choices=[*STAGES, "all"], default="all")
+    parser.add_argument("--overwrite", action="store_true")
+    args = parser.parse_args(argv)
+    project = ProjectPaths.discover()
+    config = load_task_config(project.root / args.config if not args.config.is_absolute() else args.config)
+    paths = resolve_task_paths(project, config)
+    for stage in (list(STAGES) if args.stage == "all" else [args.stage]):
+        result = STAGES[stage](paths, config, args.overwrite)
+        append_manifest(paths["output_root"], {
+            "stage": stage, "config": str(args.config),
+            "settings": {k: v for k, v in config.items() if k not in ("inputs", "outputs")},
+            "inputs_sha256": input_hashes(paths, [n for n in config["inputs"] if paths[n].is_file()]),
+            "outputs": output_paths(result)})
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

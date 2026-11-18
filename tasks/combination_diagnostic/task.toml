@@ -23,6 +23,11 @@ root = "results/combination_diagnostic"
 [reduction_inputs]
 combination_script = "data/reduction/alma/7MTM2TM1/cont/ms/combine_cont.sh"
 total_power = "data/reduction/alma/TP7MTM2TM1/cont/totalpower_dust_ff.fits"
+interferometer = "data/reduction/alma/TP7MTM2TM1/cont/interferometer_dust_ff.fits"
+feather_1p0 = "data/reduction/alma/TP7MTM2TM1/cont/feather_casa_backend/feather_combined_dust_ff.fits"
+feather_2p0 = "data/reduction/alma/TP7MTM2TM1/cont/feather_casa_backend/feather_combined_dust_ff_sdfactor2p0.fits"
+feather_2p5 = "data/reduction/alma/TP7MTM2TM1/cont/feather_casa_backend/feather_combined_dust_ff_sdfactor2p5.fits"
+feather_3p0 = "data/reduction/alma/TP7MTM2TM1/cont/feather_casa_backend/feather_combined_dust_ff_sdfactor3p0.fits"
 
 [uv_plot]
 round_decimals = 1
@@ -81,7 +86,9 @@ height_inches = 7.2440944882
 output_formats = ["pdf", "svg", "png"]
 dpi = 600
 tp_minimum_response = 0.1
-tp_display_scale = 2.7 # Display only; disclosed in the Figure 1 caption.
+tp_display_scale = 1.0
+# 7 m on the 12 m PB via the 12m+7m image; TP shown with and without its beam.
+amplitude_source = "amplitude_alignment"
 amplitude_uv_edges_klambda = [4.8, 6.0, 7.0, 8.0, 10.0, 12.0, 15.0, 18.0, 22.0, 26.0, 32.0, 40.0, 50.0, 65.0, 85.0, 110.0, 145.0, 190.0, 250.0, 330.0, 430.0, 560.0, 730.0, 960.0, 1050.0]
 
 [pointing_range]
@@ -115,3 +122,36 @@ cutout_arcsec = 100.0
 region_centres_deg = [[221.244, -59.8020], [221.359, -59.8227]]
 region_names = ["Central", "South"]
 width_inches = 7.2440944882
+
+# Forward test: sky images through the native 7 m PB at measured ACA uv points.
+[aca_forward_test]
+ddids = [0, 7]
+uv_edges_klambda = [4.8, 6.0, 7.0, 8.0, 9.165, 10.5, 12.0, 14.0, 17.0, 20.0, 25.0, 30.0]
+minimum_support = 0.95
+bootstrap_repeats = 500
+random_seed = 3168
+figure_selection = "interior_pairs"
+output_formats = ["pdf", "png"]
+
+[aca_forward_test.sky_models]
+aca_only = { source = "images.aca_pbcor", label = "ACA-only image" }
+interferometer = { source = "reduction_inputs.interferometer", label = "12m+7m (no TP)", tp_scale = 0.0, tp_beam_transfer = true }
+feather_1p0 = { source = "reduction_inputs.feather_1p0", label = "Feather, TP x1", tp_scale = 1.0, tp_beam_transfer = true }
+feather_2p0 = { source = "reduction_inputs.feather_2p0", label = "Feather, TP x2", tp_scale = 2.0 }
+feather_2p5 = { source = "reduction_inputs.feather_2p5", label = "Feather, TP x2.5", tp_scale = 2.5 }
+feather_3p0 = { source = "reduction_inputs.feather_3p0", label = "Feather, TP x3", tp_scale = 3.0 }
+jcomb = { source = "images.allscale_sky", label = "J-comb (delivered)" }
+
+# TP and interferometer amplitudes on the matched 12 m PB, TP beam removed.
+[amplitude_alignment]
+sky_model = "images.combined_pbcut"
+tp_minimum_response = 0.1
+continuous_min_klambda = 1.0
+continuous_points = 60
+overlap_uv_edges_klambda = [4.8, 5.4, 6.0, 6.6, 7.2, 7.8, 8.4, 9.165]
+bootstrap_repeats = 500
+random_seed = 3168
+width_inches = 7.2440944882
+height_inches = 2.55
+output_formats = ["pdf", "svg", "png"]
+dpi = 600

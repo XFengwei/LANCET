@@ -120,8 +120,8 @@ rerun or repurposed merely because both involve data combination.
 
 At the author's request, R4 uv coverage, visibility diagnostics and subsequent
 combination comparisons extend the maintained `combination_diagnostic` task.
-Use the local `combination_diagnostic` symlink and the corresponding result
-symlink to reach its configuration and evidence. Keep the scientific code and
+Its configuration is in `tasks/combination_diagnostic/` and its evidence in
+`results/combination_diagnostic/`. Keep the scientific code and
 products there; this coordination task records status and manuscript/reply
 links. Figure 1 placement is a later decision.
 

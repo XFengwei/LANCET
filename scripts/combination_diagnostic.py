@@ -775,7 +775,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "uv", "visibilities", "overlap-tests", "pb-curve", "full-sampling", "figure1", "figure1-three-panel", "tp-beam-test", "pointing-profiles", "pointing-range", "joint-images", "dirty-beam", "total-power", "compare-images", "beam-match", "all"),
+        choices=("inspect", "uv", "visibilities", "overlap-tests", "pb-curve", "full-sampling", "figure1", "figure1-three-panel", "tp-beam-test", "aca-forward-test", "amplitude-alignment", "amplitude-alignment-plot", "pointing-profiles", "pointing-range", "joint-images", "dirty-beam", "total-power", "compare-images", "beam-match", "all"),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
@@ -837,6 +837,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         from lancet.tp_beam_test import run_tp_beam_test
 
         run_tp_beam_test(paths, config, save_figure=_save_figure, overwrite=args.overwrite)
+    if args.stage == "aca-forward-test":
+        from lancet.aca_forward_test import run_aca_forward_test
+
+        run_aca_forward_test(paths, config, save_figure=_save_figure, overwrite=args.overwrite)
+    if args.stage == "amplitude-alignment":
+        from lancet.amplitude_alignment import run_amplitude_alignment
+
+        run_amplitude_alignment(paths, config, save_figure=_save_figure, overwrite=args.overwrite)
+    if args.stage == "amplitude-alignment-plot":
+        from lancet.amplitude_alignment import replot_alignment
+
+        replot_alignment(paths, config, save_figure=_save_figure)
     if args.stage == "pointing-profiles":
         from lancet.pointing_profiles import run_pointing_profiles
 

@@ -258,6 +258,77 @@ flux standard. C2/C5 have no cells with four rows below the TP 10% beam-response
 limit, so a similarly controlled direct TP/12 m comparison is unsupported.
 Figure 1 retains its physical amplitude scale pending scientific interpretation.
 
+## ACA forward test of combined images
+
+```bash
+PYTHONPATH=src conda run -n py312 python scripts/combination_diagnostic.py --stage aca-forward-test --overwrite
+```
+
+Each candidate sky image is multiplied by the native 7 m Gaussian PB at the
+ACA phase centre and Fourier-sampled at the measured ACA uv coordinates of the
+19 matched pointings: the ACA-only image, the 12m+7m interferometer image (no
+TP), CASA feather products with TP factors 1, 2, 2.5 and 3, and the delivered
+J-comb image. The TP model is sampled the same way. Unlike the Figure 1 and
+`tp-beam-test` comparisons, no sky model translates the ACA data to another
+PB, and no flux factor is fitted. An image consistent with the ACA data
+reproduces the measured cross-hand signal RMS in the same cells.
+
+It reuses the `overlap-tests` ACA row cache and noise summary. Results are
+given for all pairs and for the eight pairs whose PB-weighted image support
+is at least 0.95, for both sidebands together and separately, with
+pointing-pair bootstrap intervals. For the interferometer and feather-1
+images it also smooths the model to the TP beam to give a model-dependent
+TP/sky flux ratio. Outputs are in `results/combination_diagnostic/aca_forward_test/`.
+
+Limitations: Gaussian PBs; restored images contain their own residuals and
+deconvolution errors and are not independent of the ACA data; no spectral
+index is applied between image and sideband frequencies; the ACA-only image
+keeps its several-arcsec restoring beam, so it under-predicts with rising uv
+distance and is only a weak control.
+
+## TP/interferometer amplitude alignment
+
+```bash
+PYTHONPATH=src conda run -n py312 python scripts/combination_diagnostic.py --stage amplitude-alignment --overwrite
+PYTHONPATH=src conda run -n py312 python scripts/combination_diagnostic.py --stage amplitude-alignment-plot
+```
+
+The amplitude panel of the combination figure (manuscript Fig. 2) compares a TP model that keeps its 18.1″
+restoring beam with interferometer visibilities that have none, and moves
+the 7 m data to the 12 m PB with the all-scale image, which already contains
+the rescaled TP. This stage removes both effects without any flux factor:
+
+- 7 m signal RMS is translated to the matched 12 m PB with the 12m+7m image
+  (`images.combined_pbcut`), which contains no TP; `aca-forward-test` shows
+  that this image reproduces the measured 7 m visibilities.
+- The TP model is sampled through the same PB at the same uv points (12 m PB
+  in panel a, native 7 m PB in panels b and c, where the 7 m data need no
+  translation).
+- The TP beam is removed with its effective transfer through the PB, i.e. the
+  RMS ratio of the 12m+7m image smoothed to 18.1″ and unsmoothed on identical
+  cells. Division by the Gaussian beam response is the alternative bracket.
+  Corrections stop where the beam response falls below 10%.
+- Overlap bins (`overlap_uv_edges_klambda`) carry 16th–84th percentile
+  intervals from pointing-pair bootstrap resamples.
+
+`amplitude-alignment-plot` redraws the figure from the saved CSVs. Outputs,
+including a draft caption, are in `results/combination_diagnostic/amplitude_alignment/`.
+In the 12 m PB the correction is less certain: the 26″ PB mixes uv scales over
+about 7 kλ, and the 12m+7m image lacks the largest scales, which leak into
+these bins. The native 7 m PB comparison (b, c) is the more direct one.
+
+Since 13 November 2026 the adopted three-panel figure (manuscript Fig. 2) sets
+`amplitude_source = "amplitude_alignment"` and `tp_display_scale = 1` in
+`[figure1]`: panel (c) reads the 7 m/C2/C5 profiles and both TP curves from
+this stage, keeps the visibility-count strip, labels the TP curves directly and
+labels the count tracks by array. Run `amplitude-alignment` before
+`figure1-three-panel`. The previous ×2.7 outputs are archived in
+`results/combination_diagnostic/figures/archive_2026-11-13_tp_scale2p7/`.
+
+`figure1-three-panel` also accepts `output_suffix` in `[figure1]`, so a variant
+(for example with `tp_display_scale = 1`) can be written without replacing
+the adopted figure.
+
 ## Per-pointing amplitude profiles
 
 ```bash
@@ -343,8 +414,6 @@ For render-time panel QA, put the Nature Figure skill's `scripts` directory on
 PDF-text and rendered-collision audits after the final render. Diagnostics are
 exported as PDF/SVG/PNG. The run report and QA notes belong to this result root.
 
-`tasks/paper_ii_referee_response/combination_diagnostic` links to this task.
-`results/paper_ii_referee_response/combination_diagnostic` links to its outputs.
 R4a remains in progress until the common-response scientific assessment is
 complete. Figure 1 uses the explicitly adopted three-panel layout; no manuscript
 figure is replaced merely by generating these diagnostics.
