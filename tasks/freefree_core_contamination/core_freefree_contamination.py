@@ -14,12 +14,12 @@ from scipy.ndimage import map_coordinates, uniform_filter
 from astropy.stats import SigmaClip
 from photutils.background import Background2D, StdBackgroundRMS
 
-root = Path(__file__).resolve().parent.parent
+root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--radio-rms-mjybeam', type=float)
-parser.add_argument('--output-root', type=Path, default=Path('results/construct_freefree_model/core_contamination'))
+parser.add_argument('--output-root', type=Path, default=Path('results/freefree_core_contamination'))
 args = parser.parse_args()
-cfg = tomllib.loads((root / 'tasks/construct_freefree_model/task.toml').read_text())
+cfg = tomllib.loads((root / 'tasks/freefree_core_contamination/task.toml').read_text())
 radio_path = root / cfg['inputs']['cornish_map']
 radio, rh = fits.getdata(radio_path, header=True)
 assert radio.ndim == 2 and rh['BUNIT'].upper() == 'JY/BEAM'

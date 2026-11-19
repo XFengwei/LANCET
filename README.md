@@ -101,7 +101,7 @@ The default figures are written under `results/starcluster/`. Use
 Inspect the delivered radio inputs for the free-free model task:
 
 ```bash
-conda run -n py312 python scripts/construct_freefree_model.py --stage inspect
+conda run -n py312 python tasks/construct_freefree_model/run.py --stage inspect
 ```
 
 Recreate the smoothed and reprojected CORNISH inputs under
@@ -116,8 +116,8 @@ After fitting, create the 18-arcsec free-free map on the dust grid and
 synthesize the 230 and 250 GHz continuum products with:
 
 ```bash
-conda run -n py312 python scripts/construct_freefree_model.py --stage postprocess
-conda run -n py312 python scripts/construct_freefree_model.py --stage plot
+conda run -n py312 python tasks/construct_freefree_model/run.py --stage postprocess
+conda run -n py312 python tasks/construct_freefree_model/run.py --stage plot
 conda run -n py312 python scripts/synthesize_continuum.py --stage inspect
 conda run -n py312 python scripts/synthesize_continuum.py --stage all
 ```

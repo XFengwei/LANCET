@@ -32,7 +32,7 @@ MEERKAT_CUBE = (
     / "radio"
     / "MeerKAT_subcube_reprojected.fits"
 )
-SCRIPT = PROJECT_ROOT / "scripts" / "construct_freefree_model.py"
+SCRIPT = PROJECT_ROOT / "tasks" / "construct_freefree_model" / "run.py"
 SPEC = spec_from_file_location("construct_freefree_model_script", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 FREEFREE_SCRIPT = module_from_spec(SPEC)
@@ -144,6 +144,7 @@ def test_map_fit_respects_mask_and_minimum_band_count() -> None:
         frequency,
         rms,
         beam_solid_angle_sr=omega,
+        output_frequency_ghz=223.8,
         fit_mask=np.array([[True, False]]),
         minimum_bands=3,
     )
@@ -151,6 +152,58 @@ def test_map_fit_respects_mask_and_minimum_band_count() -> None:
     assert results["EM_map"][0, 0] == pytest.approx(1e6, rel=1e-5)
     assert np.isnan(results["EM_map"][0, 1])
     assert results["nband_map"].tolist() == [[3, 0]]
+
+
+def test_map_fit_evaluates_freefree_at_requested_frequency() -> None:
+    frequency = np.array([0.9, 1.1, 1.4])
+    omega = beam_solid_angle(8.0, 8.0)
+    spectrum = freefree_flux_density(
+        frequency,
+        1e6,
+        beam_solid_angle_sr=omega,
+    )
+    sed = spectrum[:, None, None]
+
+    results = fit_freefree_map(
+        sed,
+        frequency,
+        np.full(3, 1e-5),
+        beam_solid_angle_sr=omega,
+        output_frequency_ghz=223.8,
+        minimum_bands=3,
+    )
+
+    expected = freefree_flux_density(
+        223.8,
+        results["EM_map"][0, 0],
+        beam_solid_angle_sr=omega,
+    )
+    assert results["ff_map"][0, 0] == pytest.approx(expected, rel=1e-6)
+    assert "ff230_map" not in results
+
+
+def test_map_fit_requires_an_output_frequency() -> None:
+    with pytest.raises(TypeError, match="output_frequency_ghz"):
+        fit_freefree_map(
+            np.ones((3, 1, 1)),
+            np.array([0.9, 1.1, 1.4]),
+            np.full(3, 1e-5),
+            beam_solid_angle_sr=beam_solid_angle(8.0, 8.0),
+            minimum_bands=3,
+        )
+
+
+def test_task_names_freefree_maps_from_configured_frequency() -> None:
+    with (
+        PROJECT_ROOT
+        / "tasks"
+        / "construct_freefree_model"
+        / "task.toml"
+    ).open("rb") as handle:
+        config = tomllib.load(handle)
+
+    assert config["fit"]["output_frequency_ghz"] == 223.8
+    assert FREEFREE_SCRIPT.freefree_map_stem(config) == "ff224_map"
 
 
 def test_paper2_profile_reproduces_reference_13_band_pixel() -> None:
@@ -214,7 +267,7 @@ def test_task_inspection_reports_paper_profile_without_writing() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/construct_freefree_model.py",
+            "tasks/construct_freefree_model/run.py",
             "--stage",
             "inspect",
         ],
@@ -242,8 +295,8 @@ def test_temperature_comparison_plot_writes_pdf_and_png(
         shutil.copyfile(
             FREEFREE_RESULTS
             / f"Te_{temperature}K"
-            / "ff230_map.fits",
-            directory / "ff230_map.fits",
+            / "ff224_map.fits",
+            directory / "ff224_map.fits",
         )
 
     with (
@@ -272,7 +325,7 @@ def test_fit_result_writer_enforces_compact_fits_storage(
     results = {
         "EM_map": np.ones(shape, dtype=np.float64),
         "EMerr_map": np.ones(shape, dtype=np.float64),
-        "ff230_map": np.ones(shape, dtype=np.float64),
+        "ff_map": np.ones(shape, dtype=np.float64),
         "chi2_map": np.ones(shape, dtype=np.float64),
         "rchi2_map": np.ones(shape, dtype=np.float64),
         "nband_map": np.ones(shape, dtype=np.float64),
@@ -285,7 +338,12 @@ def test_fit_result_writer_enforces_compact_fits_storage(
         np.linspace(1.0, 5.5, 15),
         tmp_path,
         electron_temperature_k=8000.0,
+        output_frequency_ghz=223.8,
     )
+
+    freefree_header = fits.getheader(tmp_path / "ff224_map.fits")
+    assert freefree_header["FREQ"] == pytest.approx(223.8e9)
+    assert not (tmp_path / "ff230_map.fits").exists()
 
     for path in written:
         bitpix = int(fits.getheader(path)["BITPIX"])
@@ -293,3 +351,47 @@ def test_fit_result_writer_enforces_compact_fits_storage(
             assert bitpix == 16
         else:
             assert bitpix == -32
+
+
+def test_postprocess_keeps_frequency_on_dust_grid_product(
+    tmp_path: Path,
+) -> None:
+    header = fits.Header(
+        {
+            "CTYPE1": "RA---TAN", "CTYPE2": "DEC--TAN",
+            "CRVAL1": 221.3, "CRVAL2": -59.8,
+            "CRPIX1": 16.5, "CRPIX2": 16.5,
+            "CDELT1": -2.0 / 3600, "CDELT2": 2.0 / 3600,
+            "CUNIT1": "deg", "CUNIT2": "deg",
+            "FREQ": 223.8e9, "TE": 8000.0,
+        }
+    )
+    directory = tmp_path / "Te_8000K"
+    directory.mkdir()
+    fits.writeto(
+        directory / "ff224_map.fits",
+        np.ones((32, 32), dtype=np.float32),
+        header,
+    )
+    dust_header = header.copy()
+    del dust_header["FREQ"], dust_header["TE"]
+    dust_header["CDELT1"], dust_header["CDELT2"] = -6.0 / 3600, 6.0 / 3600
+    dust_header["CRPIX1"], dust_header["CRPIX2"] = 5.5, 5.5
+    dust = tmp_path / "dust.fits"
+    fits.writeto(dust, np.ones((10, 10), dtype=np.float32), dust_header)
+    config = {
+        "preparation": {"common_beam_arcsec": 8.0},
+        "postprocess": {
+            "smoothed_beam_arcsec": 18.0,
+            "reference_temperature_k": 8000.0,
+        },
+        "fit": {"output_frequency_ghz": 223.8},
+    }
+
+    smoothed, reprojected = FREEFREE_SCRIPT.postprocess_freefree(
+        {"output_root": tmp_path, "dust_reference": dust},
+        config,
+    )
+
+    assert smoothed.name == "ff224_map_smoothed_18arcsec.fits"
+    assert fits.getheader(reprojected)["FREQ"] == pytest.approx(223.8e9)

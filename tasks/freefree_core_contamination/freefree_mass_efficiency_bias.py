@@ -10,9 +10,9 @@ from astropy.wcs import WCS
 from astropy.convolution import Gaussian2DKernel, convolve_fft
 from reproject import reproject_interp
 
-root=Path(__file__).resolve().parent.parent
+root = Path(__file__).resolve().parents[2]
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--radio-output-root',type=Path,default=Path('results/construct_freefree_model/core_contamination'))
+parser.add_argument('--radio-output-root',type=Path,default=Path('results/freefree_core_contamination'))
 args=parser.parse_args()
 out=root/args.radio_output_root
 metadata=json.loads((out/'summary.json').read_text())

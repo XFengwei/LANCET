@@ -23,11 +23,11 @@ from regions import Regions
 sys.path.insert(0, '/Users/fexu/.codex/skills/nature-figure/scripts')
 from audit_panel_alignment import require_matplotlib_panel_alignment
 
-root=Path(__file__).resolve().parent.parent
+root = Path(__file__).resolve().parents[2]
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('--output-root',type=Path,default=Path('results/construct_freefree_model/core_contamination'))
+parser.add_argument('--output-root',type=Path,default=Path('results/freefree_core_contamination'))
 args=parser.parse_args()
-config=tomllib.loads((root/'tasks/construct_freefree_model/task.toml').read_text())
+config=tomllib.loads((root/'tasks/freefree_core_contamination/task.toml').read_text())
 out=root/args.output_root
 metadata=json.loads((out/'summary.json').read_text())
 table=Table.read(out/'smooth_core_contamination.ecsv')

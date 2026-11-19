@@ -145,8 +145,8 @@ referee_items = ["7"]
 topic = "Compact free-free emission and mass sensitivity"
 mode = "diagnostic_then_update"
 status = "complete"
-owners = ["construct_freefree_model", "synthesize_continuum", "physical_properties", "core_formation"]
-scripts = ["scripts/freefree_mass_efficiency_bias.py", "scripts/core_freefree_contamination.py", "scripts/construct_freefree_model.py", "scripts/synthesize_continuum.py", "scripts/physical_properties.py", "scripts/core_formation.py"]
+owners = ["construct_freefree_model", "freefree_core_contamination", "synthesize_continuum", "physical_properties", "core_formation"]
+scripts = ["tasks/freefree_core_contamination/freefree_mass_efficiency_bias.py", "tasks/freefree_core_contamination/core_freefree_contamination.py", "tasks/construct_freefree_model/run.py", "scripts/synthesize_continuum.py", "scripts/physical_properties.py", "scripts/core_formation.py"]
 evidence = "Author-approved CORNISH-South sensitivity test, nondetection limits and both-reservoir mass-fraction estimates; manuscript and concise response updated. Closed at the author's request."
 
 [[subtasks]]

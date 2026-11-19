@@ -256,6 +256,7 @@ def fit_freefree_map(
     rms_jy_per_beam: np.ndarray,
     *,
     beam_solid_angle_sr: float,
+    output_frequency_ghz: float,
     electron_temperature_k: float = 8000.0,
     fit_mask: np.ndarray | None = None,
     minimum_bands: int = 6,
@@ -263,7 +264,11 @@ def fit_freefree_map(
     save_model_cube: bool = True,
     progress: Callable[[int, int], None] | None = None,
 ) -> dict[str, np.ndarray]:
-    """Fit a fixed-temperature free-free model independently in each pixel."""
+    """Fit a fixed-temperature free-free model independently in each pixel.
+
+    ``ff_map`` holds the fitted free-free flux density at
+    ``output_frequency_ghz``.
+    """
     sed = np.asarray(sed_cube, dtype=float)
     frequency = np.asarray(frequency_ghz, dtype=float)
     rms = np.asarray(rms_jy_per_beam, dtype=float)
@@ -283,6 +288,8 @@ def fit_freefree_map(
         not np.isfinite(snr_threshold) or snr_threshold <= 0
     ):
         raise ValueError("snr_threshold must be positive and finite")
+    if not np.isfinite(output_frequency_ghz) or output_frequency_ghz <= 0:
+        raise ValueError("output_frequency_ghz must be positive and finite")
 
     if fit_mask is None:
         mask = np.ones((ny, nx), dtype=bool)
@@ -294,7 +301,7 @@ def fit_freefree_map(
     outputs: dict[str, np.ndarray] = {
         "EM_map": np.full((ny, nx), np.nan, dtype=np.float32),
         "EMerr_map": np.full((ny, nx), np.nan, dtype=np.float32),
-        "ff230_map": np.full((ny, nx), np.nan, dtype=np.float32),
+        "ff_map": np.full((ny, nx), np.nan, dtype=np.float32),
         "chi2_map": np.full((ny, nx), np.nan, dtype=np.float32),
         "rchi2_map": np.full((ny, nx), np.nan, dtype=np.float32),
         "nband_map": np.zeros((ny, nx), dtype=np.int16),
@@ -339,8 +346,8 @@ def fit_freefree_map(
 
         outputs["EM_map"][iy, ix] = emission_measure
         outputs["EMerr_map"][iy, ix] = emission_measure_error
-        outputs["ff230_map"][iy, ix] = freefree_flux_density(
-            230.0,
+        outputs["ff_map"][iy, ix] = freefree_flux_density(
+            output_frequency_ghz,
             emission_measure,
             electron_temperature_k=electron_temperature_k,
             beam_solid_angle_sr=beam_solid_angle_sr,

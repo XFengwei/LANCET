@@ -5,7 +5,7 @@ name = "construct_freefree_model"
 meerkat_cube = "data/delivered/archive/radio/MeerKAT_subcube_reprojected.fits"
 meerkat_reference = "data/delivered/archive/radio/MeerKAT_subimage_1.38GHz_reprojected.fits"
 cornish_map = "data/delivered/archive/radio/CORNISH_5p5GHz.fits"
-dust_reference = "data/delivered/paper1/TP_SEDsynthetic230GHz_cont.fits"
+dust_reference = "data/delivered/sedfitter/Dustmodel_230GHz.fits"
 
 [outputs]
 root = "results/construct_freefree_model"
@@ -21,6 +21,11 @@ snr_threshold = 5.0
 mfs_threshold_jy_per_beam = 0.005
 alpha_min = -0.5
 alpha_max = 2.0
+# Frequency at which the fitted free-free map is evaluated: the ALMA 1.3 mm
+# continuum reference frequency (12m image header, 223.84 GHz), also used by
+# physical_properties and column_density. Paper II used 230 GHz (0.25% higher
+# free-free flux density). Output files are named ff<rounded GHz>_map*.fits.
+output_frequency_ghz = 223.8
 
 # Paper II reproduction profile. These values exactly reproduce the stored
 # fit mask, band-count map, and tested emission-measure pixels. The two fully
@@ -42,13 +47,6 @@ rms_provenance = "recovered_from_paper2_legacy_products"
 [postprocess]
 smoothed_beam_arcsec = 18.0
 reference_temperature_k = 8000.0
-
-[core_contamination]
-noise_box_beams = 8.0
-adopted_radio_rms_mjy_per_beam = 1.0
-detection_sigma = 3.0
-upper_limit_sigma = 1.0
-continuum_image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.fits"
 
 [temperature_comparison_plot]
 reference_temperature_k = 8000.0

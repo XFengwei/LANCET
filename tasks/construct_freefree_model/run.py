@@ -318,6 +318,19 @@ def _celestial_header(header: fits.Header, shape: tuple[int, int]) -> fits.Heade
     return output
 
 
+def _freefree_stem(frequency_ghz: float) -> str:
+    """File stem of the fitted free-free map, e.g. ``ff224_map``."""
+    return f"ff{round(float(frequency_ghz)):d}_map"
+
+
+def freefree_map_stem(config: Mapping[str, object]) -> str:
+    """File stem of the free-free map at the configured output frequency."""
+    fit = config["fit"]
+    if not isinstance(fit, Mapping):
+        raise TypeError("Fit settings must be a TOML table")
+    return _freefree_stem(float(fit["output_frequency_ghz"]))
+
+
 def save_fit_results(
     results: Mapping[str, np.ndarray],
     header_2d: fits.Header,
@@ -325,20 +338,25 @@ def save_fit_results(
     output_directory: Path,
     *,
     electron_temperature_k: float,
+    output_frequency_ghz: float,
     overwrite: bool = False,
 ) -> list[Path]:
     """Save fitted maps plus explicit metadata for the irregular band axis."""
     map_units = {
         "EM_map": "pc cm-6",
         "EMerr_map": "pc cm-6",
-        "ff230_map": "Jy/beam",
+        "ff_map": "Jy/beam",
         "chi2_map": "",
         "rchi2_map": "",
         "nband_map": "",
         "fitmask_map": "",
     }
+    file_stems = {
+        name: _freefree_stem(output_frequency_ghz) if name == "ff_map" else name
+        for name in map_units
+    }
     outputs = [
-        output_directory / f"{name}.fits"
+        output_directory / f"{file_stems[name]}.fits"
         for name in map_units
     ]
     if "model_cube" in results:
@@ -348,12 +366,17 @@ def save_fit_results(
 
     written: list[Path] = []
     for name, unit in map_units.items():
-        output = output_directory / f"{name}.fits"
+        output = output_directory / f"{file_stems[name]}.fits"
         header = header_2d.copy()
         header["TE"] = (
             float(electron_temperature_k),
             "Fixed electron temperature [K]",
         )
+        if name == "ff_map":
+            header["FREQ"] = (
+                float(output_frequency_ghz) * 1e9,
+                "Frequency of the free-free model [Hz]",
+            )
         if unit:
             header["BUNIT"] = unit
         elif "BUNIT" in header:
@@ -472,6 +495,7 @@ def run_fit(
             frequency,
             rms,
             beam_solid_angle_sr=omega,
+            output_frequency_ghz=float(fit["output_frequency_ghz"]),
             electron_temperature_k=temperature,
             fit_mask=fit_mask,
             minimum_bands=int(fit["minimum_bands"]),
@@ -490,6 +514,7 @@ def run_fit(
             frequency,
             output_directory,
             electron_temperature_k=temperature,
+            output_frequency_ghz=float(fit["output_frequency_ghz"]),
             overwrite=overwrite,
         )
         print(f"  wrote {len(written)} FITS products to {output_directory}")
@@ -515,7 +540,8 @@ def postprocess_freefree(
     temperature_directory = (
         paths["output_root"] / f"Te_{temperature:g}K"
     )
-    input_map = temperature_directory / "ff230_map.fits"
+    stem = freefree_map_stem(config)
+    input_map = temperature_directory / f"{stem}.fits"
     if not input_map.is_file():
         raise FileNotFoundError(
             f"Fitted free-free map not found: {input_map}; "
@@ -523,11 +549,11 @@ def postprocess_freefree(
         )
 
     smoothed_output = (
-        temperature_directory / "ff230_map_smoothed_18arcsec.fits"
+        temperature_directory / f"{stem}_smoothed_18arcsec.fits"
     )
     reprojected_output = (
         temperature_directory
-        / "ff230_map_smoothed_18arcsec_regrid2dust.fits"
+        / f"{stem}_smoothed_18arcsec_regrid2dust.fits"
     )
     _prepare_output(smoothed_output, overwrite=overwrite)
     _prepare_output(reprojected_output, overwrite=overwrite)
@@ -581,6 +607,9 @@ def postprocess_freefree(
         if key in dust_header:
             target_header[key] = dust_header[key]
     target_header["BUNIT"] = "Jy/beam"
+    for key in ("FREQ", "TE"):
+        if key in header:
+            target_header[key] = (header[key], header.comments[key])
     target_header.add_history(
         "LANCET construct_freefree_model: reprojected to dust grid"
     )
@@ -606,7 +635,7 @@ def plot_temperature_flux_comparison(
     *,
     overwrite: bool = False,
 ) -> list[Path]:
-    """Plot 230 GHz flux changes caused by the adopted temperatures."""
+    """Plot free-free flux changes caused by the adopted temperatures."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -633,10 +662,12 @@ def plot_temperature_flux_comparison(
             "A plotting color is required for each comparison temperature"
         )
 
+    stem = freefree_map_stem(config)
+    label_ghz = round(float(config["fit"]["output_frequency_ghz"]))
     reference_path = (
         paths["output_root"]
         / f"Te_{reference_temperature:g}K"
-        / "ff230_map.fits"
+        / f"{stem}.fits"
     )
     if not reference_path.is_file():
         raise FileNotFoundError(
@@ -654,7 +685,7 @@ def plot_temperature_flux_comparison(
         comparison_path = (
             paths["output_root"]
             / f"Te_{temperature:g}K"
-            / "ff230_map.fits"
+            / f"{stem}.fits"
         )
         if not comparison_path.is_file():
             raise FileNotFoundError(
@@ -724,11 +755,11 @@ def plot_temperature_flux_comparison(
     axis.set_xticks([0.001, 0.01, 0.1])
     axis.set_xticklabels(["0.1", "1", "10"])
     axis.set_xlabel(
-        r"$|\Delta S_{230\,\mathrm{GHz}}^{\mathrm{ff}}(T_{\rm e})/"
-        rf"S_{{230\,\mathrm{{GHz}}}}^{{\mathrm{{ff}}}}"
+        rf"$|\Delta S_{{{label_ghz}\,\mathrm{{GHz}}}}^{{\mathrm{{ff}}}}(T_{{\rm e}})/"
+        rf"S_{{{label_ghz}\,\mathrm{{GHz}}}}^{{\mathrm{{ff}}}}"
         rf"({reference_temperature:g}\,\mathrm{{K}})|$ (%)"
     )
-    axis.set_ylabel("Probability density")
+    axis.set_ylabel("Number of pixels")
     axis.grid(False)
     axis.legend(frameon=False, loc="upper right")
     figure.tight_layout()

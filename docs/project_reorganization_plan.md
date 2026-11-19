@@ -78,7 +78,7 @@ before. The proposal below is the starting point for the review, not a decision:
 
 | Scripts with no task | Proposal |
 |---|---|
-| `core_freefree_contamination`, `plot_core_freefree_contamination`, `freefree_mass_efficiency_bias` | into `construct_freefree_model` |
+| `core_freefree_contamination`, `plot_core_freefree_contamination`, `freefree_mass_efficiency_bias` | into their own task `freefree_core_contamination` (done 2026-11-20; author) |
 | `core_temperature_sampling`, `core_temperature_stress_test`, their two plot scripts, `report_core_temperature_tests` | new task `core_temperature_tests` |
 | `simba_fourier_comparison`, `simba_peak_comparison`, `simba_pixel_comparison` | new task `simba_comparison` |
 | `source_deconvolution` | into `source_catalogue` |
@@ -157,6 +157,7 @@ Each phase ends with the test suite passing and one commit. Moves use `git mv`, 
 
 - Delete `path_aliases.yaml`, `path_ledger.tsv` and `path_ledger.initial-2026-07-27.tsv`. No code reads them; they are mentioned only in `CLAUDE.md`, `data/README.md`, `data/STATUS.md` and two audits in `docs/`, which are updated.
 - Label the derived files in `data/delivered/` (D3). Known cases: `alma/TP7MTM2TM1/` (old v1–v3 combined images, now superseded), the `*.MJysr*`, `*.rp*` and `*.pbcut*` variants of the continuum images, and the smoothed SED products.
+- Delete `data/delivered/archive/radio/CORNISH_5p5GHz_8arcsec_{native,on_MeerKATgrid}.fits`: same data as `results/construct_freefree_model/prepared/` (headers differ). First repoint `tests/test_freefree.py::test_paper2_profile_reproduces_reference_13_band_pixel`, which reads the delivered copy. Keep `Tile724_CORNISH_5GHz.fits` and `subcube_G316.hdr` as provenance (source tile and cutout header; no reader).
 - Let git track `data/README.md` and `data/MANIFEST.tsv` (two exceptions in `.gitignore`), so a fresh clone states what data it needs.
 
 ### Phase 5. Documentation and rules
@@ -197,3 +198,4 @@ One row per task, filled in as the author checks it.
 | Task | Checked | Name | Script | Rerun against stored results | Open points |
 |---|---|---|---|---|---|
 | `prepare_continuum_images` | 2026-11-19 | kept | `tasks/prepare_continuum_images/run.py` | all 15 outputs byte-identical | 9 of 15 outputs have no reader; 13 outputs duplicate files in `data/delivered/` (3.4 GB); 4 operations still use the old v3 combined images |
+| `construct_freefree_model` | 2026-11-20 | kept | `tasks/construct_freefree_model/run.py` | all 28 FITS byte-identical at 230 GHz; output frequency then made a setting, 223.8 GHz (author): `ff224_map*` = old × 1.002736 exactly, all other outputs byte-identical | done: dust grid read from `sedfitter/Dustmodel_230GHz.fits` (identical output); y-label fixed; core contamination split into `freefree_core_contamination` (not reviewed, ALMA inputs outdated; results moved to `results/freefree_core_contamination/`). Open: old `ff230_map*` kept until `synthesize_continuum`/`column_density` review; CORNISH 8″ copies in `delivered/` → Phase 4 |
