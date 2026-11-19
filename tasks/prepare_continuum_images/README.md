@@ -30,10 +30,10 @@ recreated under `results/`; the delivered versions are never overwritten.
 Run:
 
 ```bash
-conda run -n py312 python scripts/prepare_continuum_images.py --stage inspect
-conda run -n py312 python scripts/prepare_continuum_images.py \
+conda run -n py312 python tasks/prepare_continuum_images/run.py --stage inspect
+conda run -n py312 python tasks/prepare_continuum_images/run.py \
   --stage mask --only 7MTM2
-conda run -n py312 python scripts/prepare_continuum_images.py \
+conda run -n py312 python tasks/prepare_continuum_images/run.py \
   --stage convert --only 7MTM2_pbcut
 ```
 

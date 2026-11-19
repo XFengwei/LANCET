@@ -37,7 +37,7 @@ CONVERTED_IMAGE = (
     / "IRDC316.8.7MTM2.robust0.5.clean.dropdeg.pbcut.MJysr.fits"
 )
 PRIMARY_BEAM = ALMA_7MTM2 / "casa" / "primary_beam_rp2miriad.fits"
-SCRIPT = PROJECT_ROOT / "scripts" / "prepare_continuum_images.py"
+SCRIPT = PROJECT_ROOT / "tasks" / "prepare_continuum_images" / "run.py"
 SPEC = spec_from_file_location("prepare_continuum_images_script", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 PREPARATION_SCRIPT = module_from_spec(SPEC)
@@ -140,7 +140,7 @@ def test_image_preparation_task_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/prepare_continuum_images.py",
+            "tasks/prepare_continuum_images/run.py",
             "--stage",
             "inspect",
         ],

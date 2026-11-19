@@ -98,6 +98,18 @@ Paper II results are checked to exist (list in `docs/reorganization_baseline/`).
 `star_cluster`; `multiwavelength_cards` and `continuum_comparison_cards` become tasks; `diagnostics`
 is sorted into the owning tasks; the empty `compare_interferometer_arrays` is deleted.
 
+**D6. Reduction scripts stay in `data/reduction/`** (author, 2026-11-18). The reduction tree is a
+stand-alone workspace with its own scripts (for example `cont/script/combine_cont.sh`); its finished
+products are delivered to `data/delivered/`, and tasks read those. Tasks should not depend on files
+inside the reduction tree; `combination_diagnostic`, which reads 13 of them, is settled at its review.
+
+**D7. getsf and the new combination** (author, 2026-11-18). A getsf run is expensive and is not
+repeated. The existing extraction stays as it is for the source catalogue and for the getsf figures
+(Paper II Fig. 7 and D1). Quantities measured on the map (source background, optical-depth
+correction and what follows) use the updated combined map. This needs one new product: the new
+12m+7m+TP map minus the getsf source model of the 12m+7m image (a plain subtraction), replacing the
+getsf background component of the old combined map.
+
 ## 5. Phases
 
 Each phase ends with the test suite passing and one commit. Moves use `git mv`, so file history is kept.
@@ -177,3 +189,11 @@ Each phase ends with the test suite passing and one commit. Moves use `git mv`, 
 ## 8. Size of the work
 
 About 110 file moves, 15 scripts to place, 6 result folders to sort, one manifest of roughly 200 rows, and documentation. Phases 0–3 are mechanical and can be done in one or two sessions; Phase 4 needs your judgement on individual data products.
+
+## 9. Phase 1 review log
+
+One row per task, filled in as the author checks it.
+
+| Task | Checked | Name | Script | Rerun against stored results | Open points |
+|---|---|---|---|---|---|
+| `prepare_continuum_images` | 2026-11-19 | kept | `tasks/prepare_continuum_images/run.py` | all 15 outputs byte-identical | 9 of 15 outputs have no reader; 13 outputs duplicate files in `data/delivered/` (3.4 GB); 4 operations still use the old v3 combined images |

@@ -124,7 +124,7 @@ topic = "Primary-beam construction, sensitivity and selection boundary"
 mode = "maintained_update"
 status = "complete"
 owners = ["prepare_continuum_images", "plot_allscale_continuum", "column_density", "source_catalogue"]
-scripts = ["scripts/prepare_continuum_images.py", "scripts/plot_allscale_continuum.py", "scripts/column_density.py", "scripts/source_catalogue.py"]
+scripts = ["tasks/prepare_continuum_images/run.py", "scripts/plot_allscale_continuum.py", "scripts/column_density.py", "scripts/source_catalogue.py"]
 evidence = "Author-confirmed PB combination/attenuation/photometry sequence, updated reply/manuscript and verified PB=0.2 overlays in Figs. 2 and 3."
 diagnostic_report = "results/paper_ii_referee_response/diagnostics/R5_R3/2026-10-25/report.md"
 revision_evidence = "results/paper_ii_referee_response/evidence/R5/2026-10-25/qa_notes.md"
