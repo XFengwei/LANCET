@@ -511,3 +511,53 @@ git commit -m "Retire linear_combine_continuum and combination_diagnostic in fav
 ```
 
 Check `git status` before committing: the `git rm` deletions must be staged, and the other sessions' unrelated files must not be.
+
+---
+
+### Task 10: Extended products (author request, 2026-11-20; runs before Task 9)
+
+Spec section 5.1. The author chose the pb taper and "all four products; diagnostics unchanged".
+
+**Files:**
+- Modify: `src/lancet/combination_stages.py`, `tasks/combine_continuum/run.py`, `tasks/combine_continuum/task.toml`, `tasks/combine_continuum/README.md`
+- Test: `tests/test_combination_stages.py`, `tests/test_combine_continuum.py`
+
+**Interfaces:**
+- Consumes: `run_method`, `combine_prepared`, `measurement_context`, `zero_spacing`, `tp_only_ratio`, `product_metadata`, `product_paths`, `DELIVERED_INPUTS`.
+- Produces:
+  - `[inputs] pb = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"`. It is added to `DELIVERED_INPUTS` and read with `read_gain`, which does not check units; the shape must match the interferometer.
+  - `[combine] extended_taper_pb = [0.2, 0.3]`. The existing `fill_outside_mosaic = false` stays and applies to the standard products.
+  - `pb_taper(pb: np.ndarray, pb0: float, pb1: float) -> np.ndarray` in `combination_stages.py`: float32, 0 at pb ≤ pb0 and for NaN, 1 at pb ≥ pb1, and ½[1 − cos(π (pb − pb0)/(pb1 − pb0))] in between. It raises `ValueError` unless 0 < pb0 < pb1 ≤ 1.
+  - `product_paths(output_root, label)` gains four keys, `jcomb_continuum_extended`, `jcomb_dust_extended`, `feather_continuum_extended` and `feather_dust_extended`. They map to `products/{method}_{kind}_{label}_extended.fits`.
+  - `run_method` writes the standard and the extended product for each flavour:
+    - The extended product combines `high × pb_taper(pb)` with the same TP plane and settings, and is blank only outside the TP footprint (`product_blank(gain, footprint, True)`).
+    - The extended product's header carries the `COMB_*` cards with `fill_outside_mosaic = True`, plus `COMB_EXTENDED = T`, `COMB_TAPER_PB0` and `COMB_TAPER_PB1`.
+    - `checks/zero_spacing/` also gets `{method}_{kind}_{label}_extended_at_tp_beam.fits` and `zero_spacing_ratio_{method}_{kind}_{label}_extended.fits`.
+    - `measurements.json` gets, per flavour, an `"extended"` entry holding:
+      - the zero-spacing check over `mosaic`, `tp_only` and `all`;
+      - `tp_only_ratio_to_scaled_tp`;
+      - `ratio_to_standard_pb_ge_0.35`: the median of extended/standard where pb ≥ 0.35 and the standard is finite and above 3σ.
+    - All outputs, extended included, are guarded by `--overwrite` before any computation.
+  - `measure_product` and the other standard measurements are unchanged.
+
+- [ ] **Step 1: Write the failing tests**
+  - `test_pb_taper`: with pb = [nan, 0.1, 0.2, 0.25, 0.3, 0.9] and (0.2, 0.3), expect [0, 0, 0, 0.5, 1, 1] within 1e-6. Also check that (0.3, 0.2) and (0, 0.3) raise `ValueError`.
+  - `test_extended_product_paths`: `product_paths(root, "224GHz")["jcomb_continuum_extended"].name == "jcomb_continuum_224GHz_extended.fits"`, and the same pattern holds for all four keys.
+  - `test_pb_is_a_delivered_input`: parametrize the existing delivered-input test with `pb`, and assert `config["combine"]["extended_taper_pb"] == [0.2, 0.3]`.
+  - `test_method_writes_extended_products(tmp_path)`. Extend the monkeypatched `test_method_output_layout` pattern with a synthetic pb whose finite mosaic ends at pb 0.2, with TP extending beyond it. Assert:
+    - the four extended FITS exist, have BITPIX −32, and carry `COMB_EXTENDED == True` and `COMB_TAPER_PB0 == 0.2`;
+    - the extended product is finite in the TP-only region, where the standard one is NaN;
+    - where pb ≥ 0.3 the extended and standard products agree within 1e-3 relative on the synthetic data;
+    - `measurements.json` has `dust_ff.extended.zero_spacing.tp_only.n > 0`.
+  - `test_extended_outputs_guarded`: a second call without `overwrite` raises `FileExistsError` before any combination. Count `combine_prepared` calls.
+
+- [ ] **Step 2: Run them to verify they fail.**
+  Run: `PYTHONPATH=src conda run -n py312 python -m pytest tests/test_combination_stages.py tests/test_combine_continuum.py -q`
+  Expected: the new tests fail (`pb_taper` missing, keys missing, no `pb` input).
+
+- [ ] **Step 3: Implement the changes listed under Interfaces.** Then add the extended products, their method and their checks to the task README: the products table, the method section and the outputs.
+
+- [ ] **Step 4: Run the tests, then the full suite.**
+  Expected: all new tests pass; the full suite shows only the seven known failures.
+
+- [ ] **Step 5: Commit, staging only the listed files.**

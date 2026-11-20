@@ -231,6 +231,34 @@ factor and the absolute scale are decided:
 
 The feather products are not promoted.
 
+### 5.1 Extended products (added 2026-11-20 at the author's request)
+
+Next to each product above, the `jcomb` and `feather` stages write an
+extended version that continues smoothly into the TP-only area beyond the
+mosaic: `products/{jcomb,feather}_{continuum,dust}_224GHz_extended.fits`.
+
+- Interferometer input: the prepared true-sky plane multiplied by a weight in
+  the mosaic primary beam, read from the delivered
+  `IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits` (new input `pb`):
+  w = 0 for pb ≤ pb₀, w = 1 for pb ≥ pb₁, and
+  w = ½[1 − cos(π (pb − pb₀)/(pb₁ − pb₀))] in between, with
+  `[combine] extended_taper_pb = [0.2, 0.3]`. The small scales of the
+  12m+7m image fade out across that rim instead of stopping at pb 0.2, where
+  the true-sky noise is 2.5 times the centre value.
+- TP input, weights, TP factor and settings are those of the standard product.
+- Blank only outside the TP footprint. Beyond the mosaic the image is the TP
+  part of the combination alone (J-comb: W_low · R · f · TP; feather: f · TP).
+- Where pb ≥ pb₁ the extended product equals the standard one apart from the
+  small large-scale change that the rim weight makes through the FFT; the
+  stage records the median extended/standard ratio for pb ≥ 0.35.
+- Header: the standard `COMB_*` cards plus `COMB_EXTENDED = T` and
+  `COMB_TAPER_PB0`, `COMB_TAPER_PB1`; `COMB_FILL_OUTSIDE_MOSAIC = T`.
+- Checks: the zero-spacing check and the TP-only ratio are reported for the
+  extended products over the mosaic, the TP-only area and both together.
+  The other measurements stay on the standard products.
+- The diagnostics (phase 2) keep using the standard, blanked products.
+- Promotion of an extended version is decided with the rest of section 5.
+
 ## 6. Paper II Fig. 2
 
 The three-panel figure is the only layout; the `three_panel` switch and the
