@@ -293,6 +293,7 @@ def _create_sqrt_figure(
         vmax=float(style["vmax"]),
         colour_map=str(style["colour_map"]),
         stretch=str(style["stretch"]),
+        blank_colour=str(style["blank_colour"]),
         figsize=(
             float(view["figure_width_inches"]),
             float(view["figure_height_inches"]),

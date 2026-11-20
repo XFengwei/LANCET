@@ -382,6 +382,7 @@ def create_single_scale_figure(
     colourbar_label: str = r"Intensity (MJy sr$^{-1}$)",
     annotation_colour: str = "white",
     primary_beam_colour: str = "cyan",
+    blank_colour: str = "white",
     image_axes_rect: tuple[float, float, float, float] = (
         0.05,
         0.05,
@@ -418,7 +419,7 @@ def create_single_scale_figure(
     import matplotlib
 
     cmap = matplotlib.colormaps[colour_map].copy()
-    cmap.set_bad("white")
+    cmap.set_bad(blank_colour)
     cmap.set_under(cmap(0.0))
     cmap.set_over(cmap(1.0))
     figure = plt.figure(figsize=figsize, dpi=100)

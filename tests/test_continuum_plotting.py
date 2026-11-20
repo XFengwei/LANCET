@@ -176,16 +176,17 @@ def _check_single_scale_figure(tmp_path: Path, SqrtStretch) -> None:
         primary_beam_path=beam,
         title="test",
         resolution_label="label",
+        blank_colour="black",
     )
     image = figure.axes[0].images[0]
 
     assert image.get_cmap().name == "inferno"
     assert isinstance(image.norm.stretch, SqrtStretch)
     assert (image.norm.vmin, image.norm.vmax) == (0.0, 10.0)
-    # Blank pixels are drawn white, not at the top of the colour map.
-    np.testing.assert_allclose(image.get_cmap().get_bad(), (1, 1, 1, 1))
+    # Blank pixels take the blank colour, not the top of the colour map.
+    np.testing.assert_allclose(image.get_cmap().get_bad(), (0, 0, 0, 1))
     rgba = image.to_rgba(image.get_array())
-    np.testing.assert_allclose(rgba[0, 0], (1.0, 1.0, 1.0, 1.0))
+    np.testing.assert_allclose(rgba[0, 0], (0.0, 0.0, 0.0, 1.0))
     assert len(figure.axes) == 2  # image and one colour bar
     output = tmp_path / "single.png"
     figure.savefig(output, dpi=50)

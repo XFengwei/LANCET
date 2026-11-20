@@ -82,6 +82,7 @@ def test_sqrt_style_is_single_inferno_scale() -> None:
     assert style["colour_map"] == "inferno"
     assert style["stretch"] == "sqrt"
     assert style["vmin"] < style["vmax"]
+    assert style["blank_colour"] == "black"
 
 
 def test_sqrt_stage_writes_annotated_and_clean_views(tmp_path, monkeypatch) -> None:

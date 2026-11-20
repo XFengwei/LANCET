@@ -22,7 +22,8 @@ the TP model must be a task result. All inputs are read-only.
 - `inspect`: input paths, shapes, precision and units; writes nothing.
 - `combined`: annotated (PDF, PNG) and clean (PNG) views of the
   dust + free-free map.
-- `sqrt`: alternative view of the dust + free-free map on one colour bar
+- `sqrt`: **Paper II v3 Fig. 3** (author, 2026-11-20): the dust + free-free
+  map on one colour bar
   (inferno, square-root stretch), annotated (PDF, PNG) and clean (PNG):
   `allscale_continuum_dust_freefree_sqrt*`.
 - `synthetic`: clean view of the TP model.
@@ -46,7 +47,7 @@ are kept unless `--overwrite` is given.
   −2σ (σ = 9.2 MJy/sr).
 - `sqrt`: 0 to 1200 MJy/sr, inferno, square-root stretch, one colour bar.
   Values below 0 take the lowest colour; blank pixels (outside the TP model)
-  are white. The pb 0.2 contour is cyan and the labels white.
+  are black (`blank_colour`). The pb 0.2 contour is cyan and the labels white.
 - `synthetic`: −2.292 / 57.31 / 275.07, the former Jy/beam limits
   (−0.02 / 0.5 / 2.4) converted with the 18.1″ beam, so that view is unchanged.
 
