@@ -70,7 +70,7 @@ Existing products are kept unless `--overwrite` is given.
 ## Readers
 
 `physical_properties` (`Tenv`, `Ibkg1`, `Ibkg2`, `FXT_BST01`, `FXP_BST01`
-and errors), `core_formation`, `combine_continuum` (compact-source check),
+and errors), `core_formation_efficiency`, `combine_continuum` (compact-source check),
 `freefree_core_contamination`.
 
 ## Change from Paper II (2026-11-20)

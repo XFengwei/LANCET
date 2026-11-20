@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--output", type=Path, default=Path(
         "results/paper_ii_referee_response/diagnostics/R8d/2026-11-01"))
     parser.add_argument("--caps", nargs=3, type=float,
-                        help="Override the upper temperatures in the physical-properties task",
+                        help="Override the upper temperatures in the core_formation_efficiency task",
                         metavar=("YOUNG_K", "INTERMEDIATE_K", "EVOLVED_K"))
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -32,9 +32,10 @@ def main():
     names = {
         "source": "results/source_catalogue/tables/source_catalogue.ecsv",
         "physical": "results/physical_properties/tables/core_physical_properties.ecsv",
-        "regional": "results/core_formation/tables/core_formation_summary.ecsv",
+        "regional": "results/core_formation_efficiency/tables/core_formation_summary.ecsv",
         "environment": "results/environment_measurements/tables/core_environment_catalogue.ecsv",
         "config": "tasks/physical_properties/task.toml",
+        "sampling_config": "tasks/core_formation_efficiency/task.toml",
     }
     source, physical, regional, environment = [Table.read(root / names[k])
         for k in ("source", "physical", "regional", "environment")]
@@ -50,7 +51,7 @@ def main():
     code = np.asarray(physical["Subregion"])
     assert np.allclose(temp, source["Tenv"])
     assert np.array_equal(code, source["Subregion"])
-    caps = dict(zip(("Y", "I", "E"), args.caps or task_config["temperature_sampling"]["upper_temperatures_k"]))
+    caps = dict(zip(("Y", "I", "E"), args.caps or tomllib.loads((root / names["sampling_config"]).read_text())["temperature_sampling"]["upper_temperatures_k"]))
     ceiling = np.array([caps[r] for r in code])
     assert np.all(ceiling >= temp), "Heating endpoint must not cool any core"
     beam = 1.1331 * cfg["beam_major_arcsec"] * cfg["beam_minor_arcsec"] * u.arcsec**2

@@ -1,13 +1,14 @@
 """Sample explicit temperature priors and propagate regional core mass sums.
 
-This is prior-predictive Monte Carlo, with no fitted temperature likelihood.
-The adopted catalogues are read-only; foreground/background stays at Tenv.
+Stage ``temperature_sampling`` of ``core_formation_efficiency`` (Paper II
+Fig. 9 overlay; moved from the R8d referee diagnostic). This is
+prior-predictive Monte Carlo, with no fitted temperature likelihood. The
+adopted catalogues are read-only; foreground/background stays at Tenv.
 """
+from collections.abc import Mapping
 from pathlib import Path
-import argparse
 import hashlib
 import json
-import tomllib
 
 from astropy import units as u
 from astropy.table import Table
@@ -19,19 +20,34 @@ from numpy.polynomial.legendre import leggauss
 from lancet.physical_properties import blackbody_cgs, core_optical_depth
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path("tasks/physical_properties/task.toml"))
-    args = parser.parse_args()
-    root = Path(__file__).resolve().parents[1]
-    cfg = tomllib.loads((root/args.config).read_text())
-    settings, physics = cfg["temperature_sampling"], cfg["physics"]
-    out = root/settings["output_root"]
+PRODUCTS = (
+    "regional_sampling_summary.ecsv",
+    "core_temperature_priors.ecsv",
+    "ordering_draw_fractions.ecsv",
+    "regional_mass_draws.npz",
+    "metadata.json",
+)
+
+
+def run_temperature_sampling(
+    inputs: Mapping[str, Path],
+    settings: Mapping[str, object],
+    out: Path,
+    *,
+    config_path: Path,
+    overwrite: bool = False,
+) -> Path:
+    """Write the sampling products to ``out``; ``inputs`` maps ``source``,
+    ``physical`` and ``regional`` to the source catalogue, the physical
+    catalogue and this task's regional summary."""
+    for name in PRODUCTS:
+        if (out / name).exists() and not overwrite:
+            raise FileExistsError(
+                f"Output already exists: {out / name}; pass --overwrite to replace it"
+            )
     out.mkdir(parents=True, exist_ok=True)
-    inputs = dict(source=cfg["inputs"]["source_catalogue"],
-        physical=cfg["outputs"]["root"]+"/tables/core_physical_properties.ecsv",
-        regional="results/core_formation/tables/core_formation_summary.ecsv")
-    source, physical, regional = [Table.read(root/inputs[k]) for k in ("source", "physical", "regional")]
+    physics = settings
+    source, physical, regional = [Table.read(inputs[k]) for k in ("source", "physical", "regional")]
     order = {int(row["ID"]): i for i, row in enumerate(source)}
     assert len(order) == len(source) == len(physical)
     source = source[[order[int(i)] for i in physical["ID"]]]
@@ -159,9 +175,9 @@ def main():
     Table(rows=core_rows).write(out/"core_temperature_priors.ecsv", overwrite=True)
     Table(rows=order_rows).write(out/"ordering_draw_fractions.ecsv", overwrite=True)
     np.savez_compressed(out/"regional_mass_draws.npz", **samples)
-    metadata = dict(settings=settings, inputs=inputs,
-        input_sha256={k: hashlib.sha256((root/p).read_bytes()).hexdigest() for k,p in inputs.items()},
-        config_sha256=hashlib.sha256((root/args.config).read_bytes()).hexdigest(),
+    metadata = dict(settings=dict(settings), inputs={k: str(v) for k, v in inputs.items()},
+        input_sha256={k: hashlib.sha256(Path(p).read_bytes()).hexdigest() for k,p in inputs.items()},
+        config_sha256=hashlib.sha256(Path(config_path).read_bytes()).hexdigest(),
         method="Direct independent Monte Carlo realizations from explicit assumed priors; no temperature likelihood or MCMC posterior",
         temperature_formula="T_i=Tenv_i+F_i*(Tupper_region-Tenv_i)",
         uniform="F_i~Uniform(0,1)",
@@ -172,7 +188,4 @@ def main():
         region_column_order=regcodes, verification=checks)
     (out/"metadata.json").write_text(json.dumps(metadata, indent=2)+"\n")
     print(Table(rows=summary_rows)[["prior","coupling","region","mass_p16_msun","mass_p50_msun","mass_p84_msun"]])
-
-
-if __name__ == "__main__":
-    main()
+    return out / "regional_sampling_summary.ecsv"

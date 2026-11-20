@@ -1,14 +1,15 @@
 [task]
-name = "core_formation"
+name = "core_formation_efficiency"
 
 [inputs]
 physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
-temperature_sampling_summary = "results/paper_ii_referee_response/diagnostics/R8d/2026-11-01/temperature_sampling/regional_sampling_summary.ecsv"
 source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
 fragment_ellipse_catalogue = "data/extraction/astrodendro/my_dendrogram.dat"
 fragment_mass_catalogue = "data/extraction/astrodendro/my_catalog.dat"
 fragment_label_mask = "data/extraction/astrodendro/my_mask_idx.fits"
-selection_gain = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+# Fragment selection: whole leaf footprint at MIRIAD mosaic pb >= 0.2 (replaces
+# the removed CASA primary beam; same 49 of 65 fragments).
+selection_gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 # Overlay figure backgrounds, converted to MJy/sr in the task. The 12m+7m map is the MIRIAD
 # flat-noise image (sky x pb), replacing the former CASA-pb "pbant" product.
 high_resolution_continuum = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.flatnoise.fits"
@@ -20,7 +21,7 @@ low_resolution_continuum = "data/delivered/alma/continuum/IRDC316.8.7M.robust0.5
 paper1_fragment_catalogue = "data/delivered/paper1/PaperI_table2.fit"
 
 [outputs]
-root = "results/core_formation"
+root = "results/core_formation_efficiency"
 
 [dust_opacity]
 # Optically thin dust masses scale inversely with opacity. Paper I fragment
@@ -52,9 +53,6 @@ cloud_mass_msun = 8000.0
 paper1_fragment_mass_msun = 766.0
 fragment_count = 16
 
-[efficiency_plot]
-scales_pc = [4.0, 0.15, 0.01]
-scale_fractional_error = 0.3
 
 [overlay]
 width_arcsec = 100.0
@@ -86,3 +84,18 @@ image_vmax = 800.0
 [figures]
 formats = ["pdf", "png"]
 dpi = 200
+
+# Temperature-prior sampling of the regional core masses (stage
+# `temperature_sampling`, Paper II Fig. 9 overlay; moved from the R8d referee
+# diagnostic). Diagnostic only: the adopted catalogues keep Tenv. Output:
+# results/core_formation_efficiency/temperature_sampling/.
+[temperature_sampling]
+sample_count = 100000
+random_seed = 20261101
+upper_temperatures_k = [30.0, 40.0, 50.0] # Young, Intermediate, Evolved
+# For global peak-brightness percentile q: F ~ Beta(1+2q, 3-2q).
+brightness_strength = 2.0
+# Same values as [physics] in tasks/physical_properties/task.toml.
+frequency_ghz = 223.8
+beam_major_arcsec = 0.71
+beam_minor_arcsec = 0.60

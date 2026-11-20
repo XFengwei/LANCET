@@ -22,9 +22,9 @@ def interval(row, prefix, decimals):
 
 def main():
     root = Path(__file__).resolve().parents[1]
-    cfg = tomllib.loads((root/"tasks/physical_properties/task.toml").read_text())
-    sampling = root/cfg["temperature_sampling"]["output_root"]
-    out = sampling.parent
+    cfg = tomllib.loads((root/"tasks/core_formation_efficiency/task.toml").read_text())
+    sampling = root/"results/core_formation_efficiency/temperature_sampling"
+    out = root/"results/paper_ii_referee_response/diagnostics/R8d/2026-11-01"
     summary = json.loads((out/"summary.json").read_text())
     meta = json.loads((sampling/"metadata.json").read_text())
     caps = cfg["temperature_sampling"]["upper_temperatures_k"]
@@ -242,8 +242,8 @@ and retain the distinction between baseline counting and temperature errors.
 
 ## Reproduction and verification
 
-Configuration: `[temperature_sampling]` in the physical-properties task.
-Run `PYTHONPATH=src conda run -n py312 python scripts/core_temperature_sampling.py`;
+Configuration: `[temperature_sampling]` in the core_formation_efficiency task.
+Run `PYTHONPATH=src conda run -n py312 python tasks/core_formation_efficiency/run.py --stage temperature_sampling --overwrite`;
 then use `scripts/plot_core_temperature_sampling.py` with `--qa-scripts` and,
 for the integration alternatives, `--trials`. Refresh these reports with
 `scripts/report_core_temperature_tests.py` after the numerical runs.

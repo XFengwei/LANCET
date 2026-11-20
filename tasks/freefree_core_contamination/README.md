@@ -4,13 +4,13 @@ Paper II referee item R7 (closed). Estimates the smooth radio (free-free)
 emission inside each core footprint and its effect on core and fragment
 masses. Split out of `construct_freefree_model` on 2026-11-20, because it
 depends on later tasks: `source_catalogue`, `physical_properties` and
-`core_formation`.
+`core_formation_efficiency`.
 
 ## Status: not reviewed, does not run
 
 Its ALMA inputs were removed or renamed in `data/delivered/alma/` on
 2026-11-19. They will be repointed when this task is reviewed, after
-`core_formation`:
+`core_formation_efficiency`:
 
 | Script | Outdated input | Replacement to check |
 |---|---|---|

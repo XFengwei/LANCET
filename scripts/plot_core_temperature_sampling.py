@@ -27,7 +27,7 @@ MARKERS = ["o", "s", "^"]
 def figure9_trials(table, out, require_alignment):
     """Two alternative arrangements; preserve the manuscript's existing PDF."""
     root = Path(__file__).resolve().parents[1]
-    original = Table.read(root/"results/core_formation/tables/core_formation_summary.ecsv")
+    original = Table.read(root/"results/core_formation_efficiency/tables/core_formation_summary.ecsv")
     out.mkdir(parents=True, exist_ok=True)
     for layout in ("overlay", "comparison"):
         if layout == "overlay":
@@ -75,7 +75,7 @@ def figure9_trials(table, out, require_alignment):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, default=Path(
-        "results/paper_ii_referee_response/diagnostics/R8d/2026-11-01/temperature_sampling"))
+        "results/core_formation_efficiency/temperature_sampling"))
     parser.add_argument("--qa-scripts", type=Path, required=True)
     parser.add_argument("--trials", action="store_true",
                         help="Make Figure 9 integration trials instead of the prior-comparison figures")

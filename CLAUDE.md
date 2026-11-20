@@ -105,7 +105,8 @@ Install paths differ between machines; check before use.
   not in a paper-specific pipeline. Copy only verified task figures into a
   paper's figure folder and record their source.
 - A referee response is tracked by a coordination task (for Paper II,
-  `tasks/paper_ii_referee_response/`): `referee_requests.md` lists the items,
+  `tasks/paper_ii_referee_response/`, local only: gitignored and not
+  published): `referee_requests.md` lists the items,
   `progress.md` logs each completed work unit in its fixed entry format, and
   diagnostics go under `results/<that task>/diagnostics/`.
 - Response and manuscript statements must match completed, verified results.

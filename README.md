@@ -56,13 +56,10 @@ data-dependent task additionally requires its declared local inputs.
 
 ### Paper II referee response
 
-The coordination task in
-[`tasks/paper_ii_referee_response/`](tasks/paper_ii_referee_response/README.md)
-maps the referee items to existing analysis tasks and records isolated
-diagnostics, maintained script updates, manuscript changes and response
-evidence. Its configuration declares the active clean v2 manuscript, red
-revision convention, and reserved bold/diff sources. Those variants are
-generated only after the clean manuscript is finalized.
+The referee-response coordination task (`tasks/paper_ii_referee_response/`)
+is kept locally and is not published (gitignored). It maps the referee items
+to the analysis tasks and records diagnostics under
+`results/paper_ii_referee_response/`.
 
 ### Standalone calculations
 
@@ -175,10 +172,10 @@ build the resolution-aware full-map width and mean-density products with:
 
 ```bash
 python -m pip install -e ".[volume-density]"
-conda run -n py312 python scripts/volume_density_mapper.py inspect
-conda run -n py312 python scripts/volume_density_mapper.py pilot
-conda run -n py312 python scripts/volume_density_mapper.py full
-conda run -n py312 python scripts/volume_density_mapper.py mask
+conda run -n py312 python tasks/volume_density_mapper/run.py inspect
+conda run -n py312 python tasks/volume_density_mapper/run.py pilot
+conda run -n py312 python tasks/volume_density_mapper/run.py full
+conda run -n py312 python tasks/volume_density_mapper/run.py mask
 ```
 
 The task uses the finite ALMA footprint to distinguish the 0.65-arcsec inner
@@ -257,20 +254,20 @@ Measure the regional cloud-to-fragment-to-core mass efficiencies and create
 the compact-core/fragment overlay figures with:
 
 ```bash
-conda run -n py312 python scripts/core_formation.py --stage inspect
-conda run -n py312 python scripts/core_formation.py --stage all
+conda run -n py312 python tasks/core_formation_efficiency/run.py --stage inspect
+conda run -n py312 python tasks/core_formation_efficiency/run.py --stage all
 ```
 
 The generated physical-properties catalogue supplies the core masses and
 counts. The cloud and Paper I-scale fragment values are explicit adopted
 inputs in
-[`tasks/core_formation/task.toml`](tasks/core_formation/task.toml). The
+[`tasks/core_formation_efficiency/task.toml`](tasks/core_formation_efficiency/task.toml). The
 fragment masses are rescaled from the Paper I opacity of 0.9 cm2/g to the
 current 0.5 cm2/g opacity; cloud masses remain on their existing SED scale.
 The
 delivered Paper I fragment catalogue is recorded as an optional provenance
 reference rather than a calculation dependency. Tables and figures are
-written under `results/core_formation/`.
+written under `results/core_formation_efficiency/`.
 
 Measure the temperature, C18O velocity-dispersion, total surface-density, and
 intercore surface-density environment around every core with:

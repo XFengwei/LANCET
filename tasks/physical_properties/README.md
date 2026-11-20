@@ -48,19 +48,9 @@ The code reproduces the Paper II tables exactly from the Paper II catalogue
 
 ## Temperature-prior diagnostic
 
-The optional `[temperature_sampling]` configuration defines the Paper II
-temperature stress test without replacing the adopted physical catalogue.
-Run `PYTHONPATH=src conda run -n py312 python scripts/core_temperature_sampling.py`.
-It compares uniform temperatures with the author-approved peak-brightness
-beta prior, with independent core draws and a shared-regional-percentile
-dependence check. Each draw recomputes optical depth with the environment
-kept at Tenv. The isolated output directory includes per-core priors,
-regional mass draws and conditional temperature-only intervals; these are
-not a data-constrained temperature posterior or total mass uncertainties.
-Use `scripts/plot_core_temperature_sampling.py --qa-scripts /path/to/nature-figure/scripts`
-to replot the mass hierarchy for both temperature models.
-Use `--trials` for the two Figure 9 integration layouts. The current regional
-upper temperatures are 30/40/50 K (Young/Intermediate/Evolved); the endpoint
-runner reads the same configuration. After rerunning both numerical runners,
-`scripts/report_core_temperature_tests.py` refreshes the numerical reports
-and trial captions from the saved products.
+The temperature-prior sampling of the core masses (Paper II Fig. 9) moved to
+`core_formation_efficiency` (stage `temperature_sampling`, settings in its
+`[temperature_sampling]`). The endpoint stress test and its plots
+(`scripts/core_temperature_stress_test.py`,
+`scripts/plot_core_temperature_*.py`, `scripts/report_core_temperature_tests.py`)
+read the upper temperatures from there.

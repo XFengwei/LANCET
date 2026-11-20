@@ -25,7 +25,7 @@ pb=fits.getdata(root/'data/delivered/alma/7M/cont/IRDC316.8.ACA.p1.cont.pb.fits'
 labels,lh=fits.getdata(root/'data/extraction/astrodendro/my_mask_idx.fits',header=True)
 assert aca.shape==pb.shape==labels.shape
 cat=Table.read(root/'data/extraction/astrodendro/my_dendrogram.dat',format='ascii')
-selection=Table.read(root/'results/core_formation/tables/fragment_pb_selection.ecsv')
+selection=Table.read(root/'results/core_formation_efficiency/tables/fragment_pb_selection.ecsv')
 selection.remove_column('flux')
 fragments=join(selection,cat[['ID','_idx','flux','area_exact']],keys='ID')
 sigma_scale=1/(2*np.sqrt(2*np.log(2)))
@@ -58,7 +58,7 @@ table=Table(rows=rows)
 table.write(out/'fragment_freefree_contamination.ecsv',format='ascii.ecsv',overwrite=True)
 table.write(out/'fragment_freefree_contamination.csv',format='ascii.csv',overwrite=True)
 cores=join(Table.read(root/'results/physical_properties/tables/core_physical_properties.ecsv'),Table.read(out/'smooth_core_contamination.ecsv'),keys='ID',table_names=['mass','ff'])
-eff=Table.read(root/'results/core_formation/tables/core_formation_summary.ecsv')
+eff=Table.read(root/'results/core_formation_efficiency/tables/core_formation_summary.ecsv')
 result={'radio_rms_mjybeam':metadata['adopted_radio_rms_mjy_per_beam'],
  'fragment_method':'Convolve thresholded 2.5 arcsec radio surface brightness to the ACA beam, reproject, apply ACA PB and integrate true leaf masks. Catalogue fluxes independently reproduced.',
  'core_method':'Sensitivity scenario: multiply each adopted core mass by 1 minus its original-image aperture free-free fraction, holding temperature, geometry and optical-depth factor fixed. This is not a calibrated correction of background-subtracted core photometry.',

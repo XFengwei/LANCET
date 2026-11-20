@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+import sys
 import tomllib
 
 from astropy.io import fits
@@ -25,7 +26,10 @@ from lancet.core_formation import (
 )
 
 
-DEFAULT_CONFIG = Path("tasks/core_formation/task.toml")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from temperature_sampling import run_temperature_sampling  # noqa: E402
+
+DEFAULT_CONFIG = Path("tasks/core_formation_efficiency/task.toml")
 
 
 def load_task_config(path: Path) -> dict[str, object]:
@@ -340,6 +344,36 @@ def _save_figure(
         plt.close(figure)
 
 
+def temperature_sampling_dir(paths: Mapping[str, Path]) -> Path:
+    return Path(paths["output_root"]) / "temperature_sampling"
+
+
+def build_temperature_sampling(
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    config_path: Path,
+    overwrite: bool = False,
+) -> Path:
+    """Temperature-prior sampling of the regional core masses (Fig. 9)."""
+    regional = summary_path(paths)
+    if not regional.is_file():
+        raise FileNotFoundError(
+            f"Regional summary not found: {regional}; run --stage summary first"
+        )
+    return run_temperature_sampling(
+        {
+            "source": paths["source_catalogue"],
+            "physical": paths["physical_catalogue"],
+            "regional": regional,
+        },
+        config["temperature_sampling"],
+        temperature_sampling_dir(paths),
+        config_path=config_path,
+        overwrite=overwrite,
+    )
+
+
 def _load_or_build_summary(
     paths: Mapping[str, Path],
     config: Mapping[str, object],
@@ -363,11 +397,13 @@ def plot_efficiency(
     """Plot the adopted cloud-to-fragment-to-core efficiencies."""
     from matplotlib import pyplot as plt
 
+    sampling = temperature_sampling_dir(paths) / "regional_sampling_summary.ecsv"
+    if not sampling.is_file():
+        raise FileNotFoundError(
+            f"Temperature sampling not found: {sampling}; "
+            "run --stage temperature_sampling first"
+        )
     summary = _load_or_build_summary(paths, config)
-    plot = config["efficiency_plot"]
-    figures = config["figures"]
-    if not isinstance(plot, Mapping) or not isinstance(figures, Mapping):
-        raise TypeError("Plot and figure settings must be TOML tables")
 
     outputs = _figure_outputs(
         paths,
@@ -375,164 +411,15 @@ def plot_efficiency(
         config,
     )
     _prepare_outputs(outputs, overwrite=overwrite)
-    if "temperature_sampling_summary" in paths:
-        temperature_summary = Table.read(paths["temperature_sampling_summary"])
-        with plt.rc_context({"font.family": "sans-serif", "font.size": 10,
-                "pdf.fonttype": 42, "svg.fonttype": "none", "axes.linewidth": .8,
-                "axes.spines.top": False, "axes.spines.right": False,
-                "legend.frameon": False}):
-            figure, axis = plt.subplots(figsize=(3.9, 3.8))
-            figure.subplots_adjust(left=.17, right=.98, bottom=.21, top=.98)
-            draw_temperature_efficiency_cascade(axis, temperature_summary, summary)
-            _save_figure(figure, outputs, dpi=600, pad_inches=.025)
-        return outputs
-    scales = np.asarray(plot["scales_pc"], dtype=float)
-    if scales.shape != (3,) or np.any(scales <= 0):
-        raise ValueError("scales_pc must contain three positive values")
-
-    style = {
-        "Young": {"marker": "o", "color": "blue"},
-        "Intermediate": {"marker": "s", "color": "orange"},
-        "Evolved": {"marker": "^", "color": "red"},
-    }
-    with plt.rc_context(
-        {
-            "font.size": 9,
-            "axes.linewidth": 1.0,
-            "xtick.major.width": 1.0,
-            "ytick.major.width": 1.0,
-            "xtick.minor.width": 0.8,
-            "ytick.minor.width": 0.8,
-            "xtick.direction": "in",
-            "ytick.direction": "in",
-            "xtick.top": True,
-            "ytick.right": True,
-        }
-    ):
-        figure, axis = plt.subplots(figsize=(4.0, 3.4))
-        for row in summary:
-            label = str(row["label"])
-            masses = np.asarray(
-                [
-                    row["cloud_mass"],
-                    row["fragment_mass"],
-                    row["core_mass"],
-                ],
-                dtype=float,
-            )
-            fractions = masses / masses[0]
-            counts = np.asarray(
-                [np.inf, row["fragment_count"], row["core_count"]],
-                dtype=float,
-            )
-            errors = fractions * 0.5 / np.sqrt(counts - 1.0)
-            region_style = style[label]
-            axis.errorbar(
-                scales,
-                fractions,
-                xerr=scales * float(plot["scale_fractional_error"]),
-                yerr=errors,
-                capsize=2,
-                label=label,
-                marker=region_style["marker"],
-                color=region_style["color"],
-                markeredgecolor="white",
-                linewidth=1.8,
-                markersize=7,
-            )
-            for scale, fraction in zip(scales[1:], fractions[1:]):
-                horizontal_factor = (
-                    2.8 if np.isclose(scale, scales[1]) else 2.0
-                )
-                axis.text(
-                    scale * horizontal_factor,
-                    fraction * 1.5,
-                    f"{fraction * 100:.1f}%",
-                    color=region_style["color"],
-                    fontsize=12,
-                    fontweight="heavy",
-                    path_effects=[
-                        path_effects.withStroke(
-                            linewidth=0.8,
-                            foreground="white",
-                        )
-                    ],
-                )
-
-        axis.set_xscale("log")
-        axis.set_yscale("log")
-        axis.invert_xaxis()
-        axis.set_xlabel("Physical scale (pc)")
-        axis.set_ylabel("Mass efficiency")
-        axis.set_xticks(scales)
-        axis.set_xticklabels(
-            ["Cloud\n4 pc", "Fragment\n0.15 pc", "Core\n0.01 pc"]
-        )
-        axis.set_yticks([0.001, 0.01, 0.1, 1.0])
-        axis.set_yticklabels(["0.1%", "1%", "10%", "100%"])
-        axis.scatter(
-            scales[0],
-            1.0,
-            s=120,
-            facecolors="none",
-            edgecolors="black",
-            linewidths=1.5,
-            zorder=5,
-        )
-        axis.text(
-            0.28,
-            0.95,
-            "Cloud-scale gas reservoir",
-            transform=axis.transAxes,
-            fontsize=9,
-            horizontalalignment="left",
-            verticalalignment="center",
-            zorder=15,
-            fontweight="bold",
-            path_effects=[
-                path_effects.withStroke(
-                    linewidth=0.5,
-                    foreground="white",
-                )
-            ],
-        )
-        axis.annotate(
-            "",
-            xy=(0.25, 0.95),
-            xytext=(0.07, 0.95),
-            xycoords="axes fraction",
-            textcoords="axes fraction",
-            arrowprops={
-                "arrowstyle": "->",
-                "linewidth": 1.5,
-                "color": "black",
-            },
-            zorder=15,
-        )
-        axis.text(
-            scales[1],
-            0.001,
-            r"$\epsilon_{\rm fragment}$",
-            horizontalalignment="center",
-            verticalalignment="center",
-            fontsize=12,
-        )
-        axis.text(
-            scales[2],
-            0.001,
-            r"$\epsilon_{\rm core}$",
-            horizontalalignment="center",
-            verticalalignment="center",
-            fontsize=12,
-        )
-        axis.set_xlim(6.0, 0.005)
-        axis.set_ylim(0.0006, 1.5)
-        axis.legend(frameon=False, loc="lower left", handlelength=2.2)
-        _save_figure(
-            figure,
-            outputs,
-            dpi=int(figures["dpi"]),
-        )
+    temperature_summary = Table.read(sampling)
+    with plt.rc_context({"font.family": "sans-serif", "font.size": 10,
+            "pdf.fonttype": 42, "svg.fonttype": "none", "axes.linewidth": .8,
+            "axes.spines.top": False, "axes.spines.right": False,
+            "legend.frameon": False}):
+        figure, axis = plt.subplots(figsize=(3.9, 3.8))
+        figure.subplots_adjust(left=.17, right=.98, bottom=.21, top=.98)
+        draw_temperature_efficiency_cascade(axis, temperature_summary, summary)
+        _save_figure(figure, outputs, dpi=600, pad_inches=.025)
     return outputs
 
 
@@ -613,7 +500,10 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "summary", "efficiency", "overlays", "all"),
+        choices=(
+            "inspect", "summary", "temperature_sampling", "efficiency",
+            "overlays", "all",
+        ),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
@@ -627,6 +517,13 @@ def main() -> None:
         return
     if args.stage in {"summary", "all"}:
         build_summary(paths, config, overwrite=args.overwrite)
+    if args.stage in {"temperature_sampling", "all"}:
+        build_temperature_sampling(
+            paths,
+            config,
+            config_path=_project_path(project, args.config),
+            overwrite=args.overwrite,
+        )
     if args.stage in {"efficiency", "all"}:
         plot_efficiency(paths, config, overwrite=args.overwrite)
     if args.stage in {"overlays", "all"}:

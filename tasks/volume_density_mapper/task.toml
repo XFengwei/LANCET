@@ -5,7 +5,7 @@ name = "volume_density_mapper"
 surface_density = "results/column_density/maps/surface_density_allscale.fits"
 # Footprint only (finite pixels): MIRIAD pb >= 0.2, replacing the former CASA-pb cut.
 alma_footprint = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.flatnoise.pb0.2.fits"
-primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+primary_beam = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 low_resolution_surface_density = "results/column_density/prepared/surface_density_lowres.fits"
 
 [outputs]

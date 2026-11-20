@@ -334,7 +334,7 @@ are decided:
   `IRDC316.8.TP7MTM2TM1.robust0.5.cont.jcomb.dust.fits`;
 - add README rows there (source run, settings, checksum);
 - then repoint the downstream tasks that read a combined image
-  (`core_formation`, `column_density` and others).
+  (`core_formation_efficiency`, `column_density` and others).
 
 The feather products are not promoted.
 

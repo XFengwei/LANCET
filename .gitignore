@@ -6,6 +6,9 @@
 /references/
 /results/
 
+# Referee-response coordination: kept locally, not published
+/tasks/paper_ii_referee_response/
+
 # Python build and test artifacts
 __pycache__/
 *.py[cod]

@@ -19,10 +19,10 @@ Install the mapper in the active environment or pass a source checkout:
 
 ```bash
 python -m pip install volume-density-mapper
-conda run -n py312 python scripts/volume_density_mapper.py inspect
-conda run -n py312 python scripts/volume_density_mapper.py pilot
-conda run -n py312 python scripts/volume_density_mapper.py full
-conda run -n py312 python scripts/volume_density_mapper.py mask
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py inspect
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py pilot
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py full
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py mask
 ```
 
 For a checkout that has not been installed, append
@@ -46,3 +46,11 @@ products remain available only for diagnosing the resolution boundary.
 Measured runtimes, numerical checks, pilot-to-full differences, and the
 interpretation boundary are recorded in
 [`docs/volume_density_mapper_audit.md`](../../docs/volume_density_mapper_audit.md).
+
+## Status (2026-11-20)
+
+The primary beam for the `mask` stage is now the MIRIAD `cont.pb` (the CASA
+beam was removed). The products in `results/volume_density_mapper/` were made
+from the Paper II all-scale map and are stale: `column_density` now uses the
+new J-comb combination (about 3 × lower Σ in diffuse gas). The task has not
+been rerun because `volume-density-mapper` is not installed in `py312`.

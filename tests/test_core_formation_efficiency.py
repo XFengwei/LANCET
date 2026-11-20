@@ -209,7 +209,7 @@ def test_core_formation_inspection_reports_optional_reference() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/core_formation.py",
+            "tasks/core_formation_efficiency/run.py",
             "--stage",
             "inspect",
         ],
@@ -223,3 +223,47 @@ def test_core_formation_inspection_reports_optional_reference() -> None:
     assert "rows=231" in completed.stdout
     assert "not used in calculations" in completed.stdout
     assert "Young: cores=16" in completed.stdout
+
+
+def _load_task():
+    from importlib.util import module_from_spec, spec_from_file_location
+
+    spec = spec_from_file_location(
+        "core_formation_efficiency_script",
+        PROJECT_ROOT / "tasks" / "core_formation_efficiency" / "run.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_temperature_sampling_is_a_stage_of_this_task() -> None:
+    task = _load_task()
+    config = task.load_task_config(
+        PROJECT_ROOT / "tasks" / "core_formation_efficiency" / "task.toml"
+    )
+    settings = config["temperature_sampling"]
+
+    assert settings["upper_temperatures_k"] == [30.0, 40.0, 50.0]
+    assert settings["frequency_ghz"] == 223.8
+    assert "output_root" not in settings
+    assert "temperature_sampling_summary" not in config["inputs"]
+    paths = {"output_root": Path("/tmp/out")}
+    assert task.temperature_sampling_dir(paths) == Path(
+        "/tmp/out/temperature_sampling"
+    )
+
+
+def test_efficiency_stage_requires_current_temperature_sampling(
+    tmp_path: Path,
+) -> None:
+    task = _load_task()
+    config = task.load_task_config(
+        PROJECT_ROOT / "tasks" / "core_formation_efficiency" / "task.toml"
+    )
+    paths = {"output_root": tmp_path}
+
+    with pytest.raises(FileNotFoundError, match="--stage temperature_sampling"):
+        task.plot_efficiency(paths, config)
