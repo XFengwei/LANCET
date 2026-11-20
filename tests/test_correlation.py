@@ -151,11 +151,11 @@ def test_current_catalogue_preserves_paper_correlation_slope() -> None:
 
     assert result["n_points"][0, 1] == 228
     assert result["pearson"][0, 1] == pytest.approx(
-        0.7200655933,
+        0.7073222453,
         rel=1e-8,
     )
     assert result["spearman"][0, 1] == pytest.approx(
-        0.7215132073,
+        0.7045714338,
         rel=1e-8,
     )
 
@@ -164,7 +164,7 @@ def test_correlation_task_inspection_reports_configured_profile() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/correlation.py",
+            "tasks/correlation/run.py",
             "--stage",
             "inspect",
         ],
@@ -177,7 +177,7 @@ def test_correlation_task_inspection_reports_configured_profile() -> None:
     assert "rows=231" in completed.stdout
     assert "x fractional uncertainty=0.33" in completed.stdout
     assert "valid rows=228/231" in completed.stdout
-    assert "Pearson=0.720066" in completed.stdout
+    assert "Pearson=0.707322" in completed.stdout
 
 
 def test_publication_correlation_figure_is_available() -> None:

@@ -289,8 +289,8 @@ Calculate the core–environment correlations and the intercore
 surface-density regression with:
 
 ```bash
-conda run -n py312 python scripts/correlation.py --stage inspect
-conda run -n py312 python scripts/correlation.py --stage all
+conda run -n py312 python tasks/correlation/run.py --stage inspect
+conda run -n py312 python tasks/correlation/run.py --stage all
 ```
 
 The task writes a machine-readable pairwise-correlation table, a deterministic

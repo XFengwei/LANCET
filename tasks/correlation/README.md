@@ -29,15 +29,15 @@ environment measurement. A 20% alternative is retained with neighboring
 choices in an explicit sensitivity grid. For a fractional linear uncertainty
 `f`, the implemented log uncertainty is `f / ln(10)`.
 
-The current opacity correction scales both intercore axes together. It changes
-the fitted normalization but leaves the correlation coefficients and
-power-law slope unchanged.
+The opacity scales both intercore axes together. It changes the fitted
+normalization but leaves the correlation coefficients and power-law slope
+unchanged.
 
 Run:
 
 ```bash
-conda run -n py312 python scripts/correlation.py --stage inspect
-conda run -n py312 python scripts/correlation.py --stage all
+PYTHONPATH=src conda run -n py312 python tasks/correlation/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/correlation/run.py --stage all
 ```
 
 Use `--stage matrices` for the pairwise table and two matrix figures, or
@@ -54,3 +54,22 @@ Outputs under `results/correlation/` are:
 - regression-comparison PDF and PNG; and
 - the clean paper figure
   `figures/Correlation_Surface_env-Surface_core.pdf` with a matching PNG.
+
+## Change from Paper II (2026-11-20)
+
+The code reproduces the Paper II products from the Paper II environment
+catalogue: the pairwise table is identical, OLS, Theil–Sen and ODR agree to
+rounding. The MCMC differs at the 1e-3 level (α median 1.2231 → 1.2233)
+because the maximum-likelihood start differs in the flat intrinsic-scatter
+direction (ln σ −10.0 → −9.14, library versions); reruns are deterministic.
+
+On the reviewed catalogue (gain-corrected cores and intercore map, new
+12m+7m+TP core background; `tables/intercore_surface_density_powerlaw.json`):
+
+- Σ^ic_core–Σ^ic_env: N = 228; Pearson 0.720 → 0.707, Spearman 0.722 → 0.705;
+  MCMC α = 1.223 (+0.069/−0.065) → 1.242 (+0.072/−0.069), log₁₀A
+  0.577 → 0.579.
+- Sensitivity to the x uncertainty (0, 0.1, 0.2, 0.33, 0.5):
+  α 1.26, 1.26, 1.26, 1.22, 1.01 → 1.29, 1.29, 1.29, 1.24, 1.01.
+- Largest Spearman changes: Σ_core–Σ_env 0.19 → 0.16, M_core–Σ_env
+  0.14 → 0.11, Σ^ic_env–Σ_env 0.56 → 0.53, Σ^ic_core–Σ_env 0.37 → 0.34.
