@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Reconstruct C18O cubes, masked moments, and ALMA-grid products."""
+"""Reconstruct C18O cubes and masked moment maps from the SEDIGISM cube."""
 
 from __future__ import annotations
 
@@ -14,7 +14,6 @@ import numpy as np
 from spectral_cube import SpectralCube
 
 from lancet import ProjectPaths
-from lancet.moments import reproject_image
 
 
 DEFAULT_CONFIG = Path("tasks/c18o_moments/task.toml")
@@ -50,7 +49,7 @@ def resolve_task_paths(
     project: ProjectPaths,
     config: Mapping[str, object],
 ) -> dict[str, Path]:
-    """Resolve the single line-data input, WCS template, and output root."""
+    """Resolve the single line-data input and the output root."""
     inputs = config["inputs"]
     outputs = config["outputs"]
     if not isinstance(inputs, Mapping) or not isinstance(outputs, Mapping):
@@ -60,7 +59,7 @@ def resolve_task_paths(
         for name, value in inputs.items()
     }
     paths["output_root"] = project.validate_output(str(outputs["root"]))
-    for name in ("c18o_cube", "alma_grid"):
+    for name in ("c18o_cube",):
         path = paths[name]
         if not path.is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be a delivered input: {path}")
@@ -109,8 +108,6 @@ def inspect_inputs(
     """Report input metadata and declared mask settings."""
     print(f"C18O cube: {paths['c18o_cube']}")
     print(f"  {_describe(paths['c18o_cube'])}")
-    print(f"ALMA grid: {paths['alma_grid']}")
-    print(f"  {_describe(paths['alma_grid'])}")
     settings = config["moments"]
     assert isinstance(settings, Mapping)
     print(
@@ -213,64 +210,6 @@ def build_moments(
         mom2_minch=int(settings["moment2_min_channels"]),
     )
     return products
-
-
-def reproject_moment2(
-    paths: Mapping[str, Path],
-    config: Mapping[str, object],
-    *,
-    overwrite: bool = False,
-) -> dict[str, Path]:
-    """Reproject velocity dispersion and its footprint to the ALMA grid."""
-    source = moment_paths(paths, config)["mom2.fits.gz"]
-    if not source.is_file():
-        raise FileNotFoundError(
-            f"Moment-2 map not found: {source}; run --stage moments first"
-        )
-    data, source_header = fits.getdata(source, header=True, memmap=True)
-    target_header = fits.getheader(paths["alma_grid"])
-    reprojected, footprint, output_header = reproject_image(
-        data,
-        source_header,
-        target_header,
-        order=str(config["reprojection"]["order"]),
-    )
-    outputs = {
-        "moment2": (
-            paths["output_root"]
-            / "reprojected"
-            / "c18o_moment2_on_alma_grid.fits"
-        ),
-        "footprint": (
-            paths["output_root"]
-            / "reprojected"
-            / "c18o_moment2_reprojection_footprint.fits"
-        ),
-    }
-    for name, array in (
-        ("moment2", reprojected),
-        ("footprint", footprint),
-    ):
-        _prepare_output(outputs[name], overwrite=overwrite)
-        header = output_header.copy()
-        header["BUNIT"] = (
-            source_header.get("BUNIT", "km s-1")
-            if name == "moment2"
-            else "1"
-        )
-        header["BTYPE"] = (
-            "Velocity dispersion"
-            if name == "moment2"
-            else "Reprojection footprint"
-        )
-        fits.writeto(
-            outputs[name],
-            np.asarray(array, dtype=np.float32),
-            header,
-            overwrite=overwrite,
-        )
-        print(f"Wrote {outputs[name]}")
-    return outputs
 
 
 def _figure_outputs(
@@ -436,7 +375,6 @@ def main() -> None:
             "inspect",
             "prepare",
             "moments",
-            "reproject",
             "plot",
             "all",
         ),
@@ -455,8 +393,6 @@ def main() -> None:
         prepare_cubes(paths, overwrite=args.overwrite)
     if args.stage in ("moments", "all"):
         build_moments(paths, config, overwrite=args.overwrite)
-    if args.stage in ("reproject", "all"):
-        reproject_moment2(paths, config, overwrite=args.overwrite)
     if args.stage in ("plot", "all"):
         plot_moments(paths, config, overwrite=args.overwrite)
 

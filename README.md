@@ -192,14 +192,14 @@ velocity-dispersion map, and moment figure from the single delivered line cube
 with:
 
 ```bash
-conda run -n py312 python scripts/c18o_moments.py --stage inspect
-conda run -n py312 python scripts/c18o_moments.py --stage all
+conda run -n py312 python tasks/c18o_moments/run.py --stage inspect
+conda run -n py312 python tasks/c18o_moments/run.py --stage all
 ```
 
 The dilated-mask thresholds and supporting parameters are declared in
 [`tasks/c18o_moments/task.toml`](tasks/c18o_moments/task.toml). All generated
-cubes, moment products, reprojections, and figures are written under
-`results/moment_maps/`; the delivered data tree remains read-only.
+cubes, moment products, and figures are written under
+`results/c18o_moments/`; the delivered data tree remains read-only.
 
 Build the source catalogue and its dependent physical-property table with:
 
@@ -270,16 +270,16 @@ Calculate the core–environment correlations and the intercore
 surface-density regression with:
 
 ```bash
-conda run -n py312 python tasks/correlation/run.py --stage inspect
-conda run -n py312 python tasks/correlation/run.py --stage all
+conda run -n py312 python tasks/environ_core_correlation/run.py --stage inspect
+conda run -n py312 python tasks/environ_core_correlation/run.py --stage all
 ```
 
 The task writes a machine-readable pairwise-correlation table, a deterministic
 MCMC summary and posterior sample, and four PDF/PNG figure pairs under
-`results/correlation/`, including the clean single-panel paper figure
-`Correlation_Surface_env-Surface_core.pdf`. Variables, labels, uncertainty
+`results/environ_core_correlation/`, including the clean single-panel paper figure
+`correlation_surface_env-surface_core.pdf`. Variables, labels, uncertainty
 profiles, sampler settings, and plot styles are declared in
-[`tasks/correlation/task.toml`](tasks/correlation/task.toml).
+[`tasks/environ_core_correlation/task.toml`](tasks/environ_core_correlation/task.toml).
 
 Calculate thermal Bonnor–Ebert stability and the global/regional core mass
 functions with:

@@ -1,11 +1,11 @@
 [task]
-name = "correlation"
+name = "environ_core_correlation"
 
 [inputs]
 catalogue = "results/environment_measurements/tables/core_environment_catalogue.ecsv"
 
 [outputs]
-root = "results/correlation"
+root = "results/environ_core_correlation"
 
 [variables]
 resolved_only_columns = ["Volden_core"]

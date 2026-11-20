@@ -8,57 +8,30 @@ from astropy.io import fits
 import numpy as np
 import pytest
 
-from lancet.moments import reproject_image
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-RESULTS = PROJECT_ROOT / "results" / "moment_maps"
+RESULTS = PROJECT_ROOT / "results" / "c18o_moments"
 RETAINED = (
     PROJECT_ROOT / "data" / "delivered" / "total_power" / "SEDIGISM"
 )
 
 
-def _header(shape: tuple[int, int], pixel_arcsec: float) -> fits.Header:
-    return fits.Header(
-        {
-            "NAXIS": 2,
-            "NAXIS1": shape[1],
-            "NAXIS2": shape[0],
-            "CTYPE1": "RA---TAN",
-            "CTYPE2": "DEC--TAN",
-            "CRPIX1": (shape[1] + 1) / 2,
-            "CRPIX2": (shape[0] + 1) / 2,
-            "CRVAL1": 221.0,
-            "CRVAL2": -59.0,
-            "CDELT1": -pixel_arcsec / 3600.0,
-            "CDELT2": pixel_arcsec / 3600.0,
-            "BUNIT": "km s-1",
-            "BMAJ": 30.0 / 3600.0,
-            "BMIN": 30.0 / 3600.0,
-            "BPA": 0.0,
-        }
+def test_task_has_no_reprojection() -> None:
+    import tomllib
+
+    config = tomllib.loads(
+        (PROJECT_ROOT / "tasks" / "c18o_moments" / "task.toml").read_text()
     )
 
-
-def test_reprojection_uses_target_shape_and_preserves_unit() -> None:
-    source = np.ones((5, 5), dtype=np.float32)
-    output, footprint, header = reproject_image(
-        source,
-        _header((5, 5), 2.0),
-        _header((9, 9), 1.0),
-    )
-
-    assert output.shape == (9, 9)
-    assert footprint.shape == (9, 9)
-    assert header["BUNIT"] == "km s-1"
-    assert np.isfinite(output[4, 4])
+    assert set(config["inputs"]) == {"c18o_cube"}
+    assert "reprojection" not in config
 
 
 def test_moment_task_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/c18o_moments.py",
+            "tasks/c18o_moments/run.py",
             "--stage",
             "inspect",
         ],
@@ -70,7 +43,7 @@ def test_moment_task_inspection_is_read_only() -> None:
 
     assert "c18o_2-1_apex-sedigism.fits" in completed.stdout
     assert "snr_hi=9.0, snr_lo=2.0" in completed.stdout
-    assert "results/moment_maps" in completed.stdout
+    assert "results/c18o_moments" in completed.stdout
 
 
 def test_reconstructed_cube_derivatives_follow_raw_cube() -> None:
@@ -115,25 +88,3 @@ def test_reconstructed_mask_and_moments_are_float32() -> None:
             fits.getdata(generated_root / "c18o.mask.fits.gz"),
             fits.getdata(retained_mask),
         )
-
-
-def test_reprojected_moment2_uses_alma_shape_and_float32() -> None:
-    actual_path = (
-        RESULTS / "reprojected" / "c18o_moment2_on_alma_grid.fits"
-    )
-    if not actual_path.is_file():
-        pytest.skip("C18O reprojected product has not been generated")
-    actual_header = fits.getheader(actual_path)
-    alma_header = fits.getheader(
-        PROJECT_ROOT
-        / "data"
-        / "delivered"
-        / "alma"
-        / "TP7MTM2TM1"
-        / "cont"
-        / "allscale_combined_v3_dust_ff.MJysr.rp.fits"
-    )
-    assert actual_header["BITPIX"] == -32
-    assert actual_header["NAXIS1"] == alma_header["NAXIS1"]
-    assert actual_header["NAXIS2"] == alma_header["NAXIS2"]
-    assert actual_header["BUNIT"] == "km s-1"

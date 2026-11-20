@@ -29,7 +29,7 @@ from lancet.correlation import (
 )
 
 
-DEFAULT_CONFIG = Path("tasks/correlation/task.toml")
+DEFAULT_CONFIG = Path("tasks/environ_core_correlation/task.toml")
 
 
 def load_task_config(path: Path) -> dict[str, object]:

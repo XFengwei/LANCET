@@ -11,12 +11,11 @@ and non-positive pixels are excluded (`minimum_valid_value = 0`).
 |---|---|---|
 | `physical_catalogue` | `results/physical_properties/tables/core_physical_properties.ecsv` | (copied into the output) |
 | `temperature` | `data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits` | `Temp` |
-| `velocity_dispersion` | `results/moment_maps/moments/c18o.mom2.fits.gz` | `Vsig` |
+| `velocity_dispersion` | `results/c18o_moments/moments/c18o.mom2.fits.gz` | `Vsig` |
 | `intercore_surface_density` | `results/column_density/maps/surface_density_intercore.fits` | `Interco` |
 | `surface_density` | `results/column_density/prepared/surface_density_lowres.fits` | `Surface` |
 
-The C18O moment map comes from `results/moment_maps/`, which becomes the
-`c18o_moments` task (D5).
+The C18O moment-2 map is a product of the `c18o_moments` task.
 
 ```bash
 PYTHONPATH=src conda run -n py312 python tasks/environment_measurements/run.py --stage inspect
@@ -25,7 +24,7 @@ PYTHONPATH=src conda run -n py312 python tasks/environment_measurements/run.py -
 
 Output: `results/environment_measurements/tables/core_environment_catalogue.ecsv`,
 the physical-property catalogue plus the `*_env_*` columns. It is the input
-of `correlation` and `bonnor_ebert`.
+of `environ_core_correlation` and `bonnor_ebert`.
 
 ## Change from Paper II (2026-11-20)
 

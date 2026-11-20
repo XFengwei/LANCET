@@ -164,7 +164,7 @@ def test_correlation_task_inspection_reports_configured_profile() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "tasks/correlation/run.py",
+            "tasks/environ_core_correlation/run.py",
             "--stage",
             "inspect",
         ],
@@ -181,10 +181,10 @@ def test_correlation_task_inspection_reports_configured_profile() -> None:
 
 
 def test_publication_correlation_figure_is_available() -> None:
-    figure_root = PROJECT_ROOT / "results" / "correlation" / "figures"
+    figure_root = PROJECT_ROOT / "results" / "environ_core_correlation" / "figures"
     outputs = [
-        figure_root / "Correlation_Surface_env-Surface_core.pdf",
-        figure_root / "Correlation_Surface_env-Surface_core.png",
+        figure_root / "correlation_surface_env-surface_core.pdf",
+        figure_root / "correlation_surface_env-surface_core.png",
     ]
     if not all(path.is_file() for path in outputs):
         pytest.skip("Generated publication correlation figure is unavailable")

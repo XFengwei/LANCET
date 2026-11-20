@@ -36,15 +36,15 @@ unchanged.
 Run:
 
 ```bash
-PYTHONPATH=src conda run -n py312 python tasks/correlation/run.py --stage inspect
-PYTHONPATH=src conda run -n py312 python tasks/correlation/run.py --stage all
+PYTHONPATH=src conda run -n py312 python tasks/environ_core_correlation/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/environ_core_correlation/run.py --stage all
 ```
 
 Use `--stage matrices` for the pairwise table and two matrix figures, or
 `--stage regression` for the MCMC regression only. Add `--overwrite` when
 replacing existing task products.
 
-Outputs under `results/correlation/` are:
+Outputs under `results/environ_core_correlation/` are:
 
 - `tables/pairwise_correlations.ecsv`;
 - `tables/intercore_surface_density_powerlaw.json`;
@@ -53,7 +53,7 @@ Outputs under `results/correlation/` are:
 - compact Spearman-matrix PDF and PNG; and
 - regression-comparison PDF and PNG; and
 - the clean paper figure
-  `figures/Correlation_Surface_env-Surface_core.pdf` with a matching PNG.
+  `figures/correlation_surface_env-surface_core.pdf` with a matching PNG.
 
 ## Change from Paper II (2026-11-20)
 

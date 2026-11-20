@@ -4,7 +4,7 @@ name = "environment_measurements"
 [inputs]
 physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
 temperature = "data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits"
-velocity_dispersion = "results/moment_maps/moments/c18o.mom2.fits.gz"
+velocity_dispersion = "results/c18o_moments/moments/c18o.mom2.fits.gz"
 intercore_surface_density = "results/column_density/maps/surface_density_intercore.fits"
 surface_density = "results/column_density/prepared/surface_density_lowres.fits"
 
