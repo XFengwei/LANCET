@@ -154,6 +154,15 @@ def test_tp_only_ratio_percentiles():
     assert set(r) >= {"p01", "p16", "median", "p84", "p99"}
 
 
+def test_tp_only_ratio_empty_region_returns_none_values():
+    from lancet.combination_validation import tp_only_ratio
+
+    tp = np.ones((20, 20))
+    product = np.full((20, 20), np.nan)                 # product blank outside the mosaic
+    r = tp_only_ratio(product, tp, (0.7, 0.6, 30.0), np.ones((20, 20), dtype=bool))
+    assert r == {"p01": None, "p16": None, "median": None, "p84": None, "p99": None, "n": 0}
+
+
 def test_tapered_window_is_one_inside_and_zero_at_the_edge():
     from lancet.combination_validation import tapered_window
 

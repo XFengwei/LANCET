@@ -155,7 +155,9 @@ def plot_zero_spacing(stem, tp, combined_at_tp_beam, mosaic, tp_only, method_lab
     ax.plot([0, limit], [0, limit], color="black", lw=0.7, label="1 : 1")
     ax.set(xlim=(0, limit), ylim=(0, limit), xlabel=f"{tp_label} (MJy/sr)",
            ylabel=f"{method_label} at the TP beam (MJy/sr)",
-           title=f"flux ratio: mosaic {stats['mosaic']['flux_ratio']:.3f}, TP only {stats['tp_only']['flux_ratio']:.3f}")
+           title="flux ratio: " + ", ".join(
+               f"{name} {stats[key]['flux_ratio']:.3f}" if stats[key].get("n") else f"{name} none"
+               for name, key in (("mosaic", "mosaic"), ("TP only", "tp_only"))))
     ax.title.set_fontsize(9)
     ax.legend(fontsize=7, loc="upper left")
     _save(fig, stem)

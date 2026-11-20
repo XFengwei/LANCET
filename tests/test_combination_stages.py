@@ -227,3 +227,25 @@ def test_prepare_rejects_gain_of_another_shape(tmp_path):
         paths["gain"], overwrite=True)
     with pytest.raises(ValueError, match="shape"):
         stages.run_prepare(paths, _prepare_config())
+
+
+def test_measurements_run_on_a_product_blank_outside_the_mosaic():
+    from astropy.wcs import WCS
+    n, pix = 64, 2.0
+    config = _config({})
+    header, tp_header = _header(n, pix, 4.0), _header(16, 4 * pix, 18.1)
+    gain = np.zeros((n, n), np.float32)
+    gain[16:48, 16:48] = 1.0
+    field = np.nan_to_num(_smooth_field(n, border=1), nan=1.0)
+    product = np.where(gain > 0, field, np.nan)       # blank outside the mosaic
+    edges = np.geomspace(1.0, 30.0, 7)
+    ctx = {"high": 1.0e3 * field, "low": np.ones((n, n), np.float32), "tp_high": np.ones((n, n)),
+           "tp_native": np.ones((16, 16)), "tp_wcs": WCS(tp_header), "header": header, "gain": gain,
+           "blank": gain == 0, "mask": gain > 0, "window": (gain > 0).astype(float), "pix": pix,
+           "high_beam": (4.0, 4.0, 0.0), "clean": np.nan_to_num(field), "positions": [], "sigma": 0.1,
+           "edges": edges, "centres": np.sqrt(edges[:-1] * edges[1:])}
+    measured = stages.measure_product(product, ctx, config, 1.0)
+    assert measured["tp_only_ratio_to_scaled_tp"]["n"] == 0
+    assert measured["tp_only_ratio_to_scaled_tp"]["median"] is None
+    check = stages.zero_spacing(product, ctx, config, 1.0)[0]
+    assert check["tp_only"] == {"n": 0}

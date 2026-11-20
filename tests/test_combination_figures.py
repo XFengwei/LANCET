@@ -53,3 +53,16 @@ def test_plot_zero_spacing_writes_both_formats(tmp_path):
     stem = tmp_path / "jcomb" / "zero_spacing_dust_ff"
     plot_zero_spacing(stem, tp, 1.001 * tp, mosaic, tp_only, "J-comb", "TP dust+free-free", stats)
     assert _written(stem)
+
+
+def test_plot_zero_spacing_without_tp_only_region(tmp_path):
+    from lancet.combination_figures import plot_zero_spacing
+
+    tp = np.random.default_rng(4).random((40, 50)) + 1.0
+    mosaic = np.zeros(tp.shape, dtype=bool)
+    mosaic[10:30, 10:40] = True
+    combined = np.where(mosaic, tp, np.nan)
+    stats = {"mosaic": {"n": int(mosaic.sum()), "flux_ratio": 1.0}, "tp_only": {"n": 0}}
+    stem = tmp_path / "zero_spacing"
+    plot_zero_spacing(stem, tp, combined, mosaic, np.zeros_like(mosaic), "J-comb", "TP", stats)
+    assert _written(stem)

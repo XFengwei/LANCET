@@ -145,6 +145,8 @@ def tp_only_ratio(product_jybeam, tp_mjysr, high_beam, region) -> dict:
     product = jybeam_to_mjysr(np.asarray(product_jybeam, dtype=float), high_beam[0], high_beam[1])
     tp = np.asarray(tp_mjysr, dtype=float)
     sel = np.asarray(region, dtype=bool) & np.isfinite(product) & (tp > 0)
+    if not sel.any():
+        return {"p01": None, "p16": None, "median": None, "p84": None, "p99": None, "n": 0}
     p = np.percentile(product[sel] / tp[sel], [1, 16, 50, 84, 99])
     return {"p01": float(p[0]), "p16": float(p[1]), "median": float(p[2]), "p84": float(p[3]),
             "p99": float(p[4]), "n": int(sel.sum())}
