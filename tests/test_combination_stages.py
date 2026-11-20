@@ -188,6 +188,22 @@ def test_prepare_default_cut_keeps_the_delivered_footprint(tmp_path):
     assert json.loads(out["report"].read_text())["interferometer"]["minimum_pb"] == 0.2
 
 
+def test_prepare_default_cut_keeps_a_pixel_at_exactly_pb_0_2(tmp_path):
+    paths = _inputs(tmp_path)
+    pb = fits.getdata(paths["pb"]).squeeze()
+    pb[200, 200] = np.float32(0.2)
+    fits.PrimaryHDU(pb[None, None], _gain_header(400)).writeto(paths["pb"], overwrite=True)
+    out = stages.run_prepare(paths, _cut_config(0.2))
+    assert fits.getdata(out["gain"])[200, 200] == pytest.approx(0.9)
+    assert np.isfinite(fits.getdata(out["interferometer"])[200, 200])
+
+
+def test_clean_reference_follows_the_prepared_mosaic():
+    truesky = np.array([[1.0, 2.0], [np.nan, 4.0]], dtype=np.float32)
+    gain = np.array([[0.9, 0.0], [0.0, 0.9]], dtype=np.float32)
+    np.testing.assert_array_equal(stages.clean_reference(truesky, gain), [[1.0, 0.0], [0.0, 4.0]])
+
+
 def test_prepare_margin_is_measured_from_the_cut_mosaic(tmp_path):
     def narrow_tp(paths):
         for name in ("tp_dust", "tp_dust_ff"):      # footprint 198" wide, inside the 200" mosaic
@@ -408,6 +424,7 @@ def test_method_writes_extended_products(tmp_path, monkeypatch, method):
     assert extended["zero_spacing"]["tp_only"]["n"] > 0
     assert extended["tp_only_ratio_to_scaled_tp"]["n"] > 0
     assert abs(extended["ratio_to_standard_pb_ge_0.35"] - 1.0) < 1e-3
+    assert extended["ratio_to_standard_threshold_pb"] == 0.35
     if method == "feather":                         # beyond the mosaic the feather is the TP alone
         assert abs(extended["tp_only_ratio_to_scaled_tp"]["median"] - 1.0) < 0.03
 

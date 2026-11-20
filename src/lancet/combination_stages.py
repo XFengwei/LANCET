@@ -374,12 +374,17 @@ def catalogue_positions(px, py, gain, min_gain) -> list[tuple[float, float]]:
     return out
 
 
+def clean_reference(truesky: np.ndarray, gain: np.ndarray) -> np.ndarray:
+    """The delivered true-sky image with 0 outside the prepared mosaic (gain 0), so the pb cut applies."""
+    return np.where(gain > 0, np.nan_to_num(truesky), 0.0)
+
+
 def measurement_context(paths: Mapping[str, Path], config: Mapping, flavour: str) -> dict:
     """Arrays and reference quantities shared by the measurements of one TP flavour."""
     from astropy.table import Table
     low, high, gain, header, pix, high_beam, low_beam = load_prepared(paths, flavour)
     m = config["measure"]
-    clean = np.nan_to_num(read_plane(paths["interferometer"])[0])
+    clean = clean_reference(read_plane(paths["interferometer"])[0], gain)
     x0, y0, x1, y1 = m["noise_box_pix"]
     box = clean[y0:y1, x0:x1]
     sigma = float(1.4826 * np.median(np.abs(box - np.median(box))))
@@ -498,7 +503,9 @@ def _run_extended(method, flavour, ctx, standard, paths, config, settings, out, 
     info = {"taper_pb": [pb0, pb1], "zero_spacing": check,
             "tp_only_ratio_to_scaled_tp": tp_only_ratio(product, factor * ctx["low"], ctx["high_beam"],
                                                         ~blank & (ctx["gain"] == 0))}
-    keep = (pb >= 0.35) & np.isfinite(standard) & (standard > 3.0 * ctx["sigma"])
+    threshold = max(0.35, pb1)
+    keep = (pb >= threshold) & np.isfinite(standard) & (standard > 3.0 * ctx["sigma"])
+    info["ratio_to_standard_threshold_pb"] = threshold
     info["ratio_to_standard_pb_ge_0.35"] = float(np.median(product[keep] / standard[keep])) if keep.any() else None
     tp_meta = {"stage": method, "tp_flavour": flavour, "tp_factor": factor, "extended": True}
     write_product(out[f"at_tp_beam_extended_{flavour}"], at_tp_beam, ctx["tp_header"],
