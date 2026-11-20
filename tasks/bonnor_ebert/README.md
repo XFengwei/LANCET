@@ -64,13 +64,31 @@ uncertainty only. Uncertainties in temperature, surface density, the adopted
 0.4-pc depth, velocity dispersion, and `f_turb` are not yet propagated.
 
 ```bash
-conda run -n py312 python scripts/bonnor_ebert.py --stage inspect
-conda run -n py312 python scripts/bonnor_ebert.py \
+PYTHONPATH=src conda run -n py312 python tasks/bonnor_ebert/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/bonnor_ebert/run.py \
   --stage all --profile radius_thermal
-conda run -n py312 python scripts/bonnor_ebert.py \
+PYTHONPATH=src conda run -n py312 python tasks/bonnor_ebert/run.py \
   --stage all --profile measured_external
 ```
 
 The profile named by `calculation.active_profile` is used when `--profile` is
 omitted. Use `--stage catalogue` or `--stage plot` for individual product
 groups. Add `--overwrite` when replacing products within the same profile.
+
+## Change from Paper II (2026-11-20)
+
+The code reproduces both profiles from the Paper II environment catalogue:
+`radius_thermal` exactly, `measured_external` within 3e-9 (astropy
+constants). On the reviewed catalogue (gain-corrected masses and intercore
+map, new 12m+7m+TP core background):
+
+| | Paper II | New |
+|---|---|---|
+| `radius_thermal`: supercritical | 196/209 (0.938) | 198/209 (0.947) |
+| `radius_thermal`: median α_BE [16, 84 %] | 2.98 [1.46, 10.1] | 3.00 [1.51, 10.1] |
+| `measured_external`: supercritical | 224/231 (0.970) | 224/231 (0.970) |
+| `measured_external`: median α_BE [16, 84 %] | 6.48 [2.41, 17.4] | 6.48 [2.53, 17.6] |
+| `measured_external`: median P/k (K cm⁻³) | 4.94e7 | 4.95e7 |
+
+By region (`radius_thermal` median α_BE): Young 8.55 → 8.55, Intermediate
+2.92 → 3.00, Evolved 2.57 → 2.62.

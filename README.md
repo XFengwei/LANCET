@@ -304,10 +304,10 @@ Calculate thermal Bonnor–Ebert stability and the global/regional core mass
 functions with:
 
 ```bash
-conda run -n py312 python scripts/bonnor_ebert.py --stage inspect
-conda run -n py312 python scripts/bonnor_ebert.py \
+conda run -n py312 python tasks/bonnor_ebert/run.py --stage inspect
+conda run -n py312 python tasks/bonnor_ebert/run.py \
   --stage all --profile radius_thermal
-conda run -n py312 python scripts/bonnor_ebert.py \
+conda run -n py312 python tasks/bonnor_ebert/run.py \
   --stage all --profile measured_external
 conda run -n py312 python tasks/core_mass_function/run.py --stage inspect
 conda run -n py312 python tasks/core_mass_function/run.py --stage all

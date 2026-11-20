@@ -23,10 +23,19 @@ from lancet.stability import (
     nonthermal_velocity_dispersion,
     sound_speed,
 )
-from scripts.bonnor_ebert import calculate_catalogue, load_task_config
+from importlib.util import module_from_spec, spec_from_file_location
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_SPEC = spec_from_file_location(
+    "bonnor_ebert_script", PROJECT_ROOT / "tasks" / "bonnor_ebert" / "run.py"
+)
+assert _SPEC is not None and _SPEC.loader is not None
+_TASK = module_from_spec(_SPEC)
+sys.modules[_SPEC.name] = _TASK
+_SPEC.loader.exec_module(_TASK)
+calculate_catalogue = _TASK.calculate_catalogue
+load_task_config = _TASK.load_task_config
 
 
 def test_sound_speed_matches_isothermal_definition() -> None:
@@ -122,7 +131,7 @@ def test_bonnor_ebert_task_inspection_reports_radius_assumption() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/bonnor_ebert.py",
+            "tasks/bonnor_ebert/run.py",
             "--stage",
             "inspect",
         ],
@@ -147,7 +156,7 @@ def test_bonnor_ebert_task_can_select_measured_external_profile() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/bonnor_ebert.py",
+            "tasks/bonnor_ebert/run.py",
             "--stage",
             "inspect",
             "--profile",
