@@ -76,9 +76,14 @@ def _inputs(tmp_path, tp_frequency=223.8, truesky_edge=100):
     n = 400
     truesky = np.full((n, n), np.nan, dtype=np.float32)
     truesky[truesky_edge:n - truesky_edge, truesky_edge:n - truesky_edge] = 1.0
-    paths = {"interferometer": tmp_path / "interferometer.fits", "gain": tmp_path / "gain.fits"}
+    paths = {"interferometer": tmp_path / "interferometer.fits", "gain": tmp_path / "gain.fits",
+             "pb": tmp_path / "pb_prepare.fits"}
     fits.PrimaryHDU(truesky[None, None], _truesky_header(n, 0.5, 1.0)).writeto(paths["interferometer"])
     fits.PrimaryHDU(np.full((n, n), 0.9, dtype=np.float32)[None, None], _gain_header(n)).writeto(paths["gain"])
+    # Radial primary beam: 1 at the centre, 0.25 from 100 px (the default mosaic edge) outwards.
+    radius = np.hypot(*(np.mgrid[:n, :n] - (n - 1) / 2))
+    pb = np.clip(1.0 - 0.75 * radius / 100.0, 0.25, 1.0).astype(np.float32)
+    fits.PrimaryHDU(pb[None, None], _gain_header(n)).writeto(paths["pb"])
     tp = _smooth_field(61)
     for name in ("tp_dust", "tp_dust_ff"):
         header = _header(61, 6.0, 18.1)
@@ -154,6 +159,80 @@ def test_prepare_fails_on_small_margin(tmp_path):
     with pytest.raises(RuntimeError, match="margin"):
         stages.run_prepare(paths, _prepare_config())
     assert not (tmp_path / "out").exists()          # nothing is written when an input check fails
+
+
+def _cut_config(minimum_pb):
+    config = _prepare_config()
+    config["prepare"]["interferometer_min_pb"] = minimum_pb
+    return config
+
+
+def test_prepare_cuts_the_interferometer_at_the_minimum_pb(tmp_path):
+    paths = _inputs(tmp_path)
+    out = stages.run_prepare(paths, _cut_config(0.5))
+    pb = fits.getdata(paths["pb"]).astype(float).squeeze()
+    gain, interferometer = fits.getdata(out["gain"]), fits.getdata(out["interferometer"])
+    inside = pb >= 0.5
+    assert inside.any() and (~inside).any()
+    np.testing.assert_array_equal(gain[~inside], 0.0)
+    np.testing.assert_array_equal(interferometer[~inside], 0.0)
+    np.testing.assert_allclose(gain[inside], 0.9, rtol=1e-6)
+    assert (interferometer[inside] > 0).all()
+    assert json.loads(out["report"].read_text())["interferometer"]["minimum_pb"] == 0.5
+
+
+def test_prepare_default_cut_keeps_the_delivered_footprint(tmp_path):
+    out = stages.run_prepare(_inputs(tmp_path), _cut_config(0.2))
+    gain = fits.getdata(out["gain"])
+    np.testing.assert_allclose(gain[100:300, 100:300], 0.9, rtol=1e-6)
+    assert json.loads(out["report"].read_text())["interferometer"]["minimum_pb"] == 0.2
+
+
+def test_prepare_margin_is_measured_from_the_cut_mosaic(tmp_path):
+    def narrow_tp(paths):
+        for name in ("tp_dust", "tp_dust_ff"):      # footprint 198" wide, inside the 200" mosaic
+            header = _header(61, 6.0, 18.1)
+            header["FREQGHZ"] = 223.8
+            fits.PrimaryHDU(_smooth_field(border=14), header).writeto(paths[name], overwrite=True)
+    for sub in ("a", "b"):
+        (tmp_path / sub).mkdir()
+    paths = _inputs(tmp_path / "a", truesky_edge=0)
+    narrow_tp(paths)
+    with pytest.raises(RuntimeError, match="margin"):
+        stages.run_prepare(paths, _cut_config(0.2))
+    paths = _inputs(tmp_path / "b", truesky_edge=0)
+    narrow_tp(paths)
+    out = stages.run_prepare(paths, _cut_config(0.5))
+    assert json.loads(out["report"].read_text())["tp_dust"]["margin_arcsec"] > 18.1
+
+
+@pytest.mark.parametrize("bad", [0.19, 1.0, 1.5])
+def test_prepare_rejects_a_minimum_pb_outside_the_delivered_range(tmp_path, bad):
+    paths = _inputs(tmp_path)
+    with pytest.raises(ValueError, match="interferometer_min_pb"):
+        stages.run_prepare(paths, _cut_config(bad))
+    assert not (tmp_path / "out").exists()
+
+
+def test_method_refuses_a_taper_below_the_pb_cut(tmp_path):
+    paths = _method_inputs(tmp_path)
+    config = _config({("prepare", "interferometer_min_pb"): 0.5, ("combine", "extended_taper_pb"): [0.2, 0.3]})
+    with pytest.raises(ValueError, match="extended_taper_pb"):
+        stages.run_method("jcomb", paths, config)
+    assert not (tmp_path / "out").exists()
+
+
+def test_pb0_5_variant_differs_from_the_task_config_in_three_keys():
+    variant = TASK.load_task_config(PROJECT_ROOT / "tasks" / "combine_continuum" / "task.pb0.5.toml")
+    base = TASK.load_task_config(CONFIG)
+    assert variant["outputs"]["root"] == "results/combine_continuum/variants/interferometer_pb0.5"
+    assert variant["prepare"]["interferometer_min_pb"] == 0.5
+    assert variant["combine"]["extended_taper_pb"] == [0.5, 0.6]
+    assert base["prepare"]["interferometer_min_pb"] == 0.2
+    variant["outputs"]["root"] = base["outputs"]["root"]
+    variant["prepare"]["interferometer_min_pb"] = base["prepare"]["interferometer_min_pb"]
+    variant["combine"]["extended_taper_pb"] = base["combine"]["extended_taper_pb"]
+    assert variant == base
 
 
 # ---------------------------------------------------------------- phase 1 checks and products

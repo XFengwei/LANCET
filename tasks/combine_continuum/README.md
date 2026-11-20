@@ -182,6 +182,23 @@ the standard product apart from the small large-scale change that the rim
 weight makes through the FFT. The two combinations run one after the other, so the FFT planes of both are never held at once. The diagnostics keep using
 the standard, blanked products.
 
+### Interferometer pb cut and the pb0.5 variant
+
+`[prepare] interferometer_min_pb` (default 0.2, the delivered cut; valid range
+0.2 to below 1) blanks the 12m+7m image where the mosaic primary beam `pb` is
+below it. The prepared interferometer image and gain, the mosaic mask, the TP
+footprint margin and every later product follow the cut, and the value is
+recorded in `prepared/input_check.json`. `run_method` refuses an
+`extended_taper_pb` that starts below the cut. `task.pb0.5.toml` is a full copy
+of `task.toml` with `interferometer_min_pb = 0.5`, `extended_taper_pb = [0.5, 0.6]`
+and outputs in `results/combine_continuum/variants/interferometer_pb0.5`, the
+author's test with the interferometer restricted to pb ≥ 0.5 and the same
+weighting (TP factor 1.0). Run it with
+
+```bash
+PYTHONPATH=src conda run -n py312 python tasks/combine_continuum/run.py --config tasks/combine_continuum/task.pb0.5.toml --stage combine
+```
+
 ## Outputs
 
 `results/combine_continuum/products/` (float32, Jy/beam of the 12m+7m

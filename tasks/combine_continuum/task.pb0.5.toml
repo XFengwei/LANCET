@@ -1,0 +1,296 @@
+# Variant of task.toml for the author's test of the combination with the 12m+7m interferometer data
+# restricted to pb >= 0.5 (the standard task uses pb >= 0.2). Same weighting (J-comb and feather
+# settings, TP factor 1.0). Differs from task.toml only in outputs.root, prepare.interferometer_min_pb
+# and combine.extended_taper_pb.
+
+[task]
+name = "combine_continuum"
+
+[inputs]
+# MIRIAD 12m+7m joint mosaic: true-sky (primary-beam corrected) image cut at gain 0.2, and its gain.
+interferometer = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits"
+gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits"
+# Mosaic primary beam on the same grid; only the weight of the extended products reads it.
+pb = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
+psf = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.fits"
+psf_imfit_log = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.imfit.log"
+# 7m-only and 12m-only (C5+C2) primary-beam corrected images.
+aca_pbcor = "data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.image.pbcor.fits"
+twelve_m_pbcor = "data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.image.pbcor.fits"
+# CASA 12m+7m image and primary beam (archived).
+casa_image = "data/delivered/alma/continuum/casa-archived/IRDC316.8.7MTM2TM1.cont.image.pbcor.fits"
+casa_pb = "data/delivered/alma/continuum/casa-archived/IRDC316.8.7MTM2TM1.cont.pb.fits"
+# TP models from synthesize_continuum: the Paper I dust model and dust plus free-free. The TP
+# frequency is read from their FREQGHZ card.
+tp_dust = "results/synthesize_continuum/model/dust_224GHz.fits"
+tp_dust_ff = "results/synthesize_continuum/model/continuum_224GHz.fits"
+# Planck PR3 HFI 217 GHz map and PR2 Type-1 CO map (pixels within 1 deg of the field, HEALPix
+# Nside 2048 NESTED), the HFI RIMO (bandpass, beam) and the fetch record with the CO factors.
+planck_217 = "data/delivered/archive/planck/hfi_cutouts/freq217.npz"
+planck_co = "data/delivered/archive/planck/hfi_cutouts/co_type1.npz"
+planck_rimo = "data/delivered/archive/planck/hfi_cutouts/HFI_RIMO_R3.00.fits"
+planck_fetch_record = "data/delivered/archive/planck/hfi_cutouts/fetch.json"
+# ATLASGAL+Planck 870 um map, only to fill the area outside the TP model in one Planck fit variant.
+atlasgal_870 = "data/delivered/archive/infrared/atlasgal+planck.fits"
+# Core positions for the core-peak measurement.
+core_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
+
+[measurement_sets]
+combined_12m = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM1TM2.bin.combselfcal"
+configuration_c5 = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM1.bin.combselfcal"
+configuration_c2 = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM2.bin.combselfcal"
+aca_7m = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.ACA.bin.selfcal"
+
+[regions]
+successful_combinations = "region/success.reg"
+
+[outputs]
+root = "results/combine_continuum/variants/interferometer_pb0.5"
+
+[prepare]
+# The 12m+7m image is used only where the mosaic primary beam (inputs.pb) is at least this value.
+# 0.2 is the delivered cut; it must lie in [0.2, 1).
+interferometer_min_pb = 0.5
+tp_fwhm_arcsec = 18.1
+# The native TP is continued past its footprint edge with a cosine of this width before regridding.
+edge_taper_arcsec = 18.0
+# The TP footprint must extend at least this far beyond the mosaic.
+minimum_margin_arcsec = 18.1
+# Padding of both planes before the FFT (TP: mirrored with a cosine roll-off; 12m+7m: zeros).
+padding_arcsec = 120.0
+regrid_order = 3
+# Regridding the TP may change its power by at most this fraction in the bins below.
+regrid_power_tolerance = 0.02
+regrid_check_edges_klambda = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+regrid_check_pixel_arcsec = 1.0
+# The footprint margin is measured on the interferometer grid decimated by this factor.
+margin_decimation = 10
+
+[tp_factor]
+# Factor applied to the TP in both methods. 1.0 keeps the TP as delivered: no change of flux scale.
+value = 1.0
+# One factor serves all TP models and is determined from the complete model (dust + free-free).
+# The dust-only model has the free-free component removed and is used only for dust column
+# density; it takes the same factor and is not used to determine it.
+determined_from = "dust_ff"
+# Matching range in angular scale; the comparison region is tapered to zero at its edge with a
+# cosine of this width.
+matching_range_arcsec = [20.0, 50.0]
+window_taper_arcsec = 18.0
+# Logarithmic uv bins for the power spectra: lower edge, upper edge (klambda), number of bins.
+bins_klambda = [1.0, 30.0, 24]
+
+[combine]
+# Keep the product wherever the TP model exists. Outside the 12m+7m mosaic it is TP-only.
+# false blanks it where the mosaic gain is undefined (< 0.2).
+fill_outside_mosaic = false
+# Extended products (jcomb and feather, both TP models) are blank only outside the TP model. The
+# 12m+7m image is multiplied by a cosine weight in the mosaic primary beam: 0 at pb <= the first value,
+# 1 at pb >= the second.
+extended_taper_pb = [0.5, 0.6]
+
+[jcomb]
+# TP weight: 1 below k1, 0 above k2, Butterworth in between; the TP is multiplied by G_high/G_low.
+k1_klambda = 5.0
+k2_klambda = 9.0
+butterworth_order = 5
+# The TP beam response must stay above this wherever the TP is used.
+minimum_tp_response = 0.1
+
+[measure]
+# Mock-sky test of the J-comb code (unit TP factor): interferometer high-passed at this spacing.
+aca_shortest_klambda = 6.6
+gate_flux_tolerance = 0.02
+gate_rms_tolerance = 0.01
+# Measurements use the region with mosaic gain at or above this value.
+min_gain = 0.5
+# Zero-spacing check: the combined image smoothed to the TP beam is compared with the TP on the
+# TP's own grid. Its total flux inside the mosaic must equal the TP's within this tolerance.
+large_scale_tolerance = 0.05
+# uv comparisons use the min_gain region smoothed by this FWHM as a common window.
+window_smooth_arcsec = 18.1
+# Combined / 12m+7m amplitude from k2 up to this limit must be 1 within the tolerance.
+high_k_join_max_klambda = 20.0
+high_k_join_tolerance = 0.02
+# Background-subtracted core peaks, combined / 12m+7m (peak in 5x5 px, background in the annulus).
+core_annulus_arcsec = [3.0, 6.0]
+core_contrast_tolerance = 0.10
+negative_sigma = -3.0
+# 10" box at delivered gain 1.0 with no source above 5 sigma (MAD rms 9.1e-5 Jy/beam in the 12m+7m image).
+noise_box_pix = [6350, 3750, 6450, 3850]
+profile_edges_klambda = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 15.0, 20.0, 30.0, 50.0, 100.0, 200.0, 400.0]
+
+[box_spectrum]
+# Power spectra of the TP (dust + free-free) and the 12m+7m image inside boxes, to see how the
+# two overlay and what TP factor aligns them. Each box: name, centre (RA Dec, J2000) and size
+# (width along RA, height along Dec, arcsec). uv bins are 1 / (the shorter side) wide.
+boxes = [
+  { name = "middle", centre = "14:44:57.89 -59:48:11.69", size_arcsec = [120.0, 120.0] },
+  { name = "south", centre = "14:45:23.04 -59:49:22.49", size_arcsec = [180.0, 90.0] },
+]
+# The window is the part of the box where the mosaic gain is defined, tapered at its edge.
+window_taper_arcsec = 18.0
+# Scales over which the two spectra are aligned.
+matching_range_arcsec = [20.0, 50.0]
+# Known-answer check: the same measurement on a mock made from the J-comb image with this factor.
+mock_true_factor = 1.2
+# The mock 12m+7m image is tried complete and with scales below this uv distance removed.
+mock_missing_below_klambda = 3.0
+
+[planck_calibration]
+# TP model compared with Planck (the complete model, dust + free-free).
+tp_model = "dust_ff"
+band = "217"
+# Working grid: pixel size and width, centred on the TP model.
+pixel_arcsec = 30.0
+width_arcmin = 60.0
+# Modified black body used to convert the Planck band to the TP frequency.
+dust_beta = 1.8
+dust_temperature_k = 20.0
+# Fits use pixels whose Planck beam lies at least this fraction inside the TP model.
+coverage_min = 0.9
+# Brightest beam: disc of this radius around the peak of the smoothed TP (half a Planck beam).
+bright_radius_arcmin = 2.5
+# Reference for the differential estimate: this faintest fraction (in Planck) of the pixels
+# passing coverage_min.
+reference_fraction = 0.2
+
+[absolute_scale]
+# Final absolute flux calibration against Planck: not decided, not applied. The products are on
+# the scale set by the 12m+7m calibration and the TP factor above. The `planck_calibration`
+# stage gives the comparison this decision rests on.
+status = "pending"
+
+[uv_plot]
+round_decimals = 1
+chunk_rows = 250000
+zoom_limit_metres = 70.0
+output_formats = ["pdf", "svg", "png"]
+dpi = 300
+
+[overlap_tests]
+uv_edges_klambda = [8.0, 10.0, 12.0, 15.0, 18.0, 22.0, 26.0, 32.0]
+read_max_klambda = 40.0
+maximum_pair_separation_arcsec = 5.0
+strict_pair_separation_arcsec = 2.0
+orientation_sectors = 8
+maximum_time_pair_gap_seconds = 30.0
+model_pixel_arcsec = 0.5
+model_patch_arcsec = 256.0
+model_padding_factor = 2
+pb_reference_frequency_ghz = 225.0
+pb_12m_fwhm_arcsec = 26.0
+pb_7m_fwhm_arcsec = 43.0
+bootstrap_repeats = 500
+random_seed = 3168
+
+[image_comparison_plot]
+center_ra_deg = 221.2918
+center_dec_deg = -59.8059
+width_deg = 0.11666666666666667
+height_deg = 0.06666666666666667
+vmin_mjysr = -20.0
+vmax_mjysr = 500.0
+colormap = "mako"
+scalebar_length_deg = 0.02
+scalebar_label = "1 pc"
+output_formats = ["pdf", "svg", "png"]
+dpi = 300
+
+[dirty_beam]
+# The delivered MIRIAD mosaic PSF (inputs.psf) and its imfit log (inputs.psf_imfit_log). The
+# reference Gaussian is the restoring beam of the 12m+7m image (inputs.interferometer).
+# restor fits (bmaj, bmin arcsec; pa deg) of the rerun vs delivered images, for the record.
+rerun_restor_beams = { robust0_5 = [0.707, 0.600, 47.2], robust1_0 = [0.772, 0.681, 47.7], robust2_0 = [0.792, 0.704, 47.8] }
+zoom_half_arcsec = 1.5
+# MIRIAD restor fits the Gaussian to the central 11x11 beam pixels (restor.for, beamFit NP=11).
+restor_fit_box_pixels = 11
+profile_plot_max_arcsec = 3.0
+profile_max_arcsec = 40.0 # radial profile CSV and volume ratios
+volume_ratio_radii_arcsec = [1.0, 2.0, 5.0, 10.0, 20.0, 40.0]
+width_inches = 3.4645669291
+output_formats = ["pdf", "svg", "png"]
+dpi = 600
+
+[joint_image_comparison]
+# CASA (inputs.casa_image, inputs.casa_pb) and MIRIAD (inputs.interferometer) 12m+7m images.
+minimum_pb = 0.2
+cutout_arcsec = 100.0
+region_centres_deg = [[221.244, -59.8020], [221.359, -59.8227]]
+region_names = ["Central", "South"]
+width_inches = 7.2440944882
+
+# Forward test: sky images through the native 7 m PB at measured ACA uv points.
+
+[aca_forward_test]
+ddids = [0, 7]
+uv_edges_klambda = [4.8, 6.0, 7.0, 8.0, 9.165, 10.5, 12.0, 14.0, 17.0, 20.0, 25.0, 30.0]
+minimum_support = 0.95
+bootstrap_repeats = 500
+random_seed = 3168
+figure_selection = "interior_pairs"
+output_formats = ["pdf", "png"]
+
+# Each source is "<path group>.<name>" in the resolved task paths. The TP model itself is always
+# predicted (through the native 7 m PB); it is not listed as a sky model. signal_panel = true draws
+# the model's predicted RMS beside the measured ACA RMS in panel (b).
+[aca_forward_test.sky_models]
+interferometer = { source = "inputs.interferometer", label = "12m+7m (no TP)", signal_panel = true, tp_beam_transfer = true }
+jcomb = { source = "products.jcomb_continuum", label = "J-comb", signal_panel = true, tp_beam_transfer = true }
+feather = { source = "products.feather_continuum", label = "Feather", signal_panel = true, tp_beam_transfer = true }
+aca_only = { source = "inputs.aca_pbcor", label = "ACA-only image" }
+
+[amplitude_alignment]
+sky_model = "inputs.interferometer"
+tp_minimum_response = 0.1
+continuous_min_klambda = 1.0
+continuous_points = 60
+# Image curves for Fig. 2 panel (c), each "<path group>.<name>": the image through the matched
+# 12 m PB with the TP curve's population, its restoring beam and the pixel binning divided out,
+# up to the lowest of the beam limit (tp_minimum_response), half the model-grid Nyquist limit and the
+# uv distance where interpolating the sampling patch half a pixel off the binned grid loses this
+# fraction (|cos(pi u p)|; about 26 klambda at 0.5 arcsec).
+image_curves = { interferometer = "inputs.interferometer", jcomb = "products.jcomb_continuum", feather = "products.feather_continuum" }
+image_curve_points = 60
+image_curve_max_interpolation_loss = 0.02
+overlap_uv_edges_klambda = [4.8, 5.4, 6.0, 6.6, 7.2, 7.8, 8.4, 9.165]
+bootstrap_repeats = 500
+random_seed = 3168
+width_inches = 7.2440944882
+height_inches = 2.55
+output_formats = ["pdf", "svg", "png"]
+dpi = 600
+
+[pointing_coverage]
+# Pointing centres of each array (FIELD tables of the measurement sets above) on the MIRIAD
+# mosaic gain (inputs.gain) and the CASA 12m+7m mosaic pb (inputs.casa_pb). Primary beams are
+# drawn at the TP model frequency (FREQGHZ of inputs.tp_dust_ff).
+twelve_m_sets = ["configuration_c5", "configuration_c2"]
+seven_m_sets = ["aca_7m"]
+beam_factor = 1.13
+duplicate_tolerance_arcsec = 1.0
+pb_levels = [0.5, 0.2, 0.1]
+display_step = 8
+statistics_step = 4
+pb_bin_edges = [0.05, 0.09, 0.11, 0.19, 0.21, 0.30, 0.35, 0.45, 0.48, 0.50, 0.52, 0.55, 0.70, 1.01]
+regions = [
+  { name = "north", title = "Northern mosaic", centre = "14:44:31.5 -59:45:00", size_arcsec = [330, 330] },
+  { name = "centre_south", title = "Central and southern mosaic", centre = "14:45:10.0 -59:48:30", size_arcsec = [480, 270] },
+]
+
+[visibility_profile]
+uv_max_klambda = 3000.0
+reference_frequency_ghz = 225.0
+
+[figure2]
+# The height follows from three equal square panels at this width.
+width_inches = 7.2440944882
+output_formats = ["pdf", "svg", "png"]
+dpi = 600
+tp_minimum_response = 0.1
+# Image curves drawn in panel (c); feather stays in image_curves.csv but is not plotted.
+image_curves_shown = ["interferometer", "jcomb"]
+image_curve_labels = { interferometer = "12m+7m", jcomb = "combine" }
+# 7 m on the 12 m PB via the 12m+7m image; TP shown with and without its beam.
+amplitude_source = "amplitude_alignment"
+amplitude_uv_edges_klambda = [4.8, 6.0, 7.0, 8.0, 10.0, 12.0, 15.0, 18.0, 22.0, 26.0, 32.0, 40.0, 50.0, 65.0, 85.0, 110.0, 145.0, 190.0, 250.0, 330.0, 430.0, 560.0, 730.0, 960.0, 1050.0]

@@ -173,19 +173,36 @@ def prepared_paths(root: Path) -> dict[str, Path]:
     return out
 
 
+def interferometer_min_pb(config: Mapping) -> float:
+    """``[prepare] interferometer_min_pb``: 0.2 (the delivered cut) up to, not including, 1."""
+    value = float(config["prepare"]["interferometer_min_pb"])
+    if not 0.2 <= value < 1.0:
+        raise ValueError(f"[prepare] interferometer_min_pb = {value} must satisfy 0.2 <= value < 1 "
+                         "(the delivered true-sky image is already blank below pb 0.2)")
+    return value
+
+
+def cut_at_pb(truesky: np.ndarray, pb: np.ndarray, minimum_pb: float) -> np.ndarray:
+    """The true-sky image with NaN wherever the primary beam is below ``minimum_pb``."""
+    return np.where(pb < minimum_pb, np.nan, truesky).astype(np.float32)
+
+
 def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
     """Check the inputs and write them on the interferometer grid in MJy/sr, plus the mosaic gain."""
     settings = config["prepare"]
     out = prepared_paths(paths["output_root"])
     guard_outputs(list(out.values()), overwrite)
+    minimum_pb = interferometer_min_pb(config)
     frequency = tp_frequency_ghz(paths)                 # before anything is read or written
     truesky, header, wcs = read_plane(paths["interferometer"])
+    truesky = cut_at_pb(truesky, read_gain(paths["pb"], truesky.shape), minimum_pb)
     delivered_gain = read_gain(paths["gain"], truesky.shape)
     high_beam = beam_parameters(header)
     gain = mosaic_gain(delivered_gain, truesky)
     del delivered_gain
     report = {"interferometer": {"path": str(paths["interferometer"]), "shape": list(truesky.shape),
-                                 "beam_arcsec_deg": high_beam, "pixel_arcsec": _pixel_arcsec(wcs)},
+                                 "beam_arcsec_deg": high_beam, "pixel_arcsec": _pixel_arcsec(wcs),
+                                 "minimum_pb": minimum_pb},
               "gain": {"min_nonzero": float(gain[gain > 0].min()), "max": float(gain.max())}}
     tp_planes, problems = {}, []
     for flavour in TP_FLAVOURS:
@@ -199,9 +216,10 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
     if problems:
         raise RuntimeError("; ".join(problems))
 
-    hashes = input_hashes(paths, ["interferometer", "gain"])
+    hashes = input_hashes(paths, ["interferometer", "gain", "pb"])
     write_product(out["gain"], gain, header,
-                  {"stage": "prepare", "quantity": "12m+7m mosaic gain; 0 where the image is blank (gain < 0.2)"}, hashes, bunit="")
+                  {"stage": "prepare", "interferometer_min_pb": minimum_pb,
+                   "quantity": f"12m+7m mosaic gain; 0 where the image is blank (pb < {minimum_pb})"}, hashes, bunit="")
     write_product(out["interferometer"], jybeam_to_mjysr(np.nan_to_num(truesky), *high_beam[:2]),
                   header, {"stage": "prepare", "quantity": "12m+7m true-sky image; 0 outside the mosaic"}, hashes,
                   bunit="MJy/sr")
@@ -496,6 +514,10 @@ def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrit
     """Combined images of one method for both TP models, each with the zero-spacing check
     (combined image at the TP beam against the TP), measurements and figures."""
     output_root = paths["output_root"]
+    minimum_pb, taper_pb0 = interferometer_min_pb(config), config["combine"]["extended_taper_pb"][0]
+    if taper_pb0 < minimum_pb:
+        raise ValueError(f"[combine] extended_taper_pb starts at {taper_pb0}, below [prepare] interferometer_min_pb "
+                         f"{minimum_pb}: the taper would act on blank data")
     root, zero_root = output_root / "checks" / method, output_root / "checks" / "zero_spacing"
     frequency = tp_frequency_ghz(paths)
     label = frequency_label(frequency)

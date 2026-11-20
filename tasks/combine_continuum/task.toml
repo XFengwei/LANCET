@@ -43,6 +43,9 @@ successful_combinations = "region/success.reg"
 root = "results/combine_continuum"
 
 [prepare]
+# The 12m+7m image is used only where the mosaic primary beam (inputs.pb) is at least this value.
+# 0.2 is the delivered cut; it must lie in [0.2, 1).
+interferometer_min_pb = 0.2
 tp_fwhm_arcsec = 18.1
 # The native TP is continued past its footprint edge with a cosine of this width before regridding.
 edge_taper_arcsec = 18.0
