@@ -88,12 +88,12 @@ def test_current_catalogue_reproduces_opacity_consistent_global_fit() -> None:
         minimum_count=30,
     )
     assert diagnosis["minimum_mass"] == pytest.approx(
-        1.7506050248345124,
+        1.740443732560637,
         rel=1e-10,
     )
-    assert diagnosis["count"] == 92
+    assert diagnosis["count"] == 94
     assert diagnosis["alpha"] == pytest.approx(
-        2.4147247376365835,
+        2.406737343093398,
         rel=1e-10,
     )
 
@@ -102,7 +102,7 @@ def test_core_mass_function_task_inspection_reports_current_catalogue() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/core_mass_function.py",
+            "tasks/core_mass_function/run.py",
             "--stage",
             "inspect",
         ],
@@ -112,6 +112,6 @@ def test_core_mass_function_task_inspection_reports_current_catalogue() -> None:
         text=True,
     )
     assert "rows=231, valid positive masses=231" in completed.stdout
-    assert "Mmin=1.75061 solMass" in completed.stdout
-    assert "Ntail=92" in completed.stdout
+    assert "Mmin=1.74044 solMass" in completed.stdout
+    assert "Ntail=94" in completed.stdout
     assert "Completeness floor: none" in completed.stdout

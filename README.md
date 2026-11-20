@@ -225,8 +225,8 @@ Build the source catalogue and its dependent physical-property table with:
 ```bash
 conda run -n py312 python tasks/source_catalogue/run.py --stage inspect
 conda run -n py312 python tasks/source_catalogue/run.py --stage all
-conda run -n py312 python scripts/physical_properties.py --stage inspect
-conda run -n py312 python scripts/physical_properties.py --stage build
+conda run -n py312 python tasks/physical_properties/run.py --stage inspect
+conda run -n py312 python tasks/physical_properties/run.py --stage build
 ```
 
 The source task applies the declared getsf cuts, samples the background and
@@ -309,8 +309,8 @@ conda run -n py312 python scripts/bonnor_ebert.py \
   --stage all --profile radius_thermal
 conda run -n py312 python scripts/bonnor_ebert.py \
   --stage all --profile measured_external
-conda run -n py312 python scripts/core_mass_function.py --stage inspect
-conda run -n py312 python scripts/core_mass_function.py --stage all
+conda run -n py312 python tasks/core_mass_function/run.py --stage inspect
+conda run -n py312 python tasks/core_mass_function/run.py --stage all
 ```
 
 The Bonnor–Ebert task provides isolated radius and measured-external-pressure

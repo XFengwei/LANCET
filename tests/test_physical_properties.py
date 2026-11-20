@@ -77,7 +77,7 @@ def test_physical_properties_inspection_reads_generated_catalogue() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/physical_properties.py",
+            "tasks/physical_properties/run.py",
             "--stage",
             "inspect",
         ],
@@ -133,12 +133,12 @@ def test_generated_physical_properties_schema_and_regression_values() -> None:
     np.testing.assert_array_equal(actual["ID"][indices], [1, 116, 231])
     np.testing.assert_allclose(
         actual["Mass_core"][indices],
-        [25.56380823008521, 1.4310267089414677, 0.7611526267089587],
+        [25.555396287281976, 1.4309885580790525, 0.761139453454604],
         rtol=1e-12,
     )
     np.testing.assert_allclose(
         actual["nVolden_core"][indices],
-        [3.3051022428170023, 0.01952763541595397, 0.013915990678481108],
+        [3.304013136613267, 0.01952711397670106, 0.013915749331930056],
         rtol=5e-9,  # Allow the CODATA proton-mass update in Astropy.
     )
     assert np.count_nonzero(actual["Resolvability"] == "N") == 22

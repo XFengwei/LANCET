@@ -148,7 +148,7 @@ topic = "Compact free-free emission and mass sensitivity"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["construct_freefree_model", "freefree_core_contamination", "synthesize_continuum", "physical_properties", "core_formation"]
-scripts = ["tasks/freefree_core_contamination/freefree_mass_efficiency_bias.py", "tasks/freefree_core_contamination/core_freefree_contamination.py", "tasks/construct_freefree_model/run.py", "tasks/synthesize_continuum/run.py", "scripts/physical_properties.py", "scripts/core_formation.py"]
+scripts = ["tasks/freefree_core_contamination/freefree_mass_efficiency_bias.py", "tasks/freefree_core_contamination/core_freefree_contamination.py", "tasks/construct_freefree_model/run.py", "tasks/synthesize_continuum/run.py", "tasks/physical_properties/run.py", "scripts/core_formation.py"]
 evidence = "Author-approved CORNISH-South sensitivity test, nondetection limits and both-reservoir mass-fraction estimates; manuscript and concise response updated. Closed at the author's request."
 
 [[subtasks]]
@@ -158,7 +158,7 @@ topic = "Sizes/limits, opacity, brightness temperature and heating"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["source_catalogue", "physical_properties", "background_effects", "core_formation"]
-scripts = ["tasks/source_catalogue/run.py", "scripts/physical_properties.py", "scripts/background_effects.py", "scripts/core_temperature_stress_test.py", "scripts/core_temperature_sampling.py", "scripts/plot_core_temperature_sampling.py", "scripts/core_formation.py"]
+scripts = ["tasks/source_catalogue/run.py", "tasks/physical_properties/run.py", "scripts/background_effects.py", "scripts/core_temperature_stress_test.py", "scripts/core_temperature_sampling.py", "scripts/plot_core_temperature_sampling.py", "scripts/core_formation.py"]
 evidence = "Closed at the author's request after verification of the 209-core size/volume-density selection, all-source beam-averaged surface densities, corrected median 5.2e6 cm^-3, opacity estimates and 30/40/50 K temperature sampling. Both working TeX documents compile; 38 relevant tests pass."
 
 
