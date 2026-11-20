@@ -222,6 +222,16 @@ random_seed = 3168
 figure_selection = "interior_pairs"
 output_formats = ["pdf", "png"]
 
+# Task 4 replaces these sky models with the new images.
+[aca_forward_test.sky_models]
+aca_only = { source = "images.aca_pbcor", label = "ACA-only image" }
+interferometer = { source = "reduction_inputs.interferometer", label = "12m+7m (no TP)", tp_scale = 0.0, tp_beam_transfer = true }
+feather_1p0 = { source = "reduction_inputs.feather_1p0", label = "Feather, TP x1", tp_scale = 1.0, tp_beam_transfer = true }
+feather_2p0 = { source = "reduction_inputs.feather_2p0", label = "Feather, TP x2", tp_scale = 2.0 }
+feather_2p5 = { source = "reduction_inputs.feather_2p5", label = "Feather, TP x2.5", tp_scale = 2.5 }
+feather_3p0 = { source = "reduction_inputs.feather_3p0", label = "Feather, TP x3", tp_scale = 3.0 }
+jcomb = { source = "images.allscale_sky", label = "J-comb (delivered)" }
+
 [amplitude_alignment]
 sky_model = "images.combined_pbcut"
 tp_minimum_response = 0.1
