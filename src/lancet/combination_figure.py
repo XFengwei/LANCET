@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -14,7 +15,6 @@ from .visibility_diagnostics import C_METRES_PER_SECOND
 
 
 COLORS = {"configuration_c5": "#7254A3", "configuration_c2": "#007A9E", "aca_7m": "#D87821"}
-LABELS = {"configuration_c5": "12 m C5", "configuration_c2": "12 m C2", "aca_7m": "ACA 7 m"}
 
 
 def tp_amplitude_reference(path, statistics_path, summary, minimum_response):
@@ -73,7 +73,26 @@ def tp_amplitude_reference(path, statistics_path, summary, minimum_response):
     }
 
 
-def make_combination_figure(paths, config, *, save_figure, overwrite=False, three_panel=False):
+IMAGE_CURVES = {"interferometer": ("12m+7m", "--"), "jcomb": ("J-comb", "-"), "feather": ("Feather", ":")}
+
+
+def _plot_image_curves(axis, curves):
+    """12m+7m, J-comb and feather amplitudes (beam and pixel binning divided out), with their legend.
+
+    The colours are the module palette in order; the line style separates them from the array profiles.
+    """
+    handles = []
+    for (name, (label, style)), color in zip(IMAGE_CURVES.items(), COLORS.values()):
+        u, rms = curves[name]
+        handles += axis.plot(u, rms, color=color, linestyle=style, linewidth=1.1, label=label, zorder=4)
+    # Below the direct "TP, beam-corrected" label, above the long-baseline profiles.
+    axis.legend(handles=handles, loc="upper right", bbox_to_anchor=(1.0, 0.875), fontsize=9,
+                labelspacing=0.1, borderpad=.15, borderaxespad=.2, handlelength=1.7, handletextpad=0.35,
+                frameon=False)
+
+
+def make_combination_figure(paths, config, *, save_figure, overwrite=False):
+    """Paper II Fig. 2: (a) pointings, (b) uv coverage with the short-baseline inset, (c) amplitudes."""
     import matplotlib
     matplotlib.use("Agg")
     from matplotlib import pyplot as plt
@@ -84,8 +103,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     require_products(paths, ["jcomb_continuum", "feather_continuum"])
     root = Path(paths["output_root"])
     settings = config["figure2"]
-    tp_display_scale = float(settings.get("tp_display_scale", 1.0))
-    stem = "Figure1_combination_diagnostics" + ("_three_panel" if three_panel else "") + settings.get("output_suffix", "")
+    stem = "figure2_combination_diagnostics" + settings.get("output_suffix", "")
     outputs = [root/"figures"/f"{stem}.{suffix}" for suffix in settings["output_formats"]]
     for output in outputs:
         if output.exists() and not overwrite:
@@ -128,7 +146,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
                 observation_density.append((name, int(observation), counts))
                 density_rows.extend((name, int(observation), lo, hi, int(n))
                     for lo, hi, n in zip(density_edges[:-1], density_edges[1:], counts))
-    density_table = root/"figures"/(stem+"_observation_sampling.csv" if three_panel else "Figure1_observation_sampling.csv")
+    density_table = root/"figures"/f"{stem}_observation_sampling.csv"
     with density_table.open("w") as handle:
         writer = csv.writer(handle)
         writer.writerow(["array", "observation_id", "uv_min_klambda", "uv_max_klambda", "visibility_rows"])
@@ -138,25 +156,30 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     for name in COLORS:
         with np.load(root/"uv_coordinates"/f"{name}.npz") as z:
             if not bool(z["unflagged_only"]):
-                raise ValueError("Figure 1 requires the flag-aware UV cache")
+                raise ValueError("Figure 2 requires the flag-aware UV cache")
             coords[name] = (z["u"], z["v"])
     tp_u, tp_amp, tp_meta = tp_amplitude_reference(
         paths["inputs"]["tp_dust_ff"], sampling/"cell_statistics.npz",
         coverage, float(settings["tp_minimum_response"]))
-    tp_fixed = None
+    tp_fixed, image_curves, image_meta = None, {}, None
     amplitude_source = settings.get("amplitude_source", "full_sampling")
     if amplitude_source == "amplitude_alignment":
-        # 7 m translated with the 12m+7m image; TP with and without its beam.
+        # 7 m translated with the 12m+7m image; TP with and without its beam; image curves.
         from .amplitude_alignment import read_products
 
-        array_profiles, _, curves, alignment = read_products(root/"amplitude_alignment")
+        alignment_root = root/"amplitude_alignment"
+        array_profiles, _, curves, alignment, image_curves = read_products(alignment_root)
         tp_u, tp_amp, tp_fixed = (curves["uv_klambda"], curves["tp_raw_common_mjy"],
                                   curves["tp_corrected_common_mjy"])
-        tp_meta = {**tp_meta, "amplitude_source": str(root/"amplitude_alignment"),
+        tp_meta = {**tp_meta, "amplitude_source": str(alignment_root),
                    "translation_sky_model": alignment["sky_model"],
                    "tp_response_limit_klambda": alignment["tp_response_limit_klambda"],
                    "description": alignment["method"]}
-    tp_table = root/"figures"/(stem+"_tp_reference.csv" if three_panel else "Figure1_tp_reference.csv")
+        image_table = root/"figures"/f"{stem}_image_curves.csv"
+        shutil.copyfile(alignment_root/"image_curves.csv", image_table)
+        image_meta = {**alignment["image_curves"], "source_csv": str(image_table),
+                      "labels": {name: label for name, (label, _) in IMAGE_CURVES.items()}}
+    tp_table = root/"figures"/f"{stem}_tp_reference.csv"
     if tp_fixed is None:
         np.savetxt(tp_table, np.column_stack([tp_u, tp_amp]), delimiter=",",
                    header="uv_klambda,tp_model_rms_mjy", comments="")
@@ -166,190 +189,161 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     plt.rcParams.update({"font.family": "sans-serif", "font.size": 10,
         "axes.linewidth": 0.7, "axes.spines.top": True, "axes.spines.right": True,
         "pdf.fonttype": 42, "svg.fonttype": "none", "legend.frameon": False})
-    if three_panel:
-        # Keep three equal square plot areas at the manuscript text width.
-        height = settings["width_inches"]*.885/3.64/.74
-        fig, axes = plt.subplots(1, 3, figsize=(settings["width_inches"], height))
-        fig.subplots_adjust(left=.10, right=.985, bottom=.20, top=.94, wspace=.32)
-        a, c, b = axes
-        d = c.inset_axes([.66, .66, .34, .34], zorder=8)
-        d.patch.set_facecolor("white")
-    else:
-        fig, axes = plt.subplots(2, 2, figsize=(settings["width_inches"], settings["height_inches"]))
-        fig.subplots_adjust(left=0.105, right=0.96, bottom=0.105, top=0.96, wspace=0.25, hspace=0.25)
-        a, b, c, d = axes.flat
+    # Keep three equal square plot areas at the manuscript text width.
+    height = settings["width_inches"]*.885/3.64/.74
+    fig, axes = plt.subplots(1, 3, figsize=(settings["width_inches"], height))
+    fig.subplots_adjust(left=.10, right=.985, bottom=.20, top=.94, wspace=.32)
+    a, b, c = axes
+    inset = b.inset_axes([.66, .66, .34, .34], zorder=8)
+    inset.patch.set_facecolor("white")
     for axis in axes.flat:
         axis.tick_params(direction="in", top=True, right=True, length=3, width=0.7)
+
     def title(axis, text):
-        axis.text(0.04, .96, text, transform=axis.transAxes,
-                  ha="left", va="top", fontsize=10 if three_panel else 11,
+        axis.text(0.04, .96, text, transform=axis.transAxes, ha="left", va="top", fontsize=10,
                   bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.94, "pad": 2}, zorder=20)
 
+    # (a) pointings
     ra0, dec0 = 221.25, -59.8
-    for name, marker, label in [("aca_7m", "o", "ACA 7 m"), ("configuration_c5", "+", "12 m C2+C5")]:
+    for name, marker, label in [("aca_7m", "o", "7 m"), ("configuration_c5", "+", "12 m")]:
         pos = np.array([f["PHASE_DIR"] for f in metadata[name]["subtables"]["FIELD"]]).squeeze()
         ra, dec = np.rad2deg(pos[:, 0]) % 360, np.rad2deg(pos[:, 1])
-        a.scatter((ra-ra0)*np.cos(np.deg2rad(dec0))*60, (dec-dec0)*60, s=7 if three_panel else 12,
+        a.scatter((ra-ra0)*np.cos(np.deg2rad(dec0))*60, (dec-dec0)*60, s=7,
                   color=COLORS[name] if name == "aca_7m" else COLORS["configuration_c2"], marker=marker,
-                  linewidths=0.7, alpha=0.75, label=("7 m" if name == "aca_7m" else "12 m") if three_panel else label)
+                  linewidths=0.7, alpha=0.75, label=label)
     a.set(xlabel="RA offset (arcmin)", ylabel="Dec offset (arcmin)")
     a.set_aspect("equal", adjustable="datalim")
     a.invert_xaxis()
     a.margins(0.12)
-    if three_panel:
-        a.set_xticks([5, 0, -5])
+    a.set_xticks([5, 0, -5])
     title(a, "(a)")
     a.legend(loc="upper left", bbox_to_anchor=(0.03, 0.88), fontsize=10, labelspacing=0.35, handletextpad=0.4)
 
-    values = list(tp_amp*tp_display_scale) + ([] if tp_fixed is None else list(tp_fixed))
-    for name, marker, label in [("aca_7m", "o", "7 m (12 m PB)"),
-                                ("configuration_c2", "s", "12 m C2"),
-                                ("configuration_c5", "^", "12 m C5")]:
+    # (c) amplitudes and visibility counts
+    short = {"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}
+    values = list(tp_amp) + ([] if tp_fixed is None else list(tp_fixed))
+    values += [v for _, rms in image_curves.values() for v in rms]
+    for name, marker in [("aca_7m", "o"), ("configuration_c2", "s"), ("configuration_c5", "^")]:
         profile = [r for r in array_profiles if r["array"] == name]
         radius = np.array([r["uv_klambda"] for r in profile])
         amplitude = np.array([r["rms_mjy"] for r in profile])
         detected = np.array([r["detected"] for r in profile])
         upper = np.array([r["upper_rms_mjy"] for r in profile])
-        b.plot(radius, np.where(detected, amplitude, np.nan), color=COLORS[name],
-               linewidth=.9 if three_panel else 1.4, marker=marker, markersize=1.5 if three_panel else 3,
-               label={"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}[name] if three_panel else label)
+        c.plot(radius, np.where(detected, amplitude, np.nan), color=COLORS[name],
+               linewidth=.9, marker=marker, markersize=1.5, label=short[name])
         if (~detected).any():
-            b.errorbar(radius[~detected], upper[~detected], yerr=upper[~detected]*0.25,
-                uplims=True, fmt="none", color=COLORS[name], elinewidth=0.8,
-                capsize=1.2 if three_panel else 2, markersize=1.5 if three_panel else 3)
+            c.errorbar(radius[~detected], upper[~detected], yerr=upper[~detected]*0.25,
+                       uplims=True, fmt="none", color=COLORS[name], elinewidth=0.8, capsize=1.2, markersize=1.5)
         values.extend(amplitude[detected])
         values.extend(upper[~detected])
-    positive_tp = tp_u >= 1 if three_panel else tp_u > 0
-    b.plot(tp_u[positive_tp], tp_amp[positive_tp]*tp_display_scale, color="0.45", linestyle="-.", linewidth=.9 if three_panel else 1.2, label="TP" if three_panel else "TP (12 m PB)")
+    positive_tp = tp_u >= 1
+    c.plot(tp_u[positive_tp], tp_amp[positive_tp], color="0.45", linestyle="-.", linewidth=.9, label="TP")
     if tp_fixed is not None:
-        b.plot(tp_u[positive_tp], tp_fixed[positive_tp], color="0.1", linewidth=1.1 if three_panel else 1.4,
-               label="TP, beam-corrected")
-    b.set(xlabel=r"uv distance (k$\lambda$)", ylabel="Amplitude (mJy)", xlim=(1, 1000))
-    b.set_xscale("log")
-    b.set_xticks([1, 10, 100, 1000], labels=["1", "10", "100", "1000"])
-    b.set_yscale("log")
+        c.plot(tp_u[positive_tp], tp_fixed[positive_tp], color="0.1", linewidth=1.1, label="TP, beam-corrected")
+    if image_curves:
+        _plot_image_curves(c, image_curves)
+    c.set(xlabel=r"uv distance (k$\lambda$)", ylabel="Amplitude (mJy)", xlim=(1, 1000))
+    c.set_xscale("log")
+    c.set_xticks([1, 10, 100, 1000], labels=["1", "10", "100", "1000"])
+    c.set_yscale("log")
     values = np.asarray(values)
     positive = values[np.isfinite(values) & (values > 0)]
-    count_top = .40 if three_panel else .35
-    b.set_ylim(positive.min()*(.001 if three_panel else .006), positive.max()*(8.0 if three_panel else 4.6))
-    sampling_top = b.get_ylim()[0]*(b.get_ylim()[1]/b.get_ylim()[0])**count_top
-    major_ticks = [10, 100, 1000, 10000] if three_panel else b.yaxis.get_majorticklocs()
-    b.yaxis.set_major_locator(FixedLocator([v for v in major_ticks if v > sampling_top]))
-    b.yaxis.set_minor_locator(FixedLocator([v for v in b.yaxis.get_minorticklocs() if v > sampling_top]))
+    count_top = .40
+    c.set_ylim(positive.min()*.001, positive.max()*8.0)
+    sampling_top = c.get_ylim()[0]*(c.get_ylim()[1]/c.get_ylim()[0])**count_top
+    c.yaxis.set_major_locator(FixedLocator([v for v in [10, 100, 1000, 10000] if v > sampling_top]))
+    c.yaxis.set_minor_locator(FixedLocator([v for v in c.yaxis.get_minorticklocs() if v > sampling_top]))
     overlap = coverage["overlap_klambda"]
     maximum_count = max(counts.max() for _, _, counts in observation_density)
-    group = np.array([list(observation_sources).index(name) for name, _, _ in observation_density])
-    track_y = np.linspace(.24, .04, len(observation_density)) if three_panel else 0.25 - 0.015*np.arange(len(observation_density)) - 0.035*group
+    track_y = np.linspace(.24, .04, len(observation_density))
     for (name, _, counts), y in zip(observation_density, track_y):
         occupied = counts > 0
-        b.scatter(density_centres[occupied], np.full(occupied.sum(), y),
-                  s=(4 if three_panel else 10)*counts[occupied]/maximum_count, color=COLORS[name], linewidths=0,
-                  transform=b.get_xaxis_transform(), zorder=3)
-    track_labels = observation_sources if (not three_panel or tp_fixed is not None) else ()
-    for name in track_labels:
+        c.scatter(density_centres[occupied], np.full(occupied.sum(), y),
+                  s=4*counts[occupied]/maximum_count, color=COLORS[name], linewidths=0,
+                  transform=c.get_xaxis_transform(), zorder=3)
+    for name in observation_sources if tp_fixed is not None else ():
         indices = [i for i, (array, _, _) in enumerate(observation_density) if array == name]
-        label = {"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}[name]
-        x = 0.025 + (0.12 if three_panel and name == "configuration_c5" else 0)
-        b.text(x, track_y[indices].mean(), label, color=COLORS[name], fontsize=10,
-               va="center", transform=b.transAxes)
-    b.plot([0, 1], [count_top, count_top], color="0.8", linewidth=0.5, transform=b.transAxes)
-    b.text(0.025, .30 if three_panel else .29, "Visibility counts", transform=b.transAxes, fontsize=10)
-    if three_panel:
-        b.get_xticklabels()[-1].set_horizontalalignment("right")
-    title(b, "(c)" if three_panel else "(b)")
+        x = 0.025 + (0.12 if name == "configuration_c5" else 0)
+        c.text(x, track_y[indices].mean(), short[name], color=COLORS[name], fontsize=10,
+               va="center", transform=c.transAxes)
+    c.plot([0, 1], [count_top, count_top], color="0.8", linewidth=0.5, transform=c.transAxes)
+    c.text(0.025, .30, "Visibility counts", transform=c.transAxes, fontsize=10)
+    c.get_xticklabels()[-1].set_horizontalalignment("right")
+    title(c, "(c)")
     if tp_fixed is not None:
         # Array colours are keyed in panel (b) and labelled on the count tracks;
         # the two TP curves are labelled directly.
         end = np.flatnonzero(positive_tp)[-1]
-        b.text(tp_u[end]*1.03, tp_amp[end]*.5, "TP", color="0.45", fontsize=10, ha="left", va="center")
-        b.annotate("TP, beam-corrected", xy=(2.5, np.interp(2.5, tp_u, tp_fixed)), xytext=(3.4, tp_fixed.max()*1.7),
+        c.text(tp_u[end]*1.03, tp_amp[end]*.5, "TP", color="0.45", fontsize=10, ha="left", va="center")
+        c.annotate("TP, beam-corrected", xy=(2.5, np.interp(2.5, tp_u, tp_fixed)), xytext=(3.4, tp_fixed.max()*1.7),
                    fontsize=10, ha="left", va="bottom", color="0.1",
                    arrowprops=dict(arrowstyle="-", color="0.1", linewidth=.6, shrinkA=1, shrinkB=1))
-    if tp_fixed is None:
-        b.legend(loc="upper right", bbox_to_anchor=(0.99, 0.98), fontsize=10, labelspacing=0.25,
-                 ncol=2 if three_panel else 1, columnspacing=.4,
-                 borderpad=.2 if three_panel else .3, handlelength=1.1 if three_panel else 1.8,
+    else:
+        c.legend(loc="upper right", bbox_to_anchor=(0.99, 0.98), fontsize=10, labelspacing=0.25,
+                 ncol=2, columnspacing=.4, borderpad=.2, handlelength=1.1,
                  handletextpad=0.4, frameon=True, facecolor="white", framealpha=1, edgecolor="none")
 
-    zoom = 25.0 if three_panel else float(config["uv_plot"]["zoom_limit_metres"])
+    # (b) uv coverage with the short-baseline inset (7 m and the TP response)
+    zoom = 25.0
     limit = 1.10*max(np.abs(np.r_[u, v]).max() for u, v in coords.values())
     wavelength = C_METRES_PER_SECOND/(config["visibility_profile"]["reference_frequency_ghz"]*1e9)
     tp_half_metres = tp_meta["half_response_klambda"]*1000*wavelength
     tp_outer_metres = tp_meta["maximum_plotted_klambda"]*1000*wavelength
-    d.add_patch(Circle((0, 0), tp_outer_metres, facecolor="0.80", edgecolor="0.55", linewidth=0.6, zorder=0))
-    d.add_patch(Circle((0, 0), tp_half_metres, facecolor="0.65", edgecolor="0.4", linewidth=0.6, linestyle=":", zorder=1))
-    for axis, extent in [(c, limit), (d, zoom)]:
+    inset.add_patch(Circle((0, 0), tp_outer_metres, facecolor="0.80", edgecolor="0.55", linewidth=0.6, zorder=0))
+    inset.add_patch(Circle((0, 0), tp_half_metres, facecolor="0.65", edgecolor="0.4", linewidth=0.6, linestyle=":", zorder=1))
+    for axis, extent in [(b, limit), (inset, zoom)]:
         for name, (u, v) in coords.items():
-            if three_panel and axis is d and name != "aca_7m":
+            if axis is inset and name != "aca_7m":
                 continue
             use = (np.abs(u) <= extent) & (np.abs(v) <= extent)
-            axis.scatter(np.r_[u[use], -u[use]], np.r_[v[use], -v[use]], s=(.25 if three_panel else .45) if axis is c else .75,
+            axis.scatter(np.r_[u[use], -u[use]], np.r_[v[use], -v[use]], s=.25 if axis is b else .75,
                          color=COLORS[name], alpha=0.25 if name != "aca_7m" else 0.60,
                          linewidths=0, rasterized=True, zorder=2)
-        axis.set(xlim=(-extent, extent), ylim=(-extent, extent), xlabel="u (m)", ylabel="v (m)")
+        axis.set(xlim=(-extent, extent), ylim=(-extent, extent))
         axis.set_aspect("equal", adjustable="box")
-    c.add_patch(Rectangle((-zoom, -zoom), 2*zoom, 2*zoom, facecolor="none", edgecolor="0.2", linewidth=0.7, zorder=3))
-    d.scatter([0], [0], marker="+", s=28, linewidths=1.1, color="0.15", zorder=5)
-    handles = [Line2D([], [], marker="o", linestyle="none", color=COLORS[k], markersize=4, label=LABELS[k]) for k in COLORS]
-    c.legend(handles=handles, loc="lower left", fontsize=10, labelspacing=0.25, handletextpad=0.4,
+    b.add_patch(Rectangle((-zoom, -zoom), 2*zoom, 2*zoom, facecolor="none", edgecolor="0.2", linewidth=0.7, zorder=3))
+    inset.scatter([0], [0], marker="+", s=28, linewidths=1.1, color="0.15", zorder=5)
+    handles = [Line2D([], [], marker="o", linestyle="none", color=COLORS[k], markersize=3, label=short[k]) for k in COLORS]
+    tp_handle = Line2D([], [], marker="+", linestyle="none", color="0.3", markersize=6, label="TP")
+    b.legend(handles=handles+[tp_handle], loc="lower left", ncol=2, fontsize=10,
+             columnspacing=.35, handlelength=.7, handletextpad=.25, labelspacing=.15,
              frameon=True, facecolor="white", framealpha=1, edgecolor="none")
-    tp_handle = Line2D([], [], marker="+", linestyle="none", color="0.3", markersize=6, label="TP model")
-    if three_panel:
-        c.get_legend().remove()
-        short = {"configuration_c5": "C5", "configuration_c2": "C2", "aca_7m": "7 m"}
-        handles = [Line2D([], [], marker="o", linestyle="none", color=COLORS[k], markersize=3, label=short[k]) for k in COLORS]
-        tp_handle.set_label("TP")
-        c.legend(handles=handles+[tp_handle], loc="lower left", ncol=2, fontsize=10,
-                 columnspacing=.35, handlelength=.7, handletextpad=.25, labelspacing=.15,
-                 frameon=True, facecolor="white", framealpha=1, edgecolor="none")
-        c.set(xlabel="u (km)", ylabel="v (km)")
-        c.set_xticks([-1000, 0, 1000], labels=["−1", "0", "1"])
-        c.set_yticks([-1000, 0, 1000], labels=["−1", "0", "1"])
-        d.set(xlabel="", ylabel="", xticks=[], yticks=[])
-        d.minorticks_off()
-        for origin, destination in [((-zoom, zoom), (0, 0)), ((zoom, -zoom), (1, 0))]:
-            c.add_artist(ConnectionPatch(xyA=origin, coordsA=c.transData,
-                xyB=destination, coordsB=d.transAxes, color="black", linewidth=.65,
-                linestyle="-", zorder=7, clip_on=False))
-    else:
-        d.legend(handles=handles+[tp_handle], loc="lower left", ncol=2, fontsize=10, columnspacing=0.5,
-                 handletextpad=0.3, labelspacing=0.25, frameon=True, facecolor="white", framealpha=1, edgecolor="none")
-    title(c, "(b)" if three_panel else "(c)")
-    if not three_panel:
-        title(d, "(d)")
-    save_figure(fig, outputs, dpi=int(settings["dpi"]), bbox_inches=None,
-                exclude_axes=[d] if three_panel else ())
+    b.set(xlabel="u (km)", ylabel="v (km)")
+    b.set_xticks([-1000, 0, 1000], labels=["−1", "0", "1"])
+    b.set_yticks([-1000, 0, 1000], labels=["−1", "0", "1"])
+    inset.set(xlabel="", ylabel="", xticks=[], yticks=[])
+    inset.minorticks_off()
+    for origin, destination in [((-zoom, zoom), (0, 0)), ((zoom, -zoom), (1, 0))]:
+        b.add_artist(ConnectionPatch(xyA=origin, coordsA=b.transData,
+            xyB=destination, coordsB=inset.transAxes, color="black", linewidth=.65,
+            linestyle="-", zorder=7, clip_on=False))
+    title(b, "(b)")
+    save_figure(fig, outputs, dpi=int(settings["dpi"]), bbox_inches=None, exclude_axes=[inset])
     plt.close(fig)
     sources = [sampling/"amplitudes.csv", sampling/"separate_array_amplitudes.csv", sampling/"summary.json", sampling/"cell_statistics.npz", test/"summary.json",
                *observation_sources.values(),
                *[root/"uv_coordinates"/f"{n}.npz" for n in COLORS], Path(paths["inputs"]["tp_dust_ff"])]
-    amplitude_panel = "c" if three_panel else "b"
-    manifest = {"date": "2026-10-28", "status": "Three-panel Figure 1 selected for manuscript; four-panel output retained" if three_panel else "Four-panel output retained; verified adoption provenance is recorded by the referee-response task",
+    manifest = {"date": "2026-11-20", "status": "Paper II Fig. 2",
                 "tp": tp_meta, "tp_half_response_metres": tp_half_metres,
                 "tp_ten_percent_response_metres": tp_outer_metres,
-                f"panel_{amplitude_panel}_statistic": "Separate ACA/C2/C5 RMS from independent-hand cross-power in the same 19 pointing pairs; common occupied cells across arrays present in each radial bin where possible, own occupied cells otherwise (CSV matched_arrays flag). ACA model translation targets actual 12m pointing PB. TP has this same PB applied before FFT, with its native restoring beam retained. Non-detections have conditional two-standard-error limits.",
+                "panel_c_statistic": "Separate ACA/C2/C5 RMS from independent-hand cross-power in the same 19 pointing pairs; common occupied cells across arrays present in each radial bin where possible, own occupied cells otherwise (CSV matched_arrays flag). ACA model translation targets actual 12m pointing PB. TP has this same PB applied before FFT, with its native restoring beam retained. Non-detections have conditional two-standard-error limits.",
+                "image_curves": image_meta,
                 "figure_width_mm": settings["width_inches"]*25.4, "base_font_pt": 10,
-                "interferometer_display_scale": 1.0,
-                "tp_display_scale": tp_display_scale,
                 "amplitude_source": amplitude_source,
-                "tp_display_scale_scope": f"Panel {amplitude_panel} curve only; native TP source CSV is unscaled. Disclosed as a display normalization in the manuscript caption; no adopted calibration correction.",
                 "amplitude_ranges_klambda": coverage["ranges_klambda"], "amplitude_overlap_klambda": overlap,
-                f"panel_{amplitude_panel}_xscale": "log; 1-1000 klambda; zero spacing remains in the short-baseline view and the source CSV",
-                "panel_order": ["pointings", "uv coverage with short-baseline inset", "amplitudes and visibility counts"] if three_panel else ["pointings", "amplitudes and visibility counts", "full uv coverage", "short baselines"],
-                "panel_labels": ["(a)", "(b)", "(c)"] if three_panel else ["(a)", "(b)", "(c)", "(d)"],
-                "inset_limit_metres": zoom if three_panel else None,
-                "main_uv_display_unit": "km" if three_panel else "m",
-                "inset_uv_display_unit": "m" if three_panel else None,
-                "inset_arrays": ["aca_7m", "TP model response"] if three_panel else None,
-                "inset_background": "white; flush with upper-right parent edges; two solid black zoom connectors" if three_panel else None,
-                "inset_ticks": False if three_panel else True,
-                "inset_tick_labels": False if three_panel else True,
-                f"panel_{amplitude_panel}_marker_size_pt": 1.5 if three_panel else 3,
-                "alignment_exclusion": "Upper-right inset in b is intentionally a smaller zoom, not an equal-span main panel" if three_panel else None,
-                f"panel_{amplitude_panel}_native_aca_curve": False, f"panel_{amplitude_panel}_shading": False,
-                f"panel_{amplitude_panel}_sampling": {
+                "panel_c_xscale": "log; 1-1000 klambda; zero spacing remains in the short-baseline view and the source CSV",
+                "panel_order": ["pointings", "uv coverage with short-baseline inset", "amplitudes and visibility counts"],
+                "panel_labels": ["(a)", "(b)", "(c)"],
+                "inset_limit_metres": zoom, "main_uv_display_unit": "km", "inset_uv_display_unit": "m",
+                "inset_arrays": ["aca_7m", "TP model response"],
+                "inset_background": "white; flush with upper-right parent edges; two solid black zoom connectors",
+                "inset_ticks": False, "inset_tick_labels": False,
+                "panel_c_marker_size_pt": 1.5,
+                "alignment_exclusion": "Upper-right inset in b is intentionally a smaller zoom, not an equal-span main panel",
+                "panel_c_native_aca_curve": False, "panel_c_shading": False,
+                "panel_c_sampling": {
                     "source_csv": str(density_table), "log_bins": len(density_centres),
-                    "marker_area": f"{4 if three_panel else 10} pt^2 times row count / global maximum bin count",
+                    "marker_area": "4 pt^2 times row count / global maximum bin count",
                     "maximum_bin_count": int(maximum_count),
                     "selection": "Same 19 pointing pairs and broad windows; all valid cached rows before common-cell selection; no imaging weights or thinning. Vertical track position is an observation index, not amplitude.",
                     "observations": [{"array": name, "observation_id": obs, "rows": int(n.sum())}

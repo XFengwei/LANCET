@@ -120,10 +120,85 @@ def test_amplitude_alignment_stops_without_products(tmp_path):
         run_amplitude_alignment(_paths_without_products(tmp_path), _config(), save_figure=None)
 
 
-def test_figure2_stops_without_products(tmp_path):
+def test_figure2_requires_products(tmp_path):
     from lancet.combination_figure import make_combination_figure
-    with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
+    with pytest.raises(FileNotFoundError, match="Run stage 'jcomb' first: missing .*/products/"):
         make_combination_figure(_paths_without_products(tmp_path), _config(), save_figure=None)
+
+
+def test_figure_has_no_three_panel_switch():
+    from lancet.combination_figure import make_combination_figure
+    assert "three_panel" not in inspect.signature(make_combination_figure).parameters
+
+
+def test_image_curve_limit_is_the_lower_of_beam_and_nyquist():
+    from lancet.amplitude_alignment import image_curve_limit, response_limit
+    half_nyquist = 0.5 / (2 * 0.5 * np.pi / 648000) / 1000          # 0.5 x 206.26 klambda
+    assert response_limit(0.66, 0.1) > 240
+    assert abs(image_curve_limit(0.66, 0.1, 0.5) - half_nyquist) < 1e-3
+    assert image_curve_limit(18.1, 0.1, 0.5) == response_limit(18.1, 0.1)
+
+
+def test_pixel_binning_transfer_is_the_box_response():
+    from lancet.amplitude_alignment import pixel_binning_transfer
+    pixel_rad = 0.5 * np.pi / 648000
+    assert pixel_binning_transfer(0.0, 0.5) == 1.0
+    assert np.isclose(pixel_binning_transfer(1 / pixel_rad / 1000, 0.5), 0.0, atol=1e-12)
+
+
+def _gaussian_image(path, *, source_fwhm, beam_fwhm, size=2048, pixel=0.1, centre=(221.25, -59.8)):
+    """Restored Jy/beam image of a unit-flux circular Gaussian at the reference pixel.
+
+    CRPIX = 1023 makes the reference pixel the centre of a 5-pixel block, so the 0.5" binned grid
+    and the 0.5" sampling patch share pixel centres and the patch interpolation is exact.
+    """
+    restored = np.hypot(source_fwhm, beam_fwhm)
+    offset = (np.arange(size) - 1022) * pixel                          # 0-based index 1022 = CRPIX 1023
+    r2 = offset[None, :]**2 + offset[:, None]**2
+    data = (beam_fwhm / restored)**2 * np.exp(-4 * np.log(2) * r2 / restored**2)
+    header = fits.Header({"BUNIT": "JY/BEAM", "BMAJ": beam_fwhm / 3600, "BMIN": beam_fwhm / 3600, "BPA": 0.0,
+                          "CTYPE1": "RA---SIN", "CTYPE2": "DEC--SIN", "CRVAL1": centre[0], "CRVAL2": centre[1],
+                          "CDELT1": -pixel / 3600, "CDELT2": pixel / 3600, "CRPIX1": 1023.0, "CRPIX2": 1023.0})
+    fits.PrimaryHDU(data.astype(np.float32), header).writeto(path)
+    return restored
+
+
+def test_beam_and_binning_corrected_curve_recovers_a_gaussian(tmp_path):
+    from lancet.amplitude_alignment import (
+        _image_curve, gaussian_transfer, image_curve_limit, pixel_binning_transfer,
+    )
+    path = tmp_path / "gaussian.fits"
+    restored = _gaussian_image(path, source_fwhm=2.0, beam_fwhm=0.7)
+    settings = {**_config()["overlap_tests"], "pb_12m_fwhm_arcsec": 2000.0}    # flat over the source
+    task = {"tp_minimum_response": 0.1, "continuous_min_klambda": 1.0, "image_curve_points": 60}
+    # One pointing pair (0) at the source, one band (216.74 GHz), one orientation sector.
+    centre = {0: (221.25, -59.8)}
+    grid, rms, info = _image_curve(path, centre, np.array([0]), 1, 8, settings, task)
+    limit = image_curve_limit(0.7, 0.1, 0.5)
+    assert np.isclose(grid.max(), limit) and np.isclose(info["beam_fwhm_arcsec"], 0.7)
+    # continuous_rms returns mJy of the image times the Gaussian PB: a unit-flux source keeps the
+    # PB-weighted flux pb^2 / (pb^2 + restored^2) (PB at 216.74 GHz, centred on the source).
+    pb = 2000.0 * float(settings["pb_reference_frequency_ghz"]) / 216.74
+    expected = 1000 * pb**2 / (pb**2 + restored**2) * gaussian_transfer(grid, 2.0)
+    assert np.all(np.abs(rms / expected - 1) < 0.02), np.max(np.abs(rms / expected - 1))
+    # Each correction matters at the limit: the beam by ~35 %, the binning by ~10 %.
+    assert rms[-1] * gaussian_transfer(limit, 0.7) / expected[-1] < 0.7
+    assert rms[-1] * pixel_binning_transfer(limit, 0.5) / expected[-1] < 0.95
+
+
+def test_read_products_returns_image_curves(tmp_path):
+    from lancet.amplitude_alignment import read_products
+    (tmp_path / "array_profiles.csv").write_text("array,uv_klambda,rms_mjy\naca_7m,5.0,100.0\n")
+    (tmp_path / "overlap.csv").write_text("uv_klambda,aca_native_mjy\n5.0,90.0\n")
+    (tmp_path / "tp_continuous.csv").write_text("uv_klambda,tp_raw_common_mjy\n1.0,1000.0\n2.0,800.0\n")
+    (tmp_path / "manifest.json").write_text('{"sky_model": "x"}\n')
+    (tmp_path / "image_curves.csv").write_text(
+        "name,uv_klambda,rms_mjy\ninterferometer,1.0,50.0\ninterferometer,2.0,60.0\njcomb,1.0,900.0\n")
+    profiles, overlap, continuous, manifest, curves = read_products(tmp_path)
+    assert manifest == {"sky_model": "x"} and list(curves) == ["interferometer", "jcomb"]
+    assert np.array_equal(curves["interferometer"][0], [1.0, 2.0])
+    assert np.array_equal(curves["interferometer"][1], [50.0, 60.0])
+    assert np.array_equal(curves["jcomb"][1], [900.0])
 
 
 def test_figure2_names_feather_when_only_jcomb_exists(tmp_path):
@@ -147,8 +222,7 @@ def test_figure2_refuses_rerun_before_computing(tmp_path, monkeypatch):
     figures = paths["output_root"] / "figures"
     figures.mkdir(parents=True)
     for suffix in config["figure2"]["output_formats"]:
-        for stem in ("Figure1_combination_diagnostics", "figure2_combination_diagnostics"):
-            (figures / f"{stem}.{suffix}").write_text("x")
+        (figures / f"figure2_combination_diagnostics.{suffix}").write_text("x")
     with pytest.raises(FileExistsError):
         make_combination_figure(paths, config, save_figure=None)
 
@@ -189,6 +263,10 @@ def test_sky_model_sources_resolve_to_path_groups():
     config, paths = _config(), _paths()
     sources = [spec["source"] for spec in config["aca_forward_test"]["sky_models"].values()]
     sources.append(config["amplitude_alignment"]["sky_model"])
+    curves = config["amplitude_alignment"]["image_curves"]
+    assert curves == {"interferometer": "inputs.interferometer", "jcomb": "products.jcomb_continuum",
+                      "feather": "products.feather_continuum"}
+    sources.extend(curves.values())
     for source in sources:
         group, name = source.split(".")
         assert name in paths[group], source

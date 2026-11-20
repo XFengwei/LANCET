@@ -47,6 +47,41 @@ def response_limit(fwhm_arcsec, minimum_response):
     return float(np.sqrt(np.log(1/minimum_response)*4*np.log(2))/(np.pi*theta)/1000)
 
 
+def pixel_binning_transfer(u_klambda, pixel_arcsec):
+    """Fourier response of area-binning to `pixel_arcsec` (a box of that width, radial approximation)."""
+    return np.sinc(np.asarray(u_klambda)*1000*pixel_arcsec*np.pi/648000)
+
+
+def image_curve_limit(beam_fwhm_arcsec, minimum_response, model_pixel_arcsec):
+    """Last uv distance (kλ) of an image curve: the beam limit or half the model-grid Nyquist limit."""
+    half_nyquist = 0.5/(2*model_pixel_arcsec*np.pi/648000)/1000
+    return min(response_limit(beam_fwhm_arcsec, minimum_response), half_nyquist)
+
+
+def image_curve_method(task, settings):
+    """Description of the image curves for the manifests."""
+    bands = " and ".join(f"{f:g}" for _, f in SIDEBANDS_GHZ)
+    return (f"Each image is area-binned to the {settings['model_pixel_arcsec']}-arcsec model grid, multiplied by "
+            f"the actual matched 12 m pointing PB at both basebands ({bands} GHz) with the pointing, "
+            "band and orientation population of the TP curve, and sampled along a continuous radius from "
+            f"{task['continuous_min_klambda']} klambda. The image's restoring beam (geometric mean of BMAJ and "
+            "BMIN) and the pixel-binning response are divided out; the curve stops where the beam response falls "
+            f"to {task['tp_minimum_response']} or at half the model-grid Nyquist limit, whichever is lower.")
+
+
+def _image_curve(path, centres, keys, n_bins, sectors, settings, task):
+    """Amplitude of one restored image through the 12 m PB, with its beam and pixel binning divided out."""
+    pixel = float(settings["model_pixel_arcsec"])
+    image, header = sky_model(path, pixel)
+    beam = float(np.sqrt(header["BMAJ"]*header["BMIN"])*3600)
+    limit = image_curve_limit(beam, float(task["tp_minimum_response"]), pixel)
+    grid = np.geomspace(float(task["continuous_min_klambda"]), limit, int(task["image_curve_points"]))
+    rms = continuous_rms({"image": (image, header)}, centres, keys, n_bins, sectors, grid, settings,
+                         "pb_12m_fwhm_arcsec")["image"]
+    corrected = rms/(gaussian_transfer(grid, beam)*pixel_binning_transfer(grid, pixel))
+    return grid, corrected, {"beam_fwhm_arcsec": beam, "limit_klambda": limit}
+
+
 def _pb_width(settings, key, frequency_hz):
     return float(settings[key])*float(settings["pb_reference_frequency_ghz"])*1e9/frequency_hz
 
@@ -243,8 +278,9 @@ def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
     for p in targets:
         ra, dec = np.rad2deg(np.asarray(meta["subtables"]["FIELD"][p["aca_field"]]["PHASE_DIR"]).ravel())
         aca_centres[p["pair"]] = (float(ra % 360), float(dec))
-    frames = {"common": continuous_rms(images, {p["pair"]: (p["ra_deg"], p["dec_deg"]) for p in targets},
-                                       keys, n_bins, sectors, grid, settings, "pb_12m_fwhm_arcsec"),
+    common_centres = {p["pair"]: (p["ra_deg"], p["dec_deg"]) for p in targets}
+    frames = {"common": continuous_rms(images, common_centres, keys, n_bins, sectors, grid, settings,
+                                       "pb_12m_fwhm_arcsec"),
               "native": continuous_rms(images, aca_centres, keys, n_bins, sectors, grid, settings,
                                        "pb_7m_fwhm_arcsec")}
     gauss = gaussian_transfer(grid, tp_beam)
@@ -256,7 +292,17 @@ def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
             f"tp_gaussian_corrected_{frame}_mjy": curves["tp"]/gauss})
     _write_csv(out/"tp_continuous.csv", [dict(zip(continuous, values)) for values in zip(*continuous.values())])
 
-    sources = [cache, meta_path, tp_path, sky_path, sampling/"summary.json"]
+    image_rows, image_info = [], {"method": image_curve_method(task, settings)}
+    for name, source in task["image_curves"].items():
+        print(f"Amplitude alignment: image curve {name}", flush=True)
+        path = source_path(paths, source)
+        u, rms, info = _image_curve(path, common_centres, keys, n_bins, sectors, settings, task)
+        image_rows += [{"name": name, "uv_klambda": x, "rms_mjy": y} for x, y in zip(u, rms)]
+        image_info[name] = {"source": str(path), **info}
+    _write_csv(out/"image_curves.csv", image_rows)
+
+    sources = dict.fromkeys([cache, meta_path, tp_path, sky_path, sampling/"summary.json",
+                             *(source_path(paths, s) for s in task["image_curves"].values())])
     manifest = {"date": "2026-11-13", "tp_beam_arcsec": tp_beam, "tp_response_limit_klambda": limit,
         "sky_model": str(sky_path), "tp_beam_kernel": beam_info, "reference_aca_bin": first,
         "selected_aca_rows": int(len(rows["x"])),
@@ -271,6 +317,7 @@ def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
                         "power through the PB and implies a smaller correction. Gaussian PBs; 19 matched pointing "
                         "pairs only; no spectral-index scaling. The correction is meaningful only while the "
                         "Gaussian beam response exceeds the configured minimum."),
+        "image_curves": image_info,
         "sources_sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}}
     (out/"manifest.json").write_text(json.dumps(manifest, indent=2, default=float)+"\n")
     plot_alignment(profiles, overlap, continuous, task, limit, out, save_figure)
@@ -358,7 +405,10 @@ def plot_alignment(profiles, overlap, continuous, task, limit, out, save_figure)
 
 
 def read_products(out):
-    """Saved array profiles, overlap bins, continuous TP curves and manifest."""
+    """Saved array profiles, overlap bins, continuous TP curves, manifest and image curves.
+
+    The image curves map each name to its (uv distance in kλ, RMS in mJy) arrays.
+    """
     out = Path(out)
 
     def convert(value):
@@ -376,12 +426,16 @@ def read_products(out):
     continuous = read("tp_continuous.csv")
     continuous = {k: np.array([r[k] for r in continuous]) for k in continuous[0]}
     manifest = json.loads((out/"manifest.json").read_text())
-    return read("array_profiles.csv"), read("overlap.csv"), continuous, manifest
+    images = {}
+    for row in read("image_curves.csv"):
+        images.setdefault(row["name"], []).append((row["uv_klambda"], row["rms_mjy"]))
+    images = {name: tuple(np.array(column) for column in zip(*rows)) for name, rows in images.items()}
+    return read("array_profiles.csv"), read("overlap.csv"), continuous, manifest, images
 
 
 def replot_alignment(paths, config, *, save_figure):
     """Redraw the figure from the saved CSV products without recomputing."""
     out = Path(paths["output_root"])/"amplitude_alignment"
-    profiles, overlap, continuous, manifest = read_products(out)
+    profiles, overlap, continuous, manifest, _ = read_products(out)
     plot_alignment(profiles, overlap, continuous, config["amplitude_alignment"],
                    manifest["tp_response_limit_klambda"], out, save_figure)
