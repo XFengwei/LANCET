@@ -29,7 +29,7 @@ Papers, design, docs, presentations, references and the website stand beside thi
 Problems this plan addresses:
 
 1. **Scripts are separated from their tasks**, and 15 scripts belong to no task.
-2. **Results and tasks do not match one-to-one** (`moment_maps`, `starcluster`, `multiwavelength_cards`, `continuum_comparison_cards`, `diagnostics`, an empty `compare_interferometer_arrays`).
+2. **Results and tasks do not match one-to-one** (`moment_maps`, `starcluster`, `multiwavelength_cards`, `continuum_comparison_cards`, `diagnostics`, `compare_interferometer_arrays`, a symlink to `combination_diagnostic`).
 3. **Derived products sit among the inputs.** `data/delivered/` contains images that a task can regenerate (unit conversions, regrids, the old v1–v3 combined images).
 4. **Tasks read each other's results without a stated order**, and four tasks read from `results/paper_ii_referee_response/`, which is a coordination log, not a product.
 5. **Nothing records which data can be regenerated and which cannot.**
@@ -96,7 +96,7 @@ Paper II results are checked to exist (list in `docs/reorganization_baseline/`).
 
 **D5. Results with no task.** As proposed: `moment_maps` → `c18o_moments`; `starcluster` →
 `star_cluster`; `multiwavelength_cards` and `continuum_comparison_cards` become tasks; `diagnostics`
-is sorted into the owning tasks; the empty `compare_interferometer_arrays` is deleted.
+is sorted into the owning tasks; the `compare_interferometer_arrays` symlink is deleted (done 2026-11-19).
 
 **D6. Reduction scripts stay in `data/reduction/`** (author, 2026-11-18). The reduction tree is a
 stand-alone workspace with its own scripts (for example `cont/script/combine_cont.sh`); its finished
@@ -109,6 +109,15 @@ repeated. The existing extraction stays as it is for the source catalogue and fo
 correction and what follows) use the updated combined map. This needs one new product: the new
 12m+7m+TP map minus the getsf source model of the 12m+7m image (a plain subtraction), replacing the
 getsf background component of the old combined map.
+
+**D8. No shared image-preparation task** (author, 2026-11-20). `prepare_continuum_images` is
+dissolved: each task does its own Jy/beam→MJy/sr conversion or primary-beam cut on the delivered
+images it reads, with the `lancet.imaging` functions and settings in its own `task.toml`. Its
+readers absorb the step at their reviews: the merged combination task (replacing
+`combination_diagnostic` and `linear_combine_continuum`), `core_formation` and
+`volume_density_mapper`. Done 2026-11-20: `core_formation` and `volume_density_mapper` now read
+delivered MIRIAD images (`lancet.imaging.read_mjysr`), the task folder was removed and
+`results/prepare_continuum_images/` (1.8 GB) moved to the Trash.
 
 ## 5. Phases
 
@@ -127,6 +136,15 @@ Each phase ends with the test suite passing and one commit. Moves use `git mv`, 
   move its script. Unpaired scripts are placed or deleted in the same review.
 - Update the 19 tests that call scripts by path, every README run command, and the default config path inside each script.
 - Delete `scripts/`.
+
+- 12m+7m continuum inputs (author, 2026-11-19): `data/delivered/alma/7MTM2TM1/cont/` now holds the MIRIAD
+  clean, gain, sen, pb, clean.truesky and clean.flatnoise maps directly (see its README); the CASA products
+  are in `casa-archived/` and not used for science; drogdeg, pbcut, MJysr and pbant were removed. Each task
+  that still reads `cont/miriad/…` or `cont/casa/…` is repointed at its review, with the MIRIAD `pb` replacing
+  the CASA primary beam: `prepare_continuum_images`, `construct_freefree_model`, `column_density`,
+  `core_formation`, `volume_density_mapper`, `plot_allscale_continuum`, `linear_combine_continuum` (pbant),
+  `combination_diagnostic` (CASA pb.tt0), `plot_core_freefree_contamination`, and the beam-matching test in
+  `tests/test_interferometry.py` (used the removed convolve2ACA image as reference).
 
 ### Phase 2. Flatten `src/`
 
@@ -198,5 +216,7 @@ One row per task, filled in as the author checks it.
 | Task | Checked | Name | Script | Rerun against stored results | Open points |
 |---|---|---|---|---|---|
 | `prepare_continuum_images` | 2026-11-19 | kept | `tasks/prepare_continuum_images/run.py` | all 15 outputs byte-identical | 9 of 15 outputs have no reader; 13 outputs duplicate files in `data/delivered/` (3.4 GB); 4 operations still use the old v3 combined images |
+|  | 2026-11-20 | **removed** (D8) | — | — | readers repointed: `core_formation` overlay → MIRIAD flatnoise + 7m (converted in task); `volume_density_mapper` footprint → MIRIAD pb ≥ 0.2 (99% overlap with the old CASA cut); `combination_diagnostic` inputs handled in the merge |
 | `construct_freefree_model` | 2026-11-20 | kept | `tasks/construct_freefree_model/run.py` | all 28 FITS byte-identical at 230 GHz; output frequency then made a setting, 223.8 GHz (author): `ff224_map*` = old × 1.002736 exactly, all other outputs byte-identical | done: dust grid read from `sedfitter/Dustmodel_230GHz.fits` (identical output); y-label fixed; core contamination split into `freefree_core_contamination` (not reviewed, ALMA inputs outdated; results moved to `results/freefree_core_contamination/`). Open: old `ff230_map*` kept until `synthesize_continuum`/`column_density` review; CORNISH 8″ copies in `delivered/` → Phase 4 |
 | `synthesize_continuum` | 2026-11-20 | kept | `tasks/synthesize_continuum/run.py` (+ 3 SIMBA scripts in the task folder) | all 9 FITS byte-identical at the old 230 GHz setting; then both inputs set to 223.8 GHz (author): dust unchanged, free-free +0.27%, 250 GHz model +10.9% (SIMBA peak ratios 0.80–1.28 → 0.86–1.39) | done: `Dustmodel_223.8GHz.fits` (renamed by author), 3 delivered `SEDsynthetic_Dust_FF*` and old `*_230GHz`/`ff230` results moved to Trash; `linear_combine_continuum`, `column_density`, `multiwavelength_strip`, `plot_allscale_continuum` repointed (their results stale until rerun). Open: Paper II text and Figs. C1/C2 (250 GHz benchmark changed); SIMBA scripts not yet stages; `archive/infrared/SIMBA_1.2mm_newhdr*.fits` duplicate validation outputs |
+|  | 2026-11-19 (cont.) | | | | 7MTM2 dropped (no reader; author): its mask and conversion removed from `task.toml`, outputs deleted, the two tests that reproduced the delivered 7MTM2 files replaced by synthetic tests. Still open: 7MTM2TM1 inputs removed from `data/delivered/` (repoint to MIRIAD `pb`) |

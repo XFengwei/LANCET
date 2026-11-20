@@ -69,7 +69,8 @@ from lancet.combination_validation import (
 )
 
 DEFAULT_CONFIG = Path("tasks/linear_combine_continuum/task.toml")
-DELIVERED_INPUTS = ("interferometer", "interferometer_attenuated")
+DELIVERED_INPUTS = ("interferometer", "interferometer_attenuated", "planck_217", "planck_co", "planck_rimo",
+                    "planck_fetch_record")
 # TP models are the products of the synthesize_continuum task.
 SYNTHESIS_INPUTS = ("tp_dust", "tp_dust_ff")
 SYNTHESIS_RESULTS = Path("results/synthesize_continuum")

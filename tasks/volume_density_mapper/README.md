@@ -37,7 +37,7 @@ The task therefore does not promote a full 3-D reconstruction unless column
 closure is fixed and revalidated.
 
 The `mask` stage applies the numerical 12m+7m primary-beam response map with
-the same response cutoff, 0.20, used by `prepare_continuum_images`. It writes
+the response cutoff 0.20 (the same cut as the `alma_footprint` map). It writes
 the recommended science products under `pilot_pbmasked/` and
 `full_pbmasked/`. Every floating-point value outside the retained primary-beam
 region is NaN, and the quality mask is zero there. The earlier unmasked

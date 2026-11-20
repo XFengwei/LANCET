@@ -3,7 +3,7 @@ name = "linear_combine_continuum"
 
 [inputs]
 # MIRIAD 12m+7m joint mosaic (PB-corrected) and the same image times the mosaic gain.
-interferometer = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
+interferometer = "data/delivered/alma/7MTM2TM1/cont/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
 interferometer_attenuated = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.fits"
 # TP models at 223.8 GHz from synthesize_continuum: the Paper I dust model
 # (data/delivered/sedfitter/Dustmodel_223.8GHz.fits, unchanged) and dust plus free-free.
@@ -11,10 +11,10 @@ tp_dust = "results/synthesize_continuum/model/dust_224GHz.fits"
 tp_dust_ff = "results/synthesize_continuum/model/continuum_224GHz.fits"
 # Planck PR3 HFI 217 GHz map and PR2 Type-1 CO map (pixels within 1 deg of the field, HEALPix
 # Nside 2048 NESTED), the HFI RIMO (bandpass, beam) and the fetch record with the CO factors.
-planck_217 = "results/paper_ii_referee_response/diagnostics/R4c/2026-11-15/planck/freq217.npz"
-planck_co = "results/paper_ii_referee_response/diagnostics/R4c/2026-11-15/planck/co_type1.npz"
-planck_rimo = "results/paper_ii_referee_response/diagnostics/R4c/2026-11-15/planck/HFI_RIMO_R3.00.fits"
-planck_fetch_record = "results/paper_ii_referee_response/diagnostics/R4c/2026-11-15/planck/fetch.json"
+planck_217 = "data/delivered/archive/planck/hfi_cutouts/freq217.npz"
+planck_co = "data/delivered/archive/planck/hfi_cutouts/co_type1.npz"
+planck_rimo = "data/delivered/archive/planck/hfi_cutouts/HFI_RIMO_R3.00.fits"
+planck_fetch_record = "data/delivered/archive/planck/hfi_cutouts/fetch.json"
 # ATLASGAL+Planck 870 um map, only to fill the area outside the TP model in one variant.
 atlasgal_870 = "data/delivered/archive/infrared/atlasgal+planck.fits"
 # Core positions for the core-peak measurement.

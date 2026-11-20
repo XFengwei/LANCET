@@ -45,6 +45,14 @@ def test_task_reads_tp_models_from_synthesize_continuum():
     assert config["inputs"]["tp_dust_ff"] == "results/synthesize_continuum/model/continuum_224GHz.fits"
 
 
+@pytest.mark.parametrize("name", ["planck_217", "planck_co", "planck_rimo", "planck_fetch_record"])
+def test_planck_inputs_must_be_delivered(name):
+    old = f"results/paper_ii_referee_response/diagnostics/R4c/2026-11-15/planck/{Path(TASK.load_task_config(CONFIG)['inputs'][name]).name}"
+    config = _config({("inputs", name): old})
+    with pytest.raises(ValueError, match=name):
+        TASK.resolve_task_paths(ProjectPaths.discover(PROJECT_ROOT), config)
+
+
 def test_guard_outputs_refuses_existing(tmp_path):
     existing = tmp_path / "product.fits"
     existing.write_text("x")

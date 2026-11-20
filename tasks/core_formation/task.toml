@@ -9,8 +9,10 @@ fragment_ellipse_catalogue = "extraction/astrodendro/my_dendrogram.dat"
 fragment_mass_catalogue = "extraction/astrodendro/my_catalog.dat"
 fragment_label_mask = "extraction/astrodendro/my_mask_idx.fits"
 selection_gain = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
-high_resolution_continuum = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.MJysr.fits"
-low_resolution_continuum = "results/prepare_continuum_images/converted/7M/IRDC316.8.ACA.p1.cont.image.MJysr.fits"
+# Overlay figure backgrounds, converted to MJy/sr in the task. The 12m+7m map is the MIRIAD
+# flat-noise image (sky x pb), replacing the former CASA-pb "pbant" product.
+high_resolution_continuum = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.flatnoise.fits"
+low_resolution_continuum = "data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.image.fits"
 
 [references]
 # This published catalogue is checked during inspection only. The adopted

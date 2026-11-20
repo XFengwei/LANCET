@@ -4,7 +4,7 @@ This task owns continuum uv coverage, visibility amplitude/weight diagnostics,
 and image-combination comparisons. It extends the former
 `compare_interferometer_arrays` task; its canonical name, runner and result root
 are now `combination_diagnostic`. Historical results were moved, not discarded.
-An old-name result symlink preserves existing historical links.
+The old-name result symlink was removed on 2026-11-19; nothing referred to it.
 
 ## Read-only inputs
 
@@ -428,6 +428,30 @@ shares an asinh scale. Products and input hashes are under
 `results/combination_diagnostic/joint_image_comparison/`. The figure is
 included only in the referee response. Dirty-PSF work remains separate.
 
+## Mosaic pointings, MIRIAD gain and CASA pb
+
+```bash
+PYTHONPATH=src conda run -n py312 python scripts/combination_diagnostic.py --stage pointing-coverage --overwrite
+```
+
+Places the 12m (C5 and C2 share the same 150 centres) and 7m (118) pointing centres, read
+from the FIELD tables of the declared measurement sets, on the delivered MIRIAD mosaic gain
+(`IRDC316.8.7MTM2TM1.robust0.5.gain.fits`) and the CASA 12m+7m mosaic pb
+(`casa-archived/IRDC316.8.TM1TM2ACA.selfcal.cont.pb.tt0.fits`). Contours: gain = 1 and
+pb = 0.5, 0.2, 0.1; circles are the half-power beams, 1.13 lambda/D at 224.4 GHz (25.9" and
+44.5"). Regions and levels are in `[pointing_coverage]` of `task.toml`. This stage reads only
+its own inputs, so it runs while other entries of `[reduction_inputs]` are missing.
+
+Outputs in `results/combination_diagnostic/pointing_coverage/`:
+`pointing_coverage_north.{pdf,png}`, `pointing_coverage_centre_south.{pdf,png}`,
+`pointings.csv` and `gain_vs_pb.json` (gain percentiles in pb bins, pb regridded to the gain
+grid at every 4th pixel).
+
+Result: the gain = 1 edge follows pb = 0.50 (median along the edge 0.502, 5th–95th percentile
+0.455–0.516). Outside it the gain is close to pb / 0.5 (median gain 0.38 at pb = 0.2, 0.18 at
+pb = 0.1). This follows from MIRIAD's rule (`mostab.for`): full primary-beam correction until
+the noise reaches that of the noisiest pointing, under-correction beyond.
+
 ## MIRIAD joint-imaging dirty beam (R4b)
 
 ```bash
@@ -436,7 +460,7 @@ PYTHONPATH=src conda run -n py312 python scripts/combination_diagnostic.py --sta
 
 The MIRIAD products come from a rerun of Shuting Lin's continuum workflow
 (`data/reduction/alma/7MTM2TM1/cont/script.zip`) in
-`data/reduction/alma/7MTM2TM1/cont/miriad_r4b/work_shuting/`, stopped after the
+`data/reduction/alma/7MTM2TM1/cont/miriad_run/work/`, stopped after the
 final `invert`. It runs in the `miriad80:latest` Docker image (MAXANT=80), built from
 `~/Software/miriad-alma-maxant80-u2204.tar.gz`. The combined TM1TM2 MS has 71
 antenna rows, more than the 64 the older CARMA build accepts. The 12m UVFITS

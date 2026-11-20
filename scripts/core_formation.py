@@ -17,6 +17,7 @@ import matplotlib.patheffects as path_effects
 import numpy as np
 
 from lancet import ProjectPaths
+from lancet.imaging import read_mjysr
 from lancet.core_formation import (
     create_core_overlay_figure,
     draw_temperature_efficiency_cascade,
@@ -554,16 +555,8 @@ def plot_overlays(
     included = np.isin(fragments["ID"], selected["ID"][selected["selected"]])
     excluded_fragments = fragments[~included]
     fragments = fragments[included]
-    high_data, high_header = fits.getdata(
-        paths["high_resolution_continuum"],
-        header=True,
-        memmap=True,
-    )
-    low_data, low_header = fits.getdata(
-        paths["low_resolution_continuum"],
-        header=True,
-        memmap=True,
-    )
+    high_data, high_header = read_mjysr(paths["high_resolution_continuum"])
+    low_data, low_header = read_mjysr(paths["low_resolution_continuum"])
     overlay = config["overlay"]
     panels = config["panels"]
     figures = config["figures"]

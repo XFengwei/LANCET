@@ -770,12 +770,102 @@ def run_total_power_diagnostic(paths, config, *, overwrite=False):
     return outputs
 
 
+def run_pointing_coverage(project: ProjectPaths, config: Mapping[str, object], *, overwrite=False):
+    """12m and 7m pointings on the MIRIAD gain and CASA pb, one figure per region."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from astropy.coordinates import SkyCoord
+    import astropy.units as u
+    from lancet.pointing_coverage import (
+        gain_against_pb, pb_at_gain_edge, plot_coverage, primary_beam_fwhm_arcsec,
+        read_field_centres, unique_positions,
+    )
+
+    settings = config["pointing_coverage"]
+    root = project.validate_output(str(Path(config["outputs"]["root"]) / "pointing_coverage"))
+    stems = [root / f"pointing_coverage_{r['name']}" for r in settings["regions"]]
+    outputs = [s.with_suffix(e) for s in stems for e in (".pdf", ".png")]
+    outputs += [root / "pointings.csv", root / "gain_vs_pb.json"]
+    for path in outputs:
+        _prepare_output(path, overwrite=overwrite)
+
+    def ms_path(name):
+        return project.reduction_input(Path(config["measurement_sets"][name]).relative_to("data/reduction"),
+                                       declared=True)
+
+    def centres(names):
+        ra, dec = [], []
+        for name in names:
+            r, d = read_field_centres(ms_path(name))
+            ra.append(r); dec.append(d)
+        return unique_positions(np.concatenate(ra), np.concatenate(dec),
+                                settings["duplicate_tolerance_arcsec"])
+
+    freq, factor = settings["frequency_ghz"], settings["beam_factor"]
+    arrays = [
+        {"label": "12m pointings", "ra": None, "dec": None, "sets": settings["twelve_m_sets"],
+         "fwhm_arcsec": primary_beam_fwhm_arcsec(12.0, freq, factor), "marker": ".", "size": 40,
+         "colour": "#9467bd"},
+        {"label": "7m pointings", "ra": None, "dec": None, "sets": settings["seven_m_sets"],
+         "fwhm_arcsec": primary_beam_fwhm_arcsec(7.0, freq, factor), "marker": "+", "size": 90,
+         "colour": "#2ca02c"},
+    ]
+    for spec in arrays:
+        spec["ra"], spec["dec"] = centres(spec["sets"])
+        print(f"{spec['label']}: {spec['ra'].size} unique centres from {spec['sets']}")
+
+    def load(key, step):
+        path = project.delivered_input(Path(settings[key]).relative_to("data/delivered"))
+        with fits.open(path) as handle:
+            data = np.squeeze(handle[0].data)[::step, ::step].astype(float)
+            wcs = WCS(handle[0].header).celestial[::step, ::step]
+        return data, wcs
+
+    step = settings["display_step"]
+    gain, gain_wcs = load("gain", step)
+    pb, pb_wcs = load("pb", step)
+    for spec_region, stem in zip(settings["regions"], stems):
+        fig = plt.figure(figsize=(9, 8) if spec_region["size_arcsec"][0] < 400 else (12, 7.5))
+        centre = SkyCoord(*spec_region["centre"].split(), unit=(u.hourangle, u.deg))
+        plot_coverage(fig, gain, gain_wcs, pb, pb_wcs, arrays, pb_levels=settings["pb_levels"],
+                      region=(centre, tuple(spec_region["size_arcsec"])),
+                      title=f"{spec_region['title']}: 12m and 7m pointings, MIRIAD gain and CASA 12m+7m pb")
+        _save_figure(fig, [stem.with_suffix(".pdf"), stem.with_suffix(".png")], dpi=160)
+        plt.close(fig)
+
+    with (root / "pointings.csv").open("w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["array", "ra_deg", "dec_deg"])
+        for spec in arrays:
+            for r, d in zip(spec["ra"], spec["dec"]):
+                writer.writerow([spec["label"].split()[0], f"{r:.7f}", f"{d:.7f}"])
+
+    from reproject import reproject_interp
+
+    step = settings["statistics_step"]
+    gain, gain_wcs = load("gain", step)
+    pb, pb_wcs = load("pb", step)
+    pb_on_gain, _ = reproject_interp((pb, pb_wcs), gain_wcs, shape_out=gain.shape)
+    summary = {
+        "gain": settings["gain"], "pb": settings["pb"], "statistics_step_pixels": step,
+        "primary_beam_fwhm_arcsec": {s["label"]: s["fwhm_arcsec"] for s in arrays},
+        "pointings": {s["label"]: int(s["ra"].size) for s in arrays},
+        "gain_by_pb_bin": gain_against_pb(gain, pb_on_gain, settings["pb_bin_edges"]),
+        "pb_along_gain_edge": pb_at_gain_edge(gain, pb_on_gain),
+    }
+    (root / "gain_vs_pb.json").write_text(json.dumps(summary, indent=2) + "\n")
+    print(json.dumps(summary["pb_along_gain_edge"]))
+    return outputs
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "uv", "visibilities", "overlap-tests", "pb-curve", "full-sampling", "figure1", "figure1-three-panel", "tp-beam-test", "aca-forward-test", "amplitude-alignment", "amplitude-alignment-plot", "pointing-profiles", "pointing-range", "joint-images", "dirty-beam", "total-power", "compare-images", "beam-match", "all"),
+        choices=("inspect", "uv", "visibilities", "overlap-tests", "pb-curve", "full-sampling", "figure1", "figure1-three-panel", "tp-beam-test", "aca-forward-test", "amplitude-alignment", "amplitude-alignment-plot", "pointing-profiles", "pointing-range", "joint-images", "dirty-beam", "total-power", "compare-images", "beam-match", "pointing-coverage", "all"),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
@@ -794,6 +884,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not config_path.is_absolute():
         config_path = project.root / config_path
     config = load_task_config(config_path.resolve())
+    if args.stage == "pointing-coverage":
+        run_pointing_coverage(project, config, overwrite=args.overwrite)
+        return 0
     paths = resolve_task_paths(project, config)
 
     if args.stage in {"inspect", "all"}:

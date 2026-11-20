@@ -23,7 +23,7 @@ takes about 5 minutes, 7 GB of memory and 1.4 GB of disk. Existing outputs are r
 
 | Name | File | Notes |
 |---|---|---|
-| `interferometer` | `data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.fits` | MIRIAD 12m+7m joint mosaic, PB-corrected, beam 0.71″ × 0.61″, 0.1″ pixels |
+| `interferometer` | `data/delivered/alma/7MTM2TM1/cont/IRDC316.8.7MTM2TM1.robust0.5.clean.fits` | MIRIAD 12m+7m joint mosaic, PB-corrected, beam 0.71″ × 0.61″, 0.1″ pixels |
 | `interferometer_attenuated` | `…clean.pbant.fits` | the same image times the mosaic gain; gives the gain |
 | `tp_dust` | `results/synthesize_continuum/model/dust_224GHz.fits` | Paper I SED dust model at 223.8 GHz (= `data/delivered/sedfitter/Dustmodel_223.8GHz.fits`), 18.1″ beam |
 | `tp_dust_ff` | `results/synthesize_continuum/model/continuum_224GHz.fits` | dust plus free-free at 223.8 GHz |

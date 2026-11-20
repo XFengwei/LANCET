@@ -98,11 +98,11 @@ tp_display_scale = 2.7
 [dirty_beam]
 # R4b: rerun of Shuting Lin's MIRIAD workflow (script.zip) through the final invert;
 # robust 0.5 as the paper image. The reference Gaussian is the paper restoring beam.
-psf_fits = "data/reduction/alma/7MTM2TM1/cont/miriad_r4b/work_shuting/combined.robust0.5.psf.fits"
-imfit_log = "data/reduction/alma/7MTM2TM1/cont/miriad_r4b/work_shuting/combined.robust0.5.psf.imfit.log"
+psf_fits = "data/reduction/alma/7MTM2TM1/cont/miriad_run/work/combined.robust0.5.psf.fits"
+imfit_log = "data/reduction/alma/7MTM2TM1/cont/miriad_run/work/combined.robust0.5.psf.imfit.log"
 # restor fits (bmaj, bmin arcsec; pa deg) of the rerun vs delivered images, for the record.
 rerun_restor_beams = { robust0_5 = [0.707, 0.600, 47.2], robust1_0 = [0.772, 0.681, 47.7], robust2_0 = [0.792, 0.704, 47.8] }
-paper_image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
+paper_image = "data/delivered/alma/7MTM2TM1/cont/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
 zoom_half_arcsec = 1.5
 # MIRIAD restor fits the Gaussian to the central 11x11 beam pixels (restor.for, beamFit NP=11).
 restor_fit_box_pixels = 11
@@ -155,3 +155,22 @@ width_inches = 7.2440944882
 height_inches = 2.55
 output_formats = ["pdf", "svg", "png"]
 dpi = 600
+
+[pointing_coverage]
+# Pointing centres of each array (FIELD tables of the measurement sets above) on the MIRIAD
+# mosaic gain and the CASA 12m+7m mosaic pb. Runs on its own inputs, not resolve_task_paths.
+gain = "data/delivered/alma/7MTM2TM1/cont/IRDC316.8.7MTM2TM1.robust0.5.gain.fits"
+pb = "data/delivered/alma/7MTM2TM1/cont/casa-archived/IRDC316.8.TM1TM2ACA.selfcal.cont.pb.tt0.fits"
+twelve_m_sets = ["configuration_c5", "configuration_c2"]
+seven_m_sets = ["aca_7m"]
+frequency_ghz = 224.4
+beam_factor = 1.13
+duplicate_tolerance_arcsec = 1.0
+pb_levels = [0.5, 0.2, 0.1]
+display_step = 8
+statistics_step = 4
+pb_bin_edges = [0.05, 0.09, 0.11, 0.19, 0.21, 0.30, 0.35, 0.45, 0.48, 0.50, 0.52, 0.55, 0.70, 1.01]
+regions = [
+  { name = "north", title = "Northern mosaic", centre = "14:44:31.5 -59:45:00", size_arcsec = [330, 330] },
+  { name = "centre_south", title = "Central and southern mosaic", centre = "14:45:10.0 -59:48:30", size_arcsec = [480, 270] },
+]

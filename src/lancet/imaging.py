@@ -74,3 +74,21 @@ def apply_primary_beam_mask(
         data,
         np.nan,
     )
+
+
+def read_mjysr(path) -> tuple[np.ndarray, "fits.Header"]:
+    """Read a 2-D continuum image in MJy/sr (float32), converting Jy/beam with its beam."""
+    from astropy.io import fits
+
+    data, header = fits.getdata(path, header=True)
+    data = np.squeeze(np.asarray(data, dtype=float))
+    if data.ndim != 2:
+        raise ValueError(f"Expected a two-dimensional image, got {data.shape}: {path}")
+    unit = str(header.get("BUNIT", "")).replace(" ", "").upper()
+    if unit == "JY/BEAM":
+        data = jybeam_to_mjysr_from_header(data, header)
+    elif unit != "MJY/SR":
+        raise ValueError(f"Unsupported BUNIT {header.get('BUNIT')!r} in {path}")
+    header = header.copy()
+    header["BUNIT"] = "MJy/sr"
+    return np.asarray(data, dtype=np.float32), header

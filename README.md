@@ -135,26 +135,11 @@ conda run -n py312 python tasks/synthesize_continuum/run.py \
   --overwrite
 ```
 
-Prepare delivered continuum images for the multi-array and all-scale
-comparison tasks with:
+Each task converts the delivered continuum images it reads (Jy/beam to MJy/sr,
+`lancet.imaging.read_mjysr`) itself; there is no separate image-preparation
+task (decision D8 in `docs/project_reorganization_plan.md`).
 
-```bash
-conda run -n py312 python tasks/prepare_continuum_images/run.py --stage inspect
-conda run -n py312 python tasks/prepare_continuum_images/run.py \
-  --stage mask --only 7MTM2
-conda run -n py312 python tasks/prepare_continuum_images/run.py \
-  --stage convert --only 7MTM2_pbcut
-```
-
-This applies the declared primary-beam cutoff masks before converting the
-configured Jy/beam images to MJy/sr. The full configured output is about
-1.8 GiB with float32 FITS storage; omit `--only` only when the complete
-products are required. The
-source audit and remaining task boundaries are recorded in
-[`docs/continuum_image_workflow_audit.md`](docs/continuum_image_workflow_audit.md).
-
-After preparing the continuum images, recreate the multi-array comparison
-products with:
+Recreate the multi-array comparison products with:
 
 ```bash
 conda run -n py312 python scripts/combination_diagnostic.py --stage inspect
