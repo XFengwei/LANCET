@@ -201,22 +201,6 @@ The dilated-mask thresholds and supporting parameters are declared in
 cubes, moment products, reprojections, and figures are written under
 `results/moment_maps/`; the delivered data tree remains read-only.
 
-Test the current PHANGS-ALMA 12m+7m joint-imaging and TP-feathering path on
-the already continuum-subtracted C18O measurement sets with:
-
-```bash
-conda run -n py312 python scripts/c18o_phangs_combination.py --stage inspect
-conda run -n py312 python scripts/c18o_phangs_combination.py \
-  --stage validate --pipeline-root /path/to/phangs_imaging_scripts
-```
-
-The configured pilot uses a 4 km/s window around the TP peak and 0.1 km/s
-channels. CASA execution is split into `stage`, `dirty`, `image`, and
-`postprocess` stages, and all outputs remain isolated from the legacy MIRIAD
-tree under `data/reduction/alma/TP7MTM2/cube/phangs_test`. Environment setup,
-the safe execution order, and the full-resolution switch are documented in
-[`tasks/c18o_phangs_combination/README.md`](tasks/c18o_phangs_combination/README.md).
-
 Build the source catalogue and its dependent physical-property table with:
 
 ```bash
