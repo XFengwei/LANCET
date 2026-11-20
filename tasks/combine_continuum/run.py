@@ -5,7 +5,7 @@ Combination stages: ``inspect``, ``prepare``, ``tp_factor``, ``box_spectrum``,
 ``planck_calibration``, ``jcomb``, ``feather``. Diagnostic stages: ``uv``, ``overlap``,
 ``full_sampling``, ``amplitude_alignment``, ``figure2``, ``compare_images``, ``dirty_beam``,
 ``aca_forward_test``, ``joint_images``, ``pointing_coverage``. ``combine``, ``diagnostics`` and
-``all`` select groups of stages. Only ``inspect`` is registered so far; it writes nothing.
+``all`` select groups of stages. The combination stages are registered; ``inspect`` writes nothing.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
-import hashlib
 import json
 from pathlib import Path
 import tomllib
@@ -22,6 +21,7 @@ from astropy.io import fits
 
 from lancet import ProjectPaths
 from lancet import combination_stages
+from lancet.combination_stages import input_hashes, sha256, write_json  # noqa: F401  (sha256 re-exported)
 from lancet.imaging import frequency_label, read_frequency_ghz
 
 DEFAULT_CONFIG = Path("tasks/combine_continuum/task.toml")
@@ -110,23 +110,6 @@ def require_outputs(paths: Sequence[Path], stage: str) -> None:
             raise FileNotFoundError(f"Run stage '{stage}' first: missing {path}")
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with open(path, "rb") as handle:
-        for block in iter(lambda: handle.read(1 << 24), b""):
-            digest.update(block)
-    return digest.hexdigest()
-
-
-def input_hashes(paths: Mapping[str, Path], names: Sequence[str]) -> dict[str, str]:
-    return {name: sha256(paths[name]) for name in names}
-
-
-def write_json(path: Path, payload: Mapping | Sequence) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=1, default=str) + "\n")
-
-
 def output_paths(result) -> list[str]:
     """Paths found in a stage's return value (a path, or a mapping of paths)."""
     if isinstance(result, Path):
@@ -166,8 +149,11 @@ def run_inspect(paths: dict, config: dict, overwrite: bool) -> None:
     print(f"output root: {paths['output_root']}")
 
 
-STAGES: dict[str, Callable[[dict, dict, bool], object]] = {"inspect": run_inspect,
-                                                           "prepare": combination_stages.run_prepare}
+STAGES: dict[str, Callable[[dict, dict, bool], object]] = {
+    "inspect": run_inspect, "prepare": combination_stages.run_prepare,
+    "tp_factor": combination_stages.run_tp_factor, "box_spectrum": combination_stages.run_box_spectrum,
+    "planck_calibration": combination_stages.run_planck_calibration, "jcomb": combination_stages.run_jcomb,
+    "feather": combination_stages.run_feather}
 
 
 def main(argv: Sequence[str] | None = None) -> int:

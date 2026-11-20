@@ -25,7 +25,7 @@ from lancet.combination_figures import (
     plot_tp_factor,
     plot_zero_spacing,
 )
-from lancet.imaging import read_frequency_ghz
+from lancet.imaging import frequency_label, read_frequency_ghz
 from lancet.combination_prep import (
     azimuthal_power,
     beam_parameters,
@@ -60,6 +60,7 @@ from lancet.combination_validation import (
 TP_FLAVOURS = ("dust", "dust_ff")
 TP_LABELS = {"dust": "TP dust", "dust_ff": "TP dust+free-free"}
 METHOD_LABELS = {"jcomb": "J-comb", "feather": "Feather"}
+FLAVOUR_KIND = {"dust_ff": "continuum", "dust": "dust"}
 PADDING_MODE = "TP: mirror reflection with a cosine roll-off; 12m+7m: zeros"
 
 
@@ -81,7 +82,7 @@ def input_hashes(paths: Mapping[str, Path], names: Sequence[str]) -> dict[str, s
     return {name: sha256(paths[name]) for name in names}
 
 
-def write_json(path: Path, payload: Mapping) -> None:
+def write_json(path: Path, payload: Mapping | Sequence) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=1, default=str) + "\n")
 
@@ -238,57 +239,42 @@ def measure_tp_factor(tp, interferometer_at_tp, mask, pix, settings) -> dict:
 
 
 TP_FACTOR_VARIANTS = {
-    "as_determined": "Procedure that gave the factor 1.4: all non-zero 12m+7m pixels, including the rim "
-                     "where the mosaic gain is undefined (< 0.2); smoothing counts blank pixels as zero; TP "
-                     "regridded bilinearly.",
-    "prepared": "Same measurement on the prepared inputs used for the combination: 12m+7m only where the gain "
-                "is defined, smoothing normalised at the edge, TP regridded with the task's spline.",
+    "prepared": "Power-spectrum measurement on the prepared inputs used for the combination: 12m+7m only where "
+                "the gain is defined, smoothing normalised at the edge, TP regridded with the task's spline.",
 }
 
 
 def run_tp_factor(paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
-    """Document how the power-spectrum-matched TP factor arises, and what the prepared inputs give with the same method."""
+    """Power-spectrum-matched TP factor measured on the prepared inputs; documents the applied factor."""
     settings = config["tp_factor"]
-    root = paths["output_root"] / "tp_factor"
+    root = paths["output_root"] / "checks" / "tp_factor"
     out = {"summary": root / "tp_factor.json",
            **{f"figure_{f}_{v}_{ext}": root / f"tp_factor_{f}_{v}.{ext}"
               for f in [settings["determined_from"]] for v in TP_FACTOR_VARIANTS for ext in ("pdf", "png")}}
     guard_outputs(list(out.values()), overwrite)
+    if settings["determined_from"] not in TP_FLAVOURS:
+        raise ValueError(f"determined_from must be one of {TP_FLAVOURS}")
     tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
     clean, header, wcs = read_plane(paths["interferometer"])
     high_beam, pix = beam_parameters(header), _pixel_arcsec(wcs)
     clean = np.nan_to_num(jybeam_to_mjysr(clean, *high_beam[:2])).astype(np.float32)
-    gain = fits.getdata(prepared_paths(paths["output_root"])["gain"])
-    defined = gain > 0
-    smoothed = {"as_determined": np.nan_to_num(smooth_to(clean, pix, high_beam, tp_fwhm)).astype(np.float32),
-                "prepared": np.nan_to_num(smooth_to(np.where(defined, clean, np.nan), pix, high_beam,
-                                                    tp_fwhm)).astype(np.float32)}
-    nonzero = clean != 0
+    defined = fits.getdata(prepared_paths(paths["output_root"])["gain"]) > 0
+    smoothed = np.nan_to_num(smooth_to(np.where(defined, clean, np.nan), pix, high_beam,
+                                       tp_fwhm)).astype(np.float32)
     del clean
-    summary = {"psd_matched": settings["psd_matched"], "value_combined": settings["value"], "settings": dict(settings), "variants": TP_FACTOR_VARIANTS,
-               "note": "The factor in value is applied to every TP model. This stage documents where the "
-                       "power-spectrum-matched factor (psd_matched) comes from; it is not applied."}
-    if settings["determined_from"] not in TP_FLAVOURS:
-        raise ValueError(f"determined_from must be one of {TP_FLAVOURS}")
-    for flavour in [settings["determined_from"]]:
-        tp, tp_header, tp_wcs = read_plane(paths[f"tp_{flavour}"])
-        bilinear = regrid_to(tp, tp_wcs, wcs, gain.shape, order=1)
-        inputs = {
-            "as_determined": (jybeam_to_mjysr(np.nan_to_num(bilinear), *beam_parameters(tp_header)[:2]),
-                              nonzero & np.isfinite(bilinear)),
-            "prepared": (load_prepared(paths, flavour)[0], defined),
-        }
-        del tp, bilinear
-        summary[flavour] = {}
-        for variant, (tp_plane, mask) in inputs.items():
-            m = measure_tp_factor(tp_plane, smoothed[variant], mask, pix, settings)
-            summary[flavour][variant] = m
-            plot_tp_factor(root / f"tp_factor_{flavour}_{variant}", m["bin_centres_klambda"],
-                           m["power_interferometer_at_tp_resolution"], m["power_tp"], m["matching_range_klambda"],
-                           settings["psd_matched"], m["factor"])
-            print(flavour, variant, "factor", round(m["factor"], 3), "at", round(m["at_klambda"], 2), "klambda",
-                  flush=True)
-        del inputs
+    summary = {"value_combined": settings["value"], "settings": dict(settings), "variants": TP_FACTOR_VARIANTS,
+               "note": "The factor in value is applied to every TP model. This stage measures the "
+                       "power-spectrum-matched factor on the prepared inputs; it is not applied."}
+    flavour = settings["determined_from"]
+    summary[flavour] = {}
+    for variant in TP_FACTOR_VARIANTS:
+        m = measure_tp_factor(load_prepared(paths, flavour)[0], smoothed, defined, pix, settings)
+        summary[flavour][variant] = m
+        plot_tp_factor(root / f"tp_factor_{flavour}_{variant}", m["bin_centres_klambda"],
+                       m["power_interferometer_at_tp_resolution"], m["power_tp"], m["matching_range_klambda"],
+                       settings["value"], m["factor"])
+        print(flavour, variant, "factor", round(m["factor"], 3), "at", round(m["at_klambda"], 2), "klambda",
+              flush=True)
     write_json(out["summary"], summary)
     return out
 
@@ -438,12 +424,15 @@ def zero_spacing(product, ctx: Mapping, config: Mapping, tp_factor: float):
 def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
     """Combined images of one method for both TP models, each with the zero-spacing check
     (combined image at the TP beam against the TP), measurements and figures."""
-    root = paths["output_root"] / method
+    output_root = paths["output_root"]
+    root, zero_root = output_root / "checks" / method, output_root / "checks" / "zero_spacing"
+    label = frequency_label(read_frequency_ghz(paths["tp_dust_ff"]))
     out = {"measurements": root / "measurements.json"}
     for flavour in TP_FLAVOURS:
-        out[f"image_{flavour}"] = root / f"{method}_{flavour}.fits"
-        out[f"at_tp_beam_{flavour}"] = root / f"{method}_{flavour}_at_tp_beam.fits"
-        out[f"ratio_{flavour}"] = root / f"zero_spacing_ratio_{flavour}.fits"
+        kind = FLAVOUR_KIND[flavour]
+        out[f"image_{flavour}"] = paths["products"][f"{method}_{kind}"]
+        out[f"at_tp_beam_{flavour}"] = zero_root / f"{method}_{kind}_{label}_at_tp_beam.fits"
+        out[f"ratio_{flavour}"] = zero_root / f"zero_spacing_ratio_{method}_{kind}_{label}.fits"
         for name in ("comparison", "zero_spacing", "power_spectrum"):
             for ext in ("pdf", "png"):
                 out[f"{name}_{flavour}_{ext}"] = root / f"{name}_{flavour}.{ext}"
@@ -567,7 +556,7 @@ def run_box_spectrum(paths: Mapping[str, Path], config: Mapping, overwrite: bool
     import astropy.units as u
     from scipy import fft as _fft
     s = config["box_spectrum"]
-    root = paths["output_root"] / "box_spectrum"
+    root = paths["output_root"] / "checks" / "box_spectrum"
     out = {f"{box['name']}_{ext}": root / f"box_{box['name']}.{ext}" for box in s["boxes"]
            for ext in ("json", "pdf", "png")}
     guard_outputs(list(out.values()), overwrite)
@@ -575,7 +564,7 @@ def run_box_spectrum(paths: Mapping[str, Path], config: Mapping, overwrite: bool
     low, high, gain, header, pix, high_beam, low_beam = load_prepared(paths, flavour)
     tp_fwhm, k2 = config["prepare"]["tp_fwhm_arcsec"], config["jcomb"]["k2_klambda"]
     margin = int(np.ceil(3.0 * tp_fwhm / pix))
-    truth_path = paths["output_root"] / "jcomb" / f"jcomb_{flavour}.fits"
+    truth_path = paths["products"][f"jcomb_{FLAVOUR_KIND[flavour]}"]
     truth_full = fits.getdata(truth_path) if truth_path.is_file() else None
     for box in s["boxes"]:
         centre = SkyCoord(box["centre"], unit=(u.hourangle, u.deg))
@@ -634,7 +623,7 @@ def run_planck_calibration(paths: Mapping[str, Path], config: Mapping, overwrite
     from astropy.wcs import WCS as _WCS
     from reproject import reproject_exact, reproject_interp
     s = config["planck_calibration"]
-    root = paths["output_root"] / "planck_calibration"
+    root = paths["output_root"] / "checks" / "planck_calibration"
     out = {"summary": root / "planck_calibration.json", "planck": root / "planck_at_tp_frequency.fits",
            "model": root / "tp_at_planck_beam.fits", "coverage": root / "tp_coverage_of_planck_beam.fits",
            **{f"{name}_{ext}": root / f"{name}.{ext}" for name in ("planck_maps", "planck_scatter")

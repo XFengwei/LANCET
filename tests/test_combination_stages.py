@@ -122,3 +122,76 @@ def test_prepare_fails_on_small_margin(tmp_path):
     with pytest.raises(RuntimeError, match="margin"):
         stages.run_prepare(paths, _prepare_config())
     assert not (tmp_path / "out").exists()          # nothing is written when an input check fails
+
+
+# ---------------------------------------------------------------- phase 1 checks and products
+
+def test_product_metadata_takes_tp_frequency():
+    meta = stages.product_metadata(_config({}), "jcomb", "dust_ff", {}, 223.8)
+    assert meta["tp_frequency_ghz"] == 223.8
+
+
+def test_product_blank_outside_mosaic_when_not_filling():
+    blank = stages.product_blank(np.array([[0.0, 0.5]]), np.ones((1, 2), dtype=bool), False)
+    np.testing.assert_array_equal(blank, [[True, False]])
+
+
+def test_tp_factor_has_only_the_prepared_variant():
+    assert set(stages.TP_FACTOR_VARIANTS) == {"prepared"}
+
+
+def test_tp_factor_stage_does_not_read_psd_matched():
+    import inspect
+    assert "psd_matched" not in inspect.getsource(stages.run_tp_factor)
+    assert "as_determined" not in inspect.getsource(stages.run_tp_factor)
+
+
+def _method_inputs(tmp_path):
+    paths = _inputs(tmp_path)
+    paths["products"] = TASK.product_paths(paths["output_root"], "224GHz")
+    return paths
+
+
+def _patch_method_stages(monkeypatch, calls):
+    n = 32
+    header = _header(n, 1.0, 2.0)
+    ctx = {"low": np.ones((n, n), np.float32), "high": np.ones((n, n), np.float32),
+           "gain": np.ones((n, n), np.float32), "header": header, "tp_header": header, "pix": 1.0,
+           "high_beam": (2.0, 2.0, 0.0), "low_beam": (6.0, 6.0, 0.0), "clean": np.ones((n, n)),
+           "tp_native": np.ones((n, n)), "blank": np.zeros((n, n), bool), "centres": np.array([1.0, 2.0])}
+
+    def combine(*args, **kwargs):
+        calls.append(1)
+        return np.ones((n, n))
+
+    check = {"mosaic": {"flux_ratio": 1.0, "n": 4}}
+    measured = {"checks": {"large_scale_ratio": {"value": 1.0, "tolerance": 0.1, "flag": False}},
+                "power": {"interferometer": [1.0], "scaled_tp": [1.0], "combined": [1.0]},
+                "amplitude_ratio_to_interferometer": [1.0], "amplitude_ratio_to_scaled_tp_at_high_beam": [1.0]}
+    monkeypatch.setattr(stages, "measurement_context", lambda *a, **k: dict(ctx))
+    monkeypatch.setattr(stages, "combine_prepared", combine)
+    monkeypatch.setattr(stages, "measure_product", lambda *a, **k: {**measured, "checks": dict(measured["checks"])})
+    monkeypatch.setattr(stages, "zero_spacing", lambda *a, **k: (dict(check), np.ones((n, n)), np.ones((n, n)),
+                                                                 None, None))
+    monkeypatch.setattr(stages, "synthetic_gate", lambda *a, **k: {})
+    for name in ("plot_comparison", "plot_zero_spacing", "plot_power_spectrum"):
+        monkeypatch.setattr(stages, name, lambda *a, **k: None)
+
+
+def test_method_output_layout(tmp_path, monkeypatch):
+    paths, calls = _method_inputs(tmp_path), []
+    _patch_method_stages(monkeypatch, calls)
+    config, root = _config({}), paths["output_root"]
+    stages.run_method("jcomb", paths, config)
+    for kind in ("continuum", "dust"):
+        product = root / "products" / f"jcomb_{kind}_224GHz.fits"
+        header = fits.getheader(product)
+        assert header["BITPIX"] == -32 and header["HIERARCH COMB_TP_FREQUENCY_GHZ"] == 223.8
+        assert (root / "checks" / "zero_spacing" / f"jcomb_{kind}_224GHz_at_tp_beam.fits").is_file()
+        assert (root / "checks" / "zero_spacing" / f"zero_spacing_ratio_jcomb_{kind}_224GHz.fits").is_file()
+    assert (root / "checks" / "jcomb" / "measurements.json").is_file()
+    assert not (root / "jcomb").exists()
+    done = len(calls)
+    with pytest.raises(FileExistsError):
+        stages.run_method("jcomb", paths, config)
+    assert len(calls) == done
