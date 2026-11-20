@@ -9,8 +9,18 @@ import numpy as np
 
 from .combination_tests import (
     _broad_ddids, _concat_rows, _write_rows_csv, matching_cells,
-    predict_primary_beams, read_test_rows, require_products, row_values, subset_rows,
+    predict_primary_beams, read_test_rows, require_inputs, require_products, row_values, subset_rows,
 )
+
+# Files of the earlier diagnostic stages that later stages read.
+OVERLAP_OUTPUTS = ("summary.json", "aca_7m_rows.npz", "aca_7m_metadata.json")
+FULL_SAMPLING_OUTPUTS = ("summary.json", "configuration_c2_rows.npz", "configuration_c5_rows.npz")
+
+
+def require_stage_outputs(root, stages):
+    """Fail naming the first stage in ``stages`` (folder: file names) whose output is missing."""
+    for stage, (folder, names) in stages.items():
+        require_inputs([Path(root)/folder/name for name in names], stage)
 
 
 def _cell_statistics(rows, keys, valid, size, kappa, models=None):
@@ -138,6 +148,7 @@ def build_full_sampling_profiles(paths, config, *, overwrite=False):
     images = {"allscale": Path(paths["products"]["jcomb_continuum"]),
               "twelve_m": Path(paths["inputs"]["twelve_m_pbcor"])}
     root = Path(paths["output_root"])
+    require_stage_outputs(root, {"overlap": ("overlap_tests", OVERLAP_OUTPUTS)})
     out = root/"full_sampling"
     if (out/"amplitudes.csv").exists() and not overwrite:
         raise FileExistsError("Full sampling profiles exist; use --overwrite")

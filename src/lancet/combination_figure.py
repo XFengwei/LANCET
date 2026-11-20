@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from datetime import datetime, timezone
 import hashlib
 import json
 import shutil
@@ -10,11 +11,23 @@ from pathlib import Path
 
 import numpy as np
 
+from .amplitude_alignment import ALIGNMENT_OUTPUTS
 from .combination_tests import require_products, sample_image_visibilities
+from .full_sampling import FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, require_stage_outputs
 from .visibility_diagnostics import C_METRES_PER_SECOND
 
 
 COLORS = {"configuration_c5": "#7254A3", "configuration_c2": "#007A9E", "aca_7m": "#D87821"}
+
+
+def figure_dependencies(amplitude_source):
+    """Outputs of the earlier diagnostic stages that Fig. 2 reads, by stage, in stage order."""
+    stages = {"uv": ("uv_coordinates", tuple(f"{name}.npz" for name in COLORS)),
+              "overlap": ("overlap_tests", (*OVERLAP_OUTPUTS, "configuration_c5_metadata.json")),
+              "full_sampling": ("full_sampling", (*FULL_SAMPLING_OUTPUTS, "amplitudes.csv", "cell_statistics.npz"))}
+    if amplitude_source == "amplitude_alignment":
+        stages["amplitude_alignment"] = ("amplitude_alignment", ALIGNMENT_OUTPUTS)
+    return stages
 
 
 def tp_amplitude_reference(path, statistics_path, summary, minimum_response):
@@ -109,13 +122,12 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     for output in outputs:
         if output.exists() and not overwrite:
             raise FileExistsError(f"Output exists: {output}")
+    amplitude_source = settings.get("amplitude_source", "full_sampling")
+    require_stage_outputs(root, figure_dependencies(amplitude_source))
+    for output in outputs:
         output.parent.mkdir(parents=True, exist_ok=True)
     test = root/"overlap_tests"
     sampling = root/"full_sampling"
-    if not (sampling/"amplitudes.csv").is_file():
-        from .full_sampling import build_full_sampling_profiles
-
-        build_full_sampling_profiles(paths, config)
     coverage = json.loads((sampling/"summary.json").read_text())
     if coverage["uv_edges_klambda"] != settings["amplitude_uv_edges_klambda"] or coverage["settings"] != config["overlap_tests"]:
         raise ValueError("Full-sampling settings changed; rerun the full-sampling stage")
@@ -162,14 +174,14 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     tp_u, tp_amp, tp_meta = tp_amplitude_reference(
         paths["inputs"]["tp_dust_ff"], sampling/"cell_statistics.npz",
         coverage, float(settings["tp_minimum_response"]))
-    tp_fixed, image_curves, image_meta = None, {}, None
-    amplitude_source = settings.get("amplitude_source", "full_sampling")
+    tp_fixed, image_curves, image_meta, alignment_sources = None, {}, None, []
     if amplitude_source == "amplitude_alignment":
         # 7 m translated with the 12m+7m image; TP with and without its beam; image curves.
         from .amplitude_alignment import read_products
 
         alignment_root = root/"amplitude_alignment"
         array_profiles, _, curves, alignment, image_curves = read_products(alignment_root)
+        alignment_sources = [alignment_root/name for name in ALIGNMENT_OUTPUTS]
         tp_u, tp_amp, tp_fixed = (curves["uv_klambda"], curves["tp_raw_common_mjy"],
                                   curves["tp_corrected_common_mjy"])
         tp_meta = {**tp_meta, "amplitude_source": str(alignment_root),
@@ -324,8 +336,9 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     plt.close(fig)
     sources = [sampling/"amplitudes.csv", sampling/"separate_array_amplitudes.csv", sampling/"summary.json", sampling/"cell_statistics.npz", test/"summary.json",
                *observation_sources.values(),
-               *[root/"uv_coordinates"/f"{n}.npz" for n in COLORS], Path(paths["inputs"]["tp_dust_ff"])]
-    manifest = {"date": "2026-11-20", "status": "Paper II Fig. 2",
+               *[root/"uv_coordinates"/f"{n}.npz" for n in COLORS], Path(paths["inputs"]["tp_dust_ff"]),
+               *alignment_sources]
+    manifest = {"date": datetime.now(timezone.utc).date().isoformat(), "status": "Paper II Fig. 2",
                 "tp": tp_meta, "tp_half_response_metres": tp_half_metres,
                 "tp_ten_percent_response_metres": tp_outer_metres,
                 "panel_c_statistic": "Separate ACA/C2/C5 RMS from independent-hand cross-power in the same 19 pointing pairs; common occupied cells across arrays present in each radial bin where possible, own occupied cells otherwise (CSV matched_arrays flag). ACA model translation targets actual 12m pointing PB. TP has this same PB applied before FFT, with its native restoring beam retained. Non-detections have conditional two-standard-error limits.",

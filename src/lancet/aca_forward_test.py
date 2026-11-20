@@ -9,6 +9,7 @@ data reproduces the measured short-baseline signal RMS.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -18,7 +19,7 @@ import numpy as np
 from .combination_tests import (
     matching_cells, require_products, row_values, subset_rows, _write_rows_csv,
 )
-from .full_sampling import _cell_statistics
+from .full_sampling import FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, _cell_statistics, require_stage_outputs
 from .tp_beam_test import _predict, smooth_to_circular_beam
 
 
@@ -97,6 +98,8 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
     require_products(paths, [spec["source"].split(".")[1] for spec in test["sky_models"].values()
                              if spec["source"].startswith("products.")])
     root = Path(paths["output_root"])
+    require_stage_outputs(root, {"overlap": ("overlap_tests", OVERLAP_OUTPUTS),
+                                 "full_sampling": ("full_sampling", ("summary.json",))})
     out = root/"aca_forward_test"
     if (out/"profiles.csv").exists() and not overwrite:
         raise FileExistsError("ACA forward test exists; use --overwrite")
@@ -193,7 +196,7 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
                 profiles.append(record)
     _write_rows_csv(out/"profiles.csv", profiles)
     np.savez_compressed(out/"cell_statistics.npz", **stats)
-    manifest = {"date": "2026-11-13", "selected_rows": int(len(rows["x"])),
+    manifest = {"date": datetime.now(timezone.utc).date().isoformat(), "selected_rows": int(len(rows["x"])),
         "uv_edges_klambda": edges.tolist(), "tp_comparison_limit_klambda": float(tp_limit),
         "tp_beam_arcsec": tp_beam, "pb_7m_fwhm_arcsec_at_reference": settings["pb_7m_fwhm_arcsec"],
         "sky_models": test["sky_models"], "pb_weighted_support": support,

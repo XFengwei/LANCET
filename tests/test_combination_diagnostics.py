@@ -303,3 +303,115 @@ def test_sky_model_sources_resolve_to_path_groups():
     assert models["jcomb"]["source"] == "products.jcomb_continuum"
     assert not any("tp_scale" in spec for spec in models.values())     # no TP scale is derived
     assert config["amplitude_alignment"]["sky_model"] == "inputs.interferometer"
+
+
+# ---------------------------------------------------------------- stage dependencies (spec section 2)
+
+OVERLAP_FILES = ("summary.json", "aca_7m_rows.npz", "aca_7m_metadata.json", "configuration_c5_metadata.json")
+FULL_SAMPLING_FILES = ("summary.json", "amplitudes.csv", "cell_statistics.npz", "configuration_c2_rows.npz",
+                       "configuration_c5_rows.npz")
+
+
+def _paths_with(tmp_path, products=None, **stage_files):
+    """Diagnostic paths with placeholder products and placeholder files of earlier stages."""
+    paths = _paths_without_products(tmp_path)
+    for name in products if products is not None else paths["products"]:
+        paths["products"][name].parent.mkdir(parents=True, exist_ok=True)
+        paths["products"][name].write_text("x")
+    for folder, names in stage_files.items():
+        (paths["output_root"] / folder).mkdir(parents=True, exist_ok=True)
+        for name in names:
+            (paths["output_root"] / folder / name).write_text("x")
+    return paths
+
+
+def test_full_sampling_names_overlap_before_reading(tmp_path, monkeypatch):
+    from lancet import full_sampling
+    monkeypatch.setattr(full_sampling, "read_test_rows", _forbid)
+    paths = _paths_with(tmp_path)
+    with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
+        full_sampling.build_full_sampling_profiles(paths, _config())
+    assert not (paths["output_root"] / "full_sampling").exists()
+
+
+def test_aca_forward_test_names_overlap_and_full_sampling(tmp_path):
+    from lancet.aca_forward_test import run_aca_forward_test
+    with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
+        run_aca_forward_test(_paths_with(tmp_path / "a"), _config(), save_figure=None)
+    paths = _paths_with(tmp_path / "b", overlap_tests=OVERLAP_FILES)
+    with pytest.raises(FileNotFoundError, match="Run stage 'full_sampling' first"):
+        run_aca_forward_test(paths, _config(), save_figure=None)
+    assert not (paths["output_root"] / "aca_forward_test").exists()
+
+
+def test_amplitude_alignment_names_overlap_and_full_sampling(tmp_path):
+    from lancet.amplitude_alignment import run_amplitude_alignment
+    with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
+        run_amplitude_alignment(_paths_with(tmp_path / "a"), _config(), save_figure=None)
+    paths = _paths_with(tmp_path / "b", overlap_tests=OVERLAP_FILES)
+    with pytest.raises(FileNotFoundError, match="Run stage 'full_sampling' first"):
+        run_amplitude_alignment(paths, _config(), save_figure=None)
+    assert not (paths["output_root"] / "amplitude_alignment").exists()
+
+
+def test_amplitude_alignment_requires_only_the_configured_image_curve_products(tmp_path):
+    from lancet.amplitude_alignment import run_amplitude_alignment
+    config = _config()
+    config["amplitude_alignment"]["image_curves"] = {"interferometer": "inputs.interferometer",
+                                                     "jcomb": "products.jcomb_continuum"}
+    paths = _paths_with(tmp_path, products=["jcomb_continuum"])   # no feather product
+    with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
+        run_amplitude_alignment(paths, config, save_figure=None)
+
+
+def test_figure2_names_each_missing_stage(tmp_path, monkeypatch):
+    from lancet import full_sampling
+    from lancet.combination_figure import make_combination_figure
+    monkeypatch.setattr(full_sampling, "build_full_sampling_profiles", _forbid)
+    config = _config()
+    assert config["figure2"]["amplitude_source"] == "amplitude_alignment"
+    uv = [f"{name}.npz" for name in ("aca_7m", "configuration_c2", "configuration_c5")]
+    cases = [({}, "uv"), ({"uv_coordinates": uv}, "overlap"),
+             ({"uv_coordinates": uv, "overlap_tests": OVERLAP_FILES}, "full_sampling"),
+             ({"uv_coordinates": uv, "overlap_tests": OVERLAP_FILES, "full_sampling": FULL_SAMPLING_FILES},
+              "amplitude_alignment")]
+    for i, (files, stage) in enumerate(cases):
+        paths = _paths_with(tmp_path / str(i), **files)
+        with pytest.raises(FileNotFoundError, match=f"Run stage '{stage}' first"):
+            make_combination_figure(paths, config, save_figure=None)
+        assert not (paths["output_root"] / "figures").exists()
+
+
+def test_figure2_dependencies_include_the_alignment_products():
+    from lancet.amplitude_alignment import ALIGNMENT_OUTPUTS
+    from lancet.combination_figure import figure_dependencies
+    stages = figure_dependencies("amplitude_alignment")
+    assert list(stages) == ["uv", "overlap", "full_sampling", "amplitude_alignment"]
+    assert {"image_curves.csv", "array_profiles.csv", "tp_continuous.csv"} <= set(ALIGNMENT_OUTPUTS)
+    assert stages["amplitude_alignment"] == ("amplitude_alignment", ALIGNMENT_OUTPUTS)
+    assert "amplitude_alignment" not in figure_dependencies("full_sampling")
+
+
+ALIGNMENT_RESULTS = PROJECT_ROOT / "results" / "combine_continuum" / "diagnostics" / "amplitude_alignment"
+
+
+@pytest.mark.skipif(not (ALIGNMENT_RESULTS / "manifest.json").is_file(), reason="needs an amplitude_alignment run")
+def test_alignment_figure_has_no_old_tp_factor_reference_line():
+    from matplotlib import pyplot as plt
+    from lancet.amplitude_alignment import plot_alignment, read_products
+    profiles, overlap, continuous, manifest, _ = read_products(ALIGNMENT_RESULTS)   # read only
+    figures = []
+    plot_alignment(profiles, overlap, continuous, _config()["amplitude_alignment"],
+                   manifest["tp_response_limit_klambda"], ALIGNMENT_RESULTS,
+                   lambda fig, outputs, **_: figures.append(fig))
+    ratio = figures[0].axes[2]
+    assert not any("2.7" in t.get_text() for t in ratio.texts)
+    assert not any(np.allclose(line.get_ydata(), 1 / 2.7) for line in ratio.lines)
+    plt.close("all")
+
+
+def test_diagnostic_manifests_carry_no_fixed_date():
+    import re
+    from lancet import aca_forward_test, amplitude_alignment, combination_figure
+    for module in (aca_forward_test, amplitude_alignment, combination_figure):
+        assert not re.search(r'"date":\s*"\d{4}-', inspect.getsource(module)), module.__name__

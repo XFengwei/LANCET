@@ -17,6 +17,7 @@ No flux factor is fitted or applied.
 from __future__ import annotations
 
 import csv
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -27,11 +28,15 @@ from .aca_forward_test import sky_model, source_path
 from .combination_tests import (
     _broad_ddids, matching_cells, require_products, row_values, sample_image_visibilities, subset_rows,
 )
-from .full_sampling import _cell_statistics, separate_array_profiles
+from .full_sampling import (
+    FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, _cell_statistics, require_stage_outputs, separate_array_profiles,
+)
 from .tp_beam_test import smooth_to_circular_beam
 from .visibility_diagnostics import C_METRES_PER_SECOND
 
 COLORS = {"configuration_c5": "#7254A3", "configuration_c2": "#007A9E", "aca_7m": "#D87821"}
+# Products that read_products reads back (Fig. 2 plots the profiles, TP curves and image curves).
+ALIGNMENT_OUTPUTS = ("array_profiles.csv", "overlap.csv", "tp_continuous.csv", "image_curves.csv", "manifest.json")
 SIDEBANDS_GHZ = ((0, 216.74), (1, 230.95))
 
 
@@ -216,13 +221,16 @@ def _write_csv(path, records):
 def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
     from astropy.io import fits
 
-    require_products(paths, ["jcomb_continuum", "feather_continuum"])
+    task = config["amplitude_alignment"]
+    sources = [task["sky_model"], *task["image_curves"].values()]
+    require_products(paths, list(dict.fromkeys(s.split(".")[1] for s in sources if s.startswith("products."))))
     root = Path(paths["output_root"])
+    require_stage_outputs(root, {"overlap": ("overlap_tests", OVERLAP_OUTPUTS),
+                                 "full_sampling": ("full_sampling", FULL_SAMPLING_OUTPUTS)})
     out = root/"amplitude_alignment"
     if (out/"overlap.csv").exists() and not overwrite:
         raise FileExistsError("Amplitude alignment outputs exist; use --overwrite")
     out.mkdir(parents=True, exist_ok=True)
-    task = config["amplitude_alignment"]
     settings = config["overlap_tests"]
     sectors = int(settings["orientation_sectors"])
     sampling = root/"full_sampling"
@@ -320,7 +328,7 @@ def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
 
     sources = dict.fromkeys([cache, meta_path, tp_path, sky_path, sampling/"summary.json",
                              *(source_path(paths, s) for s in task["image_curves"].values())])
-    manifest = {"date": "2026-11-13", "tp_beam_arcsec": tp_beam, "tp_response_limit_klambda": limit,
+    manifest = {"date": datetime.now(timezone.utc).date().isoformat(), "tp_beam_arcsec": tp_beam, "tp_response_limit_klambda": limit,
         "sky_model": str(sky_path), "tp_beam_kernel": beam_info, "reference_aca_bin": first,
         "selected_aca_rows": int(len(rows["x"])),
         "method": ("ACA signal RMS is translated from the native 7 m PB to the matched 12 m PB with the "
@@ -408,8 +416,6 @@ def plot_alignment(profiles, overlap, continuous, task, limit, out, save_figure)
     c.plot(x, [r["ratio_gaussian_native"] for r in overlap], color="0.1", linestyle=":", linewidth=1,
            label="TP, Gaussian beam-corrected")
     c.axhline(1, color="k", linewidth=.6)
-    c.axhline(1/2.7, color="#B2182B", linewidth=.8, linestyle="--")
-    c.text(x.max(), 1/2.7*1.08, "1/2.7", color="#B2182B", ha="right", va="bottom", fontsize=7)
     c.set(xscale="log", yscale="log", xlim=(lo_uv*.97, hi_uv*1.03), ylim=(.1, 3),
           xlabel=r"uv distance (k$\lambda$)", ylabel="TP / 7 m")
     c.set_xticks([5, 6, 7, 8, 9]); c.set_yticks([.1, .3, 1, 3])
