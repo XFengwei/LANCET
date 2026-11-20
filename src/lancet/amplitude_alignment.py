@@ -25,7 +25,7 @@ import numpy as np
 
 from .aca_forward_test import sky_model, source_path
 from .combination_tests import (
-    _broad_ddids, matching_cells, require_inputs, row_values, sample_image_visibilities, subset_rows,
+    _broad_ddids, matching_cells, require_products, row_values, sample_image_visibilities, subset_rows,
 )
 from .full_sampling import _cell_statistics, separate_array_profiles
 from .tp_beam_test import smooth_to_circular_beam
@@ -164,8 +164,7 @@ def _write_csv(path, records):
 def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
     from astropy.io import fits
 
-    require_inputs([paths["products"]["jcomb_continuum"], paths["products"]["feather_continuum"]],
-                   "jcomb/feather")
+    require_products(paths, ["jcomb_continuum", "feather_continuum"])
     root = Path(paths["output_root"])
     out = root/"amplitude_alignment"
     if (out/"overlap.csv").exists() and not overwrite:

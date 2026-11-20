@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .combination_tests import require_inputs, sample_image_visibilities
+from .combination_tests import require_products, sample_image_visibilities
 from .visibility_diagnostics import C_METRES_PER_SECOND
 
 
@@ -81,8 +81,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     from matplotlib.patches import Circle, ConnectionPatch, Rectangle
     from matplotlib.ticker import FixedLocator
 
-    require_inputs([paths["products"]["jcomb_continuum"], paths["products"]["feather_continuum"]],
-                   "jcomb/feather")
+    require_products(paths, ["jcomb_continuum", "feather_continuum"])
     root = Path(paths["output_root"])
     settings = config["figure2"]
     tp_display_scale = float(settings.get("tp_display_scale", 1.0))

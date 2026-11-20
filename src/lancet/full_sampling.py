@@ -9,7 +9,7 @@ import numpy as np
 
 from .combination_tests import (
     _broad_ddids, _concat_rows, _write_rows_csv, matching_cells,
-    predict_primary_beams, read_test_rows, require_inputs, row_values, subset_rows,
+    predict_primary_beams, read_test_rows, require_products, row_values, subset_rows,
 )
 
 
@@ -134,9 +134,9 @@ def build_separate_array_profiles(paths, coverage):
 
 def build_full_sampling_profiles(paths, config, *, overwrite=False):
     """Keep ACA's shorter modes and the entire observed 12 m baseline range."""
+    require_products(paths, ["jcomb_continuum"])
     images = {"allscale": Path(paths["products"]["jcomb_continuum"]),
               "twelve_m": Path(paths["inputs"]["twelve_m_pbcor"])}
-    require_inputs(list(images.values()), "jcomb")
     root = Path(paths["output_root"])
     out = root/"full_sampling"
     if (out/"amplitudes.csv").exists() and not overwrite:

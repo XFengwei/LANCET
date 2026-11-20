@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from .combination_tests import (
-    matching_cells, require_inputs, row_values, subset_rows, _write_rows_csv,
+    matching_cells, require_products, row_values, subset_rows, _write_rows_csv,
 )
 from .full_sampling import _cell_statistics
 from .tp_beam_test import _predict, smooth_to_circular_beam
@@ -85,6 +85,21 @@ def scale_for_unit_ratio(scales, ratios):
     return float(np.interp(1.0, ratios, scales))
 
 
+def tp_scales_reproducing_aca(ratios, scales):
+    """TP scale at which each TP-bearing model's predicted/measured RMS ratio is one.
+
+    Each model with a non-zero `tp_scale` is interpolated against the single model with scale
+    0 (the 12m+7m image without TP), alone: models from different combination methods are never
+    mixed. NaN where that pair does not bracket a ratio of one.
+    """
+    reference = [m for m, s in scales.items() if s == 0]
+    if len(reference) != 1:
+        raise ValueError(f"Need exactly one sky model with tp_scale = 0, got {reference}")
+    zero = reference[0]
+    return {m: scale_for_unit_ratio([0.0, s], [ratios[zero], ratios[m]])
+            for m, s in scales.items() if m != zero}
+
+
 def _support(rows, meta, pairs, image, header, settings):
     """PB-weighted fraction of each native ACA beam covered by nonzero model pixels."""
     mask = (np.isfinite(image) & (image != 0)).astype(float)
@@ -107,7 +122,8 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
 
     test = config["aca_forward_test"]
     sky_paths = {label: source_path(paths, spec["source"]) for label, spec in test["sky_models"].items()}
-    require_inputs(list(sky_paths.values()), "jcomb/feather")
+    require_products(paths, [spec["source"].split(".")[1] for spec in test["sky_models"].values()
+                             if spec["source"].startswith("products.")])
     root = Path(paths["output_root"])
     out = root/"aca_forward_test"
     if (out/"profiles.csv").exists() and not overwrite:
@@ -201,9 +217,9 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
                                     / binned_rms(stats["cross_power"], use, cell_pair, w))
                     low, high = np.nanpercentile(boot, [16, 84])
                     record[model+"_to_aca_p16"], record[model+"_to_aca_p84"] = float(low), float(high)
-                ordered = sorted(scales, key=scales.get)
-                record["tp_scale_reproducing_aca"] = scale_for_unit_ratio(
-                    [scales[m] for m in ordered], [record[m+"_to_aca"] for m in ordered])
+                reproducing = tp_scales_reproducing_aca({m: record[m+"_to_aca"] for m in scales}, scales)
+                for model, value in reproducing.items():
+                    record[f"tp_scale_reproducing_aca_{model}"] = value
                 for model in beam_info:
                     if "tp_rms_mjy" in record:
                         record[f"tp_scale_given_{model}_transfer"] = record["tp_rms_mjy"]/record[model+"_tp_beam_rms_mjy"]

@@ -30,6 +30,15 @@ def require_inputs(paths: Sequence[Path], stage: str) -> None:
             raise FileNotFoundError(f"Run stage '{stage}' first: missing {path}")
 
 
+def require_products(paths, names: Sequence[str]) -> None:
+    """Fail naming the stage that writes each missing product (``jcomb_*``: ``jcomb``, ...).
+
+    Delivered inputs are checked when the task paths are resolved, not here.
+    """
+    for name in names:
+        require_inputs([paths["products"][name]], name.split("_")[0])
+
+
 def read_test_rows(path, maximum_klambda, chunk_rows=20000, field_ids=None):
     """Read parallel hands separately, preserving row identifiers for time pairs."""
     meta = measurement_set_metadata(path)
@@ -432,9 +441,9 @@ def check_model_sampling(rows, meta, pair, array, model_path, settings, native, 
 
 def run_overlap_tests(paths, config, *, save_figure, overwrite=False):
     """Run and retain all three requested factor tests in the owning task."""
+    require_products(paths, ["jcomb_continuum"])
     images = {"allscale": Path(paths["products"]["jcomb_continuum"]),
               "twelve_m": Path(paths["inputs"]["twelve_m_pbcor"])}
-    require_inputs(list(images.values()), "jcomb")
     settings = config["overlap_tests"]
     edges = np.array(settings["uv_edges_klambda"], dtype=float)
     root = Path(paths["output_root"]) / "overlap_tests"

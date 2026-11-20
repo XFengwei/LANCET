@@ -27,7 +27,7 @@ def _task():
 
 
 TASK = _task()
-MISSING_PRODUCT = r"Run stage '(jcomb|jcomb/feather)' first"
+MISSING_PRODUCT = r"Run stage '(jcomb|feather)' first: missing .*/products/"
 
 
 def _config():
@@ -82,6 +82,17 @@ def test_require_inputs_names_the_stage(tmp_path):
         require_inputs([tmp_path / "x.fits"], "jcomb")
 
 
+def test_require_products_names_the_stage_that_writes_each_product(tmp_path):
+    from lancet.combination_tests import require_products
+    paths = {"products": TASK.product_paths(tmp_path)}
+    paths["products"]["jcomb_continuum"].parent.mkdir(parents=True)
+    paths["products"]["jcomb_continuum"].write_text("x")
+    require_products(paths, ["jcomb_continuum"])
+    with pytest.raises(FileNotFoundError, match="Run stage 'feather' first: missing .*feather_continuum"):
+        require_products(paths, ["jcomb_continuum", "feather_continuum"])
+    assert set(TASK.STAGES) >= {name.split("_")[0] for name in paths["products"]}
+
+
 def test_overlap_stops_without_jcomb_products(tmp_path, monkeypatch):
     from lancet import combination_tests
     monkeypatch.setattr(combination_tests, "read_test_rows", _forbid)
@@ -113,6 +124,15 @@ def test_figure2_stops_without_products(tmp_path):
     from lancet.combination_figure import make_combination_figure
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         make_combination_figure(_paths_without_products(tmp_path), _config(), save_figure=None)
+
+
+def test_figure2_names_feather_when_only_jcomb_exists(tmp_path):
+    from lancet.combination_figure import make_combination_figure
+    paths = _paths_without_products(tmp_path)
+    paths["products"]["jcomb_continuum"].parent.mkdir(parents=True)
+    paths["products"]["jcomb_continuum"].write_text("x")
+    with pytest.raises(FileNotFoundError, match="Run stage 'feather' first"):
+        make_combination_figure(paths, _config(), save_figure=None)
 
 
 def test_figure2_refuses_rerun_before_computing(tmp_path, monkeypatch):

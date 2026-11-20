@@ -36,3 +36,15 @@ def test_gaussian_transfer_and_limit_are_consistent():
     assert np.isclose(gaussian_transfer(limit, 18.1), 0.1)
     half = response_limit(18.1, 0.5)
     assert np.isclose(half, 5.0287, rtol=1e-3)  # matches the TP summary half-response radius
+
+
+def test_tp_scale_is_interpolated_per_model_against_the_interferometer():
+    from lancet.aca_forward_test import tp_scales_reproducing_aca
+
+    scales = {"interferometer": 0.0, "jcomb": 1.0, "feather": 1.0}
+    result = tp_scales_reproducing_aca({"interferometer": 0.6, "jcomb": 0.9, "feather": 1.1}, scales)
+    assert set(result) == {"jcomb", "feather"}
+    assert np.isnan(result["jcomb"])                 # 0.6 -> 0.9 does not reach 1
+    assert np.isclose(result["feather"], 0.8)        # 0.6 at scale 0, 1.1 at scale 1
+    swapped = tp_scales_reproducing_aca({"interferometer": 0.6, "jcomb": 1.1, "feather": 0.9}, scales)
+    assert np.isclose(swapped["jcomb"], 0.8) and np.isnan(swapped["feather"])
