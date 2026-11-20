@@ -6,6 +6,10 @@ name = "synthesize_continuum"
 dust = "data/delivered/sedfitter/Dustmodel_223.8GHz.fits"
 freefree = "results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec_regrid2dust.fits"
 simba_250ghz = "data/delivered/archive/infrared/SIMBA_1.2mm.fits"
+# Paper I 18"+36" SED maps (same 6" grid): used only outside the dust model
+# by the `fill` stage.
+fill_column_density = "data/delivered/sedfitter/combine/NH2_18arcsec+36arcsec.fits"
+fill_temperature = "data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits"
 
 [outputs]
 root = "results/synthesize_continuum"
@@ -19,6 +23,19 @@ frequencies_ghz = [223.8, 250.0]
 dust_spectral_index = 3.8
 freefree_spectral_index = -0.1
 missing_freefree_value_jy_per_beam = 0.0
+
+[fill]
+# Stage `fill`: the reference-frequency model continued beyond the Paper I dust
+# model with the dust emission of the 18"+36" N(H2), T_dust maps (36" there).
+# Paper I opacity law: kappa_dust = 10 (nu / 1000 GHz)^beta cm2/g, beta = 2
+# (fixed in both SED fits), R_gd = 100, mu_H2 = 2.8. Jy/beam use
+# [beam] model_fwhm_arcsec, the convention of the delivered dust model.
+label = "fill36"
+dust_opacity_cm2_per_g = 10.0
+opacity_frequency_ghz = 1000.0
+beta = 2.0
+gas_to_dust = 100.0
+mean_molecular_weight = 2.8
 
 [beam]
 model_fwhm_arcsec = 18.0

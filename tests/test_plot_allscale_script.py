@@ -64,11 +64,11 @@ def test_task_reads_delivered_jcomb_and_miriad_pb() -> None:
 
     assert inputs["combined_continuum"] == (
         DELIVERED
-        + "IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits"
+        + "IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits"
     )
     assert inputs["dust_continuum"] == (
         DELIVERED
-        + "IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended.fits"
+        + "IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits"
     )
     assert inputs["primary_beam"] == (
         DELIVERED + "IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
@@ -146,3 +146,11 @@ def test_tp_view_is_inferno_and_named_tp_continuum(tmp_path, monkeypatch) -> Non
     assert [path.name for path in written] == ["tp_continuum.png"]
     assert calls[0]["colour_map"] == "inferno"
     assert calls[0]["annotated"] is False
+
+
+def test_tp_view_reads_the_filled_tp_model() -> None:
+    inputs = TASK.load_task_config(CONFIG)["inputs"]
+
+    assert inputs["synthetic_continuum"] == (
+        "results/synthesize_continuum/model/continuum_224GHz_fill36.fits"
+    )

@@ -37,7 +37,7 @@ DELIVERED_INPUTS = ("interferometer", "gain", "pb", "psf", "psf_imfit_log", "aca
                     "casa_image", "casa_pb", "planck_217", "planck_co", "planck_rimo",
                     "planck_fetch_record", "atlasgal_870")
 # TP models are the products of the synthesize_continuum task.
-SYNTHESIS_INPUTS = ("tp_dust", "tp_dust_ff")
+SYNTHESIS_INPUTS = ("tp_dust", "tp_dust_ff", "tp_dust_extended", "tp_dust_ff_extended")
 SYNTHESIS_RESULTS = Path("results/synthesize_continuum")
 # Inputs that are products of another task, with that task's results folder.
 TASK_PRODUCT_INPUTS = {**{name: SYNTHESIS_RESULTS for name in SYNTHESIS_INPUTS},

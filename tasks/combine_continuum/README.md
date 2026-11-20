@@ -78,7 +78,8 @@ All inputs are declared in `task.toml`; the code checks each key's source.
 | `aca_pbcor` | `…IRDC316.8.7M.robust0.5.cont.image.pbcor.fits` | delivered | compare_images, aca_forward_test |
 | `twelve_m_pbcor` | `…IRDC316.8.TM2TM1.robust0.5.cont.image.pbcor.fits` | delivered | compare_images |
 | `casa_image`, `casa_pb` | `…/casa-archived/IRDC316.8.7MTM2TM1.cont.image.pbcor.fits`, `….cont.pb.fits` | delivered | joint_images, pointing_coverage |
-| `tp_dust`, `tp_dust_ff` | `results/synthesize_continuum/model/{dust,continuum}_224GHz.fits` | `synthesize_continuum` product | all TP use |
+| `tp_dust`, `tp_dust_ff` | `results/synthesize_continuum/model/{dust,continuum}_224GHz.fits` | `synthesize_continuum` product | all TP use except the extended products |
+| `tp_dust_extended`, `tp_dust_ff_extended` | `results/synthesize_continuum/model/{dust,continuum}_224GHz_fill36.fits` | `synthesize_continuum` product (stage `fill`) | extended products only |
 | `planck_217`, `planck_co`, `planck_rimo`, `planck_fetch_record` | `data/delivered/archive/planck/hfi_cutouts/` | delivered | planck_calibration |
 | `atlasgal_870` | `data/delivered/archive/infrared/atlasgal+planck.fits` | delivered | one Planck fit variant |
 | `core_catalogue` | `results/source_catalogue/tables/source_catalogue.ecsv` | task product | compact-source check |
@@ -175,11 +176,19 @@ multiplied by a weight in the mosaic primary beam (`pb`):
 `w = ½[1 − cos(π (pb − pb₀)/(pb₁ − pb₀))]` between, with
 `[combine] extended_taper_pb = [0.2, 0.3]`. The small scales fade out across
 that rim instead of stopping at pb 0.2, where the true-sky noise is 2.5 times
-the centre value. The TP, its factor and all settings are those of the standard
-product. The extended product is blank only outside the TP footprint; beyond
+the centre value. The TP is the extended TP model (`tp_*_extended`: the same
+model continued beyond the Paper I dust model with the 18″+36″ SED maps, 36″
+there; prepared as `prepared/tp_*_extended_{mjysr,footprint}.fits`); its
+factor and all settings are those of the standard product. Without
+`tp_*_extended` inputs the standard TP is used. The extended product is blank
+only outside the TP footprint, which the fill model makes the whole 7MTM2TM1
+grid; beyond
 the mosaic it is the TP part of the combination alone. Where pb ≥ pb₁ it equals
 the standard product apart from the small large-scale change that the rim
-weight makes through the FFT. The two combinations run one after the other, so the FFT planes of both are never held at once. The diagnostics keep using
+weight makes through the FFT. With the fill model (run 2026-11-20 21:21 UTC)
+the extended products equal the earlier ones (standard TP) within 0.001σ
+wherever both exist; the standard products are byte-identical to the delivered
+ones. The two combinations run one after the other, so the FFT planes of both are never held at once. The diagnostics keep using
 the standard, blanked products.
 
 ### Interferometer pb cut and the pb0.5 variant

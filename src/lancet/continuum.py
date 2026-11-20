@@ -136,3 +136,68 @@ def calibrate_simba(
     if scale <= 0:
         raise ValueError("SIMBA flux scale must be positive")
     return np.where(data > floor, data * scale, np.nan)
+
+
+def dust_opacity_power_law(
+    frequency_ghz: float,
+    *,
+    reference_opacity_cm2_per_g: float,
+    reference_frequency_ghz: float,
+    beta: float,
+    gas_to_dust: float,
+) -> float:
+    """Gas opacity kappa_ref (nu/nu_ref)**beta / R_gd in cm^2 per g of gas."""
+    values = (
+        float(frequency_ghz),
+        float(reference_opacity_cm2_per_g),
+        float(reference_frequency_ghz),
+        float(gas_to_dust),
+    )
+    if not all(np.isfinite(value) and value > 0 for value in values):
+        raise ValueError("Opacity settings must be finite and positive")
+    frequency, reference_opacity, reference_frequency, ratio = values
+    return (
+        reference_opacity
+        * (frequency / reference_frequency) ** float(beta)
+        / ratio
+    )
+
+
+def dust_model_jybeam(
+    column_density_cm2: np.ndarray,
+    temperature_k: np.ndarray,
+    *,
+    frequency_ghz: float,
+    gas_opacity_cm2_per_g: float,
+    mean_molecular_weight: float,
+    beam_fwhm_arcsec: float,
+) -> np.ndarray:
+    """Dust emission of N(H2), T_dust in Jy per circular Gaussian beam.
+
+    Pixels with a non-positive or missing temperature are blank.
+    """
+    from lancet.column_density import modified_blackbody_mjysr
+
+    temperature = np.asarray(temperature_k, dtype=float)
+    temperature = np.where(temperature > 0, temperature, np.nan)
+    intensity = modified_blackbody_mjysr(
+        column_density_cm2,
+        temperature,
+        frequency_ghz=frequency_ghz,
+        opacity_cm2_per_g=gas_opacity_cm2_per_g,
+        mean_molecular_weight=mean_molecular_weight,
+    )
+    fwhm = np.deg2rad(float(beam_fwhm_arcsec) / 3600.0)
+    beam_sr = np.pi / (4.0 * np.log(2.0)) * fwhm**2
+    return intensity * 1.0e6 * beam_sr
+
+
+def fill_missing(primary: np.ndarray, filler: np.ndarray) -> np.ndarray:
+    """Keep finite ``primary`` pixels and take ``filler`` elsewhere."""
+    primary = np.asarray(primary, dtype=float)
+    filler = np.asarray(filler, dtype=float)
+    if primary.shape != filler.shape:
+        raise ValueError(
+            f"Shapes differ: {primary.shape} and {filler.shape}"
+        )
+    return np.where(np.isfinite(primary), primary, filler)

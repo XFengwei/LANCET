@@ -24,6 +24,11 @@ casa_pb = "data/delivered/alma/continuum/casa-archived/IRDC316.8.7MTM2TM1.cont.p
 # frequency is read from their FREQGHZ card.
 tp_dust = "results/synthesize_continuum/model/dust_224GHz.fits"
 tp_dust_ff = "results/synthesize_continuum/model/continuum_224GHz.fits"
+# TP models for the extended products only: the same models continued beyond the Paper I dust model
+# with the 18"+36" SED maps (synthesize_continuum stage `fill`, 36" there). Standard products use
+# tp_dust and tp_dust_ff; inside their footprint the two are identical.
+tp_dust_extended = "results/synthesize_continuum/model/dust_224GHz_fill36.fits"
+tp_dust_ff_extended = "results/synthesize_continuum/model/continuum_224GHz_fill36.fits"
 # Planck PR3 HFI 217 GHz map and PR2 Type-1 CO map (pixels within 1 deg of the field, HEALPix
 # Nside 2048 NESTED), the HFI RIMO (bandpass, beam) and the fetch record with the CO factors.
 planck_217 = "data/delivered/archive/planck/hfi_cutouts/freq217.npz"

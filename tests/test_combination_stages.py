@@ -471,3 +471,73 @@ def test_measurements_run_on_a_product_blank_outside_the_mosaic():
     assert measured["tp_only_ratio_to_scaled_tp"]["median"] is None
     check = stages.zero_spacing(product, ctx, config, 1.0)[0]
     assert check["tp_only"] == {"n": 0}
+
+
+def _add_extended_tp(paths, tmp_path):
+    """Extended TP models: twice the standard field, with a narrower NaN border (a wider footprint)."""
+    wide = 2.0 * _smooth_field(61, border=1)
+    for name in ("tp_dust", "tp_dust_ff"):
+        header = _header(61, 6.0, 18.1)
+        header["FREQGHZ"] = 223.8
+        paths[f"{name}_extended"] = tmp_path / f"{name}_extended.fits"
+        fits.PrimaryHDU(wide, header).writeto(paths[f"{name}_extended"])
+    return paths
+
+
+def test_prepare_writes_the_extended_tp_when_declared(tmp_path):
+    paths = _add_extended_tp(_inputs(tmp_path), tmp_path)
+    stages.run_prepare(paths, _prepare_config())
+    standard = stages.prepared_paths(paths["output_root"])
+    extended = stages.extended_prepared_paths(paths["output_root"])
+    for flavour in ("dust", "dust_ff"):
+        wide, narrow = fits.getdata(extended[f"tp_{flavour}"]), fits.getdata(standard[f"tp_{flavour}"])
+        inside = fits.getdata(standard[f"tp_{flavour}_footprint"]) > 0.5
+        np.testing.assert_allclose(wide[inside], 2.0 * narrow[inside], rtol=1e-4)
+        assert fits.getdata(extended[f"tp_{flavour}_footprint"]).sum() >= inside.sum()
+
+
+def test_prepare_without_extended_tp_writes_no_extended_planes(tmp_path):
+    paths = _inputs(tmp_path)
+    stages.run_prepare(paths, _prepare_config())
+    extended = stages.extended_prepared_paths(paths["output_root"])
+    assert not any(path.exists() for path in extended.values())
+
+
+def test_extended_context_takes_the_extended_tp(tmp_path):
+    paths = _add_extended_tp(_inputs(tmp_path), tmp_path)
+    stages.run_prepare(paths, _prepare_config())
+    ctx = {"low": np.zeros(1), "footprint": np.zeros(1, bool), "tp_native": np.zeros(1), "other": 7}
+
+    swapped = stages.extended_context(ctx, paths, "dust")
+
+    extended = stages.extended_prepared_paths(paths["output_root"])
+    np.testing.assert_array_equal(swapped["low"], fits.getdata(extended["tp_dust"]))
+    np.testing.assert_array_equal(swapped["footprint"], fits.getdata(extended["tp_dust_footprint"]) > 0.5)
+    assert swapped["tp_native"].shape == (61, 61)
+    assert np.isfinite(swapped["tp_native"]).sum() == 59 * 59      # border of one pixel
+    assert swapped["other"] == 7
+
+
+def test_extended_context_without_extended_tp_is_unchanged(tmp_path):
+    paths = _inputs(tmp_path)
+    ctx = {"low": np.zeros(1)}
+    assert stages.extended_context(ctx, paths, "dust") is ctx
+
+
+def test_extended_product_is_combined_with_the_extended_tp(tmp_path, monkeypatch):
+    n = 512
+    pb, ctx = _extended_setup(monkeypatch, n)
+    paths = _method_inputs(tmp_path, n)
+    fits.PrimaryHDU(pb[None, None], _gain_header(n)).writeto(paths["pb"], overwrite=True)
+    wide_low = np.full((n, n), 2.0, np.float32)
+    monkeypatch.setattr(stages, "extended_context",
+                        lambda c, p, f: {**c, "low": wide_low, "footprint": np.ones((n, n), bool)})
+    calls, real = [], stages.combine_prepared
+
+    def spy(low, high, *args, **kwargs):
+        calls.append(low)
+        return real(low, high, *args, **kwargs)
+
+    monkeypatch.setattr(stages, "combine_prepared", spy)
+    stages.run_method("jcomb", paths, _config({}))
+    assert calls[0] is not wide_low and calls[1] is wide_low

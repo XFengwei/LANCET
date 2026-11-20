@@ -15,6 +15,9 @@ import numpy as np
 from lancet import ProjectPaths
 from lancet.continuum import (
     calibrate_simba,
+    dust_model_jybeam,
+    dust_opacity_power_law,
+    fill_missing,
     smooth_circular_jybeam,
     synthesize_continuum,
 )
@@ -77,7 +80,9 @@ def resolve_task_paths(
     )
     paths["output_root"] = project.validate_output(str(output_value))
 
-    for name in ("dust", "simba_250ghz"):
+    for name in (
+        "dust", "simba_250ghz", "fill_column_density", "fill_temperature",
+    ):
         path = paths[name]
         if not path.is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be a delivered input: {path}")
@@ -262,6 +267,121 @@ def build_models(
         written[target] = products
         print(f"Wrote {target:g} GHz model products to {model_directory}")
     return written
+
+
+def build_filled_models(
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    overwrite: bool = False,
+) -> dict[str, Path]:
+    """Continue the reference-frequency model beyond the dust-model footprint.
+
+    Inside the Paper I dust model nothing changes. Outside, the dust emission
+    is computed from the 18"+36" N(H2) and T_dust maps with the Paper I
+    opacity law; free-free is added where it exists, as in ``build_models``.
+    """
+    import json
+
+    fill = config["fill"]
+    model = config["model"]
+    if not isinstance(fill, Mapping) or not isinstance(model, Mapping):
+        raise TypeError("Fill and model settings must be TOML tables")
+    dust, dust_header = fits.getdata(paths["dust"], header=True)
+    dust = np.squeeze(np.asarray(dust, dtype=float))
+    freefree = np.squeeze(np.asarray(fits.getdata(paths["freefree"])))
+    grids = {}
+    for name in ("fill_column_density", "fill_temperature"):
+        data, header = fits.getdata(paths[name], header=True)
+        data = np.squeeze(np.asarray(data, dtype=float))
+        if not _same_grid(dust.shape, dust_header, data.shape, header):
+            raise ValueError(f"{name} is not on the dust-model grid")
+        grids[name] = data
+
+    frequency = float(model["reference_frequency_ghz"])
+    opacity = dust_opacity_power_law(
+        frequency,
+        reference_opacity_cm2_per_g=float(fill["dust_opacity_cm2_per_g"]),
+        reference_frequency_ghz=float(fill["opacity_frequency_ghz"]),
+        beta=float(fill["beta"]),
+        gas_to_dust=float(fill["gas_to_dust"]),
+    )
+    filler = dust_model_jybeam(
+        grids["fill_column_density"],
+        grids["fill_temperature"],
+        frequency_ghz=frequency,
+        gas_opacity_cm2_per_g=opacity,
+        mean_molecular_weight=float(fill["mean_molecular_weight"]),
+        beam_fwhm_arcsec=float(config["beam"]["model_fwhm_arcsec"]),
+    )
+    dust_filled = fill_missing(dust, filler)
+    dust_out, freefree_out, total = synthesize_continuum(
+        dust_filled,
+        freefree,
+        reference_frequency_ghz=frequency,
+        target_frequency_ghz=frequency,
+        dust_spectral_index=float(model["dust_spectral_index"]),
+        freefree_spectral_index=float(model["freefree_spectral_index"]),
+        missing_freefree_value=float(
+            model["missing_freefree_value_jy_per_beam"]
+        ),
+    )
+
+    suffix = str(fill["label"])
+    label = frequency_label(frequency)
+    directory = paths["output_root"] / "model"
+    products = {
+        component: directory / f"{component}_{label}_{suffix}.fits"
+        for component in ("dust", "freefree", "continuum")
+    }
+    report_path = directory / f"fill_{label}_{suffix}.json"
+    for output in (*products.values(), report_path):
+        _prepare_output(output, overwrite=overwrite)
+    for component, data in (
+        ("dust", dust_out),
+        ("freefree", freefree_out),
+        ("continuum", total),
+    ):
+        header = _component_header(
+            dust_header, frequency_ghz=frequency, component=component
+        )
+        header["FILLED"] = (True, "beyond the dust model: 18+36 arcsec SED")
+        header["FILLKAPG"] = (opacity, "gas opacity of the fill [cm2/g]")
+        header.add_history(
+            "LANCET synthesize_continuum: filled outside the Paper I dust "
+            "model from N(H2), T_dust 18+36 arcsec"
+        )
+        fits.writeto(
+            products[component],
+            np.asarray(data, dtype=np.float32),
+            header,
+            overwrite=overwrite,
+        )
+        print(f"Wrote {products[component]}")
+
+    overlap = np.isfinite(dust) & np.isfinite(filler) & (dust > 0)
+    ratio = filler[overlap] / dust[overlap]
+    pixel_arcmin2 = float(
+        np.prod(np.abs(WCS(dust_header).celestial.wcs.cdelt)) * 3600.0
+    )
+    report = {
+        "gas_opacity_cm2_per_g": opacity,
+        "overlap_pixels": int(overlap.sum()),
+        "overlap_ratio_median": float(np.median(ratio)),
+        "overlap_ratio_p05_p95": [
+            float(np.percentile(ratio, 5)),
+            float(np.percentile(ratio, 95)),
+        ],
+        "dust_model_area_arcmin2": float(np.isfinite(dust).sum() * pixel_arcmin2),
+        "filled_area_arcmin2": float(
+            np.isfinite(dust_filled).sum() * pixel_arcmin2
+        ),
+        "note": "overlap ratio = fill model / Paper I dust model where both "
+        "exist; the fill is used only outside the dust model",
+    }
+    report_path.write_text(json.dumps(report, indent=2) + "\n")
+    print(f"Wrote {report_path}")
+    return {**products, "report": report_path}
 
 
 def build_simba_validation(
@@ -1098,7 +1218,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "model", "validate", "plot", "all"),
+        choices=("inspect", "model", "fill", "validate", "plot", "all"),
         default="inspect",
     )
     parser.add_argument(
@@ -1133,6 +1253,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         inspect_inputs(paths, config)
     if args.stage in {"model", "all"}:
         build_models(paths, config, overwrite=args.overwrite)
+    if args.stage in {"fill", "all"}:
+        build_filled_models(paths, config, overwrite=args.overwrite)
     if args.stage in {"validate", "all"}:
         build_simba_validation(paths, config, overwrite=args.overwrite)
     if args.stage in {"plot", "all"}:

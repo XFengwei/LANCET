@@ -12,6 +12,7 @@ products are the TP inputs of `combine_continuum`.
 | `dust` | `data/delivered/sedfitter/Dustmodel_223.8GHz.fits` | Paper I dust model, 18.1″ beam, 6″ grid; byte-identical to the published `TP_SEDsynthetic230GHz_cont.fits` (SHA-256 `fb3c3de0…`), whose "230GHz" is only a label |
 | `freefree` | `results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec_regrid2dust.fits` | 8000 K free-free model at 223.8 GHz, smoothed to 18″ and put on the dust grid |
 | `simba_250ghz` | `data/delivered/archive/infrared/SIMBA_1.2mm.fits` | archival SIMBA map, for validation only |
+| `fill_column_density`, `fill_temperature` | `data/delivered/sedfitter/combine/{NH2,Tdust}_18arcsec+36arcsec.fits` | Paper I 18″+36″ SED maps on the same 6″ grid; used only by `fill` |
 
 ## Model
 
@@ -42,6 +43,31 @@ The superseded `SEDsynthetic_Dust_FF_{230GHz,250GHz,250GHz_smooth24arcsec}.fits`
 in `data/delivered/sedfitter/` were this task's Paper II outputs (equal to
 float32 rounding). They were removed, as were the old `*_230GHz` products.
 
+### Filled model (stage `fill`)
+
+The Paper I dust model covers 199 arcmin²; the 18″+36″ SED maps cover about
+904 arcmin². `fill` keeps the 223.8 GHz model unchanged where the dust model
+exists and adds, outside it, the dust emission of the 18″+36″ N(H2) and T_dust:
+
+```text
+kappa_gas = 10 cm2/g (nu / 1000 GHz)^beta / R_gd,  beta = 2, R_gd = 100  ->  0.00501 cm2/g
+I_dust    = B_nu(T_dust) [1 - exp(-mu_H2 m_p kappa_gas N(H2))],  mu_H2 = 2.8
+```
+
+converted to Jy/beam with `[beam] model_fwhm_arcsec` (18.0″). β is fixed at
+2 in both Paper I SED fits. Free-free is added where it exists (73 % of the
+added area), as in `model`. Outside the 18″ fit the 18″+36″ maps are the 36″
+fit rescaled to the 18″ one (×1.2), so the fill has 36″ resolution there.
+
+Check (`model/fill_224GHz_fill36.json`): where both exist, fill / dust model =
+1.009 (5–95 %: 0.92–1.14). With an 18.1″ beam the ratio would be 0.989
+= (18.0/18.1)², so the delivered dust model's Jy/beam correspond to an 18.0″
+beam although its header gives 18.1″.
+
+Products: `model/{dust,freefree,continuum}_224GHz_fill36.fits` (header
+`FILLED = T`, `FILLKAPG`). `combine_continuum` uses them for its extended
+products only.
+
 ## Outputs
 
 `results/synthesize_continuum/`:
@@ -62,9 +88,10 @@ formats are set in the `[plot]` tables.
 
 - `inspect`: checks inputs, grids, beams, units and model readiness; writes nothing.
 - `model`: component and combined maps.
+- `fill`: the 223.8 GHz model continued beyond the dust model (above).
 - `validate`: SIMBA comparison maps (after `model`).
 - `plot`: the three figures (after `validate`).
-- `all`: all four in order.
+- `all`: all five in order (inspect, model, fill, validate, plot).
 
 ```bash
 PYTHONPATH=src conda run -n py312 python tasks/synthesize_continuum/run.py --stage all --overwrite

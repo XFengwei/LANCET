@@ -9,8 +9,12 @@ from astropy.io import fits
 import numpy as np
 import pytest
 
+from lancet.column_density import modified_blackbody_mjysr
 from lancet.continuum import (
     calibrate_simba,
+    dust_model_jybeam,
+    dust_opacity_power_law,
+    fill_missing,
     scale_power_law,
     smooth_circular_jybeam,
     synthesize_continuum,
@@ -196,3 +200,83 @@ def test_plot_stage_writes_pdf_and_png_products(tmp_path: Path) -> None:
     for path in outputs:
         assert path.is_file()
         assert path.stat().st_size > 10_000
+
+
+def test_dust_opacity_power_law_gives_gas_opacity() -> None:
+    kappa = dust_opacity_power_law(
+        223.8,
+        reference_opacity_cm2_per_g=10.0,
+        reference_frequency_ghz=1000.0,
+        beta=2.0,
+        gas_to_dust=100.0,
+    )
+
+    assert kappa == pytest.approx(0.1 * 0.2238**2, rel=1e-12)
+
+
+def test_dust_model_jybeam_uses_beam_solid_angle() -> None:
+    column = np.array([1.0e22, 5.0e22])
+    temperature = np.array([15.0, 20.0])
+    beam_sr = np.pi / (4 * np.log(2)) * np.deg2rad(18.0 / 3600.0) ** 2
+
+    model = dust_model_jybeam(
+        column,
+        temperature,
+        frequency_ghz=223.8,
+        gas_opacity_cm2_per_g=0.005,
+        mean_molecular_weight=2.8,
+        beam_fwhm_arcsec=18.0,
+    )
+
+    expected = modified_blackbody_mjysr(
+        column, temperature, frequency_ghz=223.8, opacity_cm2_per_g=0.005
+    ) * 1.0e6 * beam_sr
+    np.testing.assert_allclose(model, expected, rtol=1e-12)
+
+
+def test_dust_model_jybeam_blanks_nonpositive_temperature() -> None:
+    model = dust_model_jybeam(
+        np.array([1.0e22, 1.0e22]),
+        np.array([0.0, 15.0]),
+        frequency_ghz=223.8,
+        gas_opacity_cm2_per_g=0.005,
+        mean_molecular_weight=2.8,
+        beam_fwhm_arcsec=18.0,
+    )
+
+    assert np.isnan(model[0]) and np.isfinite(model[1])
+
+
+def test_fill_missing_keeps_primary_pixels() -> None:
+    primary = np.array([1.0, np.nan, np.nan])
+    filler = np.array([9.0, 2.0, np.nan])
+
+    filled = fill_missing(primary, filler)
+
+    np.testing.assert_array_equal(filled, [1.0, 2.0, np.nan])
+
+
+def test_fill_stage_fills_only_outside_the_dust_model(tmp_path: Path) -> None:
+    config = SYNTHESIS_SCRIPT.load_task_config(
+        PROJECT_ROOT / "tasks" / "synthesize_continuum" / "task.toml"
+    )
+    inputs = config["inputs"]
+    paths = {
+        "dust": DUST,
+        "freefree": FREEFREE,
+        "fill_column_density": PROJECT_ROOT / inputs["fill_column_density"],
+        "fill_temperature": PROJECT_ROOT / inputs["fill_temperature"],
+        "output_root": tmp_path,
+    }
+
+    written = SYNTHESIS_SCRIPT.build_filled_models(paths, config)
+
+    assert written["dust"].name == "dust_224GHz_fill36.fits"
+    assert written["continuum"].name == "continuum_224GHz_fill36.fits"
+    dust = np.squeeze(fits.getdata(DUST)).astype(float)
+    filled = fits.getdata(written["dust"]).astype(float)
+    inside = np.isfinite(dust)
+    np.testing.assert_array_equal(filled[inside], dust[inside].astype(np.float32))
+    assert np.isfinite(filled).sum() > 4 * inside.sum()
+    report = written["report"].read_text()
+    assert "overlap_ratio_median" in report

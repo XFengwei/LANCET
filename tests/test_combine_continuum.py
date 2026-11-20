@@ -169,3 +169,15 @@ def test_no_reference_to_retired_tasks():
             found += [f"{relative}:{n}" for n, line in enumerate(path.read_text().splitlines(), 1)
                       if RETIRED_TASKS.search(line)]
     assert not found, "Retired tasks still named:\n" + "\n".join(found)
+
+
+def test_extended_tp_inputs_are_the_filled_synthesis_models():
+    inputs = TASK.load_task_config(CONFIG)["inputs"]
+    assert inputs["tp_dust_extended"] == "results/synthesize_continuum/model/dust_224GHz_fill36.fits"
+    assert inputs["tp_dust_ff_extended"] == "results/synthesize_continuum/model/continuum_224GHz_fill36.fits"
+
+
+def test_extended_tp_inputs_must_come_from_synthesize_continuum():
+    config = _config({("inputs", "tp_dust_extended"): "data/delivered/sedfitter/Dustmodel_223.8GHz.fits"})
+    with pytest.raises(ValueError, match="tp_dust_extended"):
+        _resolve(config)

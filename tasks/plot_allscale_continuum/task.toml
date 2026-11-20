@@ -3,10 +3,12 @@ name = "plot_allscale_continuum"
 
 [inputs]
 # J-comb 12m+7m+TP (TP factor 1.0), Jy/beam, converted to MJy/sr in the task.
-# The extended products continue into the TP-only area beyond the mosaic.
-combined_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits"
-dust_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended.fits"
-synthetic_continuum = "results/synthesize_continuum/model/continuum_224GHz.fits"
+# The extended36 products continue into the TP-only area beyond the mosaic, with the TP model
+# filled beyond the Paper I dust model from the 18"+36" SED maps: no blank pixels.
+combined_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits"
+dust_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits"
+# TP model (dust + free-free), filled beyond the Paper I dust model (synthesize_continuum `fill`).
+synthetic_continuum = "results/synthesize_continuum/model/continuum_224GHz_fill36.fits"
 # MIRIAD mosaic pb; its 0.2 contour is drawn on the annotated views.
 primary_beam = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 

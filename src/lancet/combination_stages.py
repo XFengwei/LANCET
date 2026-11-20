@@ -173,6 +173,33 @@ def prepared_paths(root: Path) -> dict[str, Path]:
     return out
 
 
+def extended_prepared_paths(root: Path) -> dict[str, Path]:
+    """Prepared planes of the optional extended TP models (``tp_<flavour>_extended`` inputs)."""
+    prepared = Path(root) / "prepared"
+    out = {}
+    for flavour in TP_FLAVOURS:
+        out[f"tp_{flavour}"] = prepared / f"tp_{flavour}_extended_mjysr.fits"
+        out[f"tp_{flavour}_footprint"] = prepared / f"tp_{flavour}_extended_footprint.fits"
+    return out
+
+
+def _has_extended_tp(paths: Mapping[str, Path]) -> bool:
+    return all(f"tp_{flavour}_extended" in paths for flavour in TP_FLAVOURS)
+
+
+def extended_context(ctx: Mapping, paths: Mapping[str, Path], flavour: str) -> Mapping:
+    """``ctx`` with the TP planes of the extended TP model, when one is declared; else ``ctx``."""
+    if f"tp_{flavour}_extended" not in paths:
+        return ctx
+    prep = extended_prepared_paths(paths["output_root"])
+    require_inputs([prep[f"tp_{flavour}"], prep[f"tp_{flavour}_footprint"]], "prepare")
+    tp_native, tp_header, tp_wcs = read_plane(paths[f"tp_{flavour}_extended"])
+    tp_native = jybeam_to_mjysr(tp_native.astype(float), *beam_parameters(tp_header)[:2])
+    return {**ctx, "low": fits.getdata(prep[f"tp_{flavour}"]).astype(np.float32),
+            "footprint": fits.getdata(prep[f"tp_{flavour}_footprint"]) > 0.5,
+            "tp_native": tp_native, "tp_header": tp_header, "tp_wcs": tp_wcs}
+
+
 def interferometer_min_pb(config: Mapping) -> float:
     """``[prepare] interferometer_min_pb``: 0.2 (the delivered cut) up to, not including, 1."""
     value = float(config["prepare"]["interferometer_min_pb"])
@@ -191,9 +218,15 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
     """Check the inputs and write them on the interferometer grid in MJy/sr, plus the mosaic gain."""
     settings = config["prepare"]
     out = prepared_paths(paths["output_root"])
-    guard_outputs(list(out.values()), overwrite)
+    extended_out = extended_prepared_paths(paths["output_root"]) if _has_extended_tp(paths) else {}
+    guard_outputs(list(out.values()) + list(extended_out.values()), overwrite)
     minimum_pb = interferometer_min_pb(config)
     frequency = tp_frequency_ghz(paths)                 # before anything is read or written
+    for flavour in TP_FLAVOURS if extended_out else ():
+        extended_frequency = read_frequency_ghz(paths[f"tp_{flavour}_extended"])
+        if extended_frequency != frequency:
+            raise ValueError(f"tp_{flavour}_extended FREQGHZ {extended_frequency} differs from the TP "
+                             f"models' {frequency} GHz")
     truesky, header, wcs = read_plane(paths["interferometer"])
     truesky = cut_at_pb(truesky, read_gain(paths["pb"], truesky.shape), minimum_pb)
     delivered_gain = read_gain(paths["gain"], truesky.shape)
@@ -223,17 +256,20 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
     write_product(out["interferometer"], jybeam_to_mjysr(np.nan_to_num(truesky), *high_beam[:2]),
                   header, {"stage": "prepare", "quantity": "12m+7m true-sky image; 0 outside the mosaic"}, hashes,
                   bunit="MJy/sr")
-    for flavour, (tp, tp_header, tp_wcs) in tp_planes.items():
+    planes = [(out, f"tp_{flavour}", flavour, plane) for flavour, plane in tp_planes.items()]
+    planes += [(extended_out, f"tp_{flavour}_extended", flavour, read_plane(paths[f"tp_{flavour}_extended"]))
+               for flavour in TP_FLAVOURS if extended_out]
+    for target, name, flavour, (tp, tp_header, tp_wcs) in planes:
         tp_beam = beam_parameters(tp_header)
         tapered = taper_edge(tp, np.isfinite(tp), settings["edge_taper_arcsec"], _pixel_arcsec(tp_wcs))
         grid = np.nan_to_num(regrid_to(tapered, tp_wcs, wcs, truesky.shape, order=settings["regrid_order"]))
-        tp_hash = input_hashes(paths, [f"tp_{flavour}"])
+        tp_hash = input_hashes(paths, [name])
         meta = {"stage": "prepare", "tp_frequency_ghz": frequency,
                 "edge_taper_arcsec": settings["edge_taper_arcsec"]}
-        write_product(out[f"tp_{flavour}"], jybeam_to_mjysr(grid, *tp_beam[:2]), header, meta, tp_hash,
+        write_product(target[f"tp_{flavour}"], jybeam_to_mjysr(grid, *tp_beam[:2]), header, meta, tp_hash,
                       bunit="MJy/sr", beam=tp_beam)
         footprint = tp_footprint_on_grid(tp, tp_wcs, wcs, truesky.shape).astype(np.float32)
-        write_product(out[f"tp_{flavour}_footprint"], footprint, header,
+        write_product(target[f"tp_{flavour}_footprint"], footprint, header,
                       {"stage": "prepare", "quantity": "TP model defined (1) or not (0)"}, tp_hash, bunit="")
     write_json(out["report"], report)
     return out
@@ -488,7 +524,9 @@ def _run_extended(method, flavour, ctx, standard, paths, config, settings, out, 
     """
     factor, (pb0, pb1) = settings["tp_factor"], config["combine"]["extended_taper_pb"]
     tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
-    hashes = input_hashes(paths, ["interferometer", "gain", "pb", f"tp_{flavour}"])
+    ctx = extended_context(ctx, paths, flavour)     # the extended TP model, when one is declared
+    tp_name = f"tp_{flavour}_extended" if f"tp_{flavour}_extended" in paths else f"tp_{flavour}"
+    hashes = input_hashes(paths, ["interferometer", "gain", "pb", tp_name])
     pb = read_gain(paths["pb"], ctx["high"].shape)
     high = ctx["high"] * pb_taper(pb, pb0, pb1)
     blank = product_blank(ctx["gain"], ctx["footprint"], True)

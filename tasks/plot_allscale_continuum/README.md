@@ -8,9 +8,9 @@ version, and the TP model.
 
 | Key | File | Notes |
 |---|---|---|
-| `combined_continuum` | `data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits` | J-comb 12m+7m + dust + free-free TP (TP factor 1.0), continued into the TP-only area |
-| `dust_continuum` | `…TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended.fits` | as above with the dust-only TP |
-| `synthetic_continuum` | `results/synthesize_continuum/model/continuum_224GHz.fits` | 223.8 GHz TP model, 18.1″ |
+| `combined_continuum` | `data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits` | J-comb 12m+7m + dust + free-free TP (TP factor 1.0), continued into the TP-only area; the TP is filled beyond the Paper I dust model from the 18″+36″ SED maps (36″ there), so nothing is blank |
+| `dust_continuum` | `…TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits` | as above with the dust-only TP |
+| `synthetic_continuum` | `results/synthesize_continuum/model/continuum_224GHz_fill36.fits` | 223.8 GHz TP model, filled beyond the dust model (stage `fill`) |
 | `primary_beam` | `…7MTM2TM1.robust0.5.cont.pb.fits` | MIRIAD mosaic pb; the annotated views show its 0.2 contour |
 
 Every image is read with `lancet.imaging.read_mjysr` (Jy/beam converted with
