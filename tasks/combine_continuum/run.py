@@ -21,6 +21,7 @@ import tomllib
 from astropy.io import fits
 
 from lancet import ProjectPaths
+from lancet import combination_stages
 from lancet.imaging import frequency_label, read_frequency_ghz
 
 DEFAULT_CONFIG = Path("tasks/combine_continuum/task.toml")
@@ -165,7 +166,8 @@ def run_inspect(paths: dict, config: dict, overwrite: bool) -> None:
     print(f"output root: {paths['output_root']}")
 
 
-STAGES: dict[str, Callable[[dict, dict, bool], object]] = {"inspect": run_inspect}
+STAGES: dict[str, Callable[[dict, dict, bool], object]] = {"inspect": run_inspect,
+                                                           "prepare": combination_stages.run_prepare}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
