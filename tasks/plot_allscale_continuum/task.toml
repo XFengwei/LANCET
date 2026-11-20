@@ -34,6 +34,14 @@ background_vmin = -20.0
 transition = 50.0
 highlight_vmax = 800.0
 
+# Alternative view of the combined map (stage `sqrt`): one colour bar,
+# square-root stretch, MJy/sr; values outside [vmin, vmax] are clipped.
+[styles.sqrt]
+vmin = 0.0
+vmax = 1200.0
+colour_map = "inferno"
+stretch = "sqrt"
+
 # MJy/sr: the former Jy/beam limits -0.02 / 0.5 / 2.4 times 114.61 MJy/sr per
 # Jy/beam of the 18.1" TP beam, so the view is unchanged.
 [styles.synthetic]

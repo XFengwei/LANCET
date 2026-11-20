@@ -11,7 +11,10 @@ import tomllib
 from astropy.io import fits
 
 from lancet import ProjectPaths
-from lancet.continuum_plotting import create_dual_colour_figure
+from lancet.continuum_plotting import (
+    create_dual_colour_figure,
+    create_single_scale_figure,
+)
 from lancet.imaging import read_mjysr
 
 
@@ -122,14 +125,18 @@ def _save_figure(
     *,
     dpi: int,
 ) -> None:
-    from matplotlib import pyplot as plt
-
     try:
         for output in outputs:
             figure.savefig(output, bbox_inches="tight", dpi=dpi)
             print(f"Wrote {output}")
     finally:
-        plt.close(figure)
+        _close(figure)
+
+
+def _close(figure) -> None:
+    from matplotlib import pyplot as plt
+
+    plt.close(figure)
 
 
 def _plot_settings(
@@ -265,6 +272,91 @@ def plot_synthetic(
     return outputs
 
 
+def _create_sqrt_figure(
+    path: Path,
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    annotated: bool,
+    title: str | None = None,
+):
+    view, style = _plot_settings(config, style_name="sqrt")
+    data, header = read_mjysr(path)
+    return create_single_scale_figure(
+        data,
+        header,
+        center_ra_deg=float(view["center_ra_deg"]),
+        center_dec_deg=float(view["center_dec_deg"]),
+        width_deg=float(view["width_deg"]),
+        height_deg=float(view["height_deg"]),
+        vmin=float(style["vmin"]),
+        vmax=float(style["vmax"]),
+        colour_map=str(style["colour_map"]),
+        stretch=str(style["stretch"]),
+        figsize=(
+            float(view["figure_width_inches"]),
+            float(view["figure_height_inches"]),
+        ),
+        annotated=annotated,
+        primary_beam_path=paths["primary_beam"] if annotated else None,
+        minimum_primary_beam_response=float(
+            config["primary_beam"]["minimum_response"]
+        ),
+        title=title,
+        resolution_label=(
+            str(view["resolution_label"]) if annotated else None
+        ),
+        scalebar_length_deg=float(view["scalebar_length_deg"]),
+        scalebar_label=str(view["scalebar_label"]),
+    )
+
+
+def plot_sqrt(
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    overwrite: bool = False,
+) -> list[Path]:
+    """Plot the dust-plus-free-free map on one square-root colour scale."""
+    figures = config["figures"]
+    if not isinstance(figures, Mapping):
+        raise TypeError("Figure settings must be a TOML table")
+    output_root = paths["output_root"] / "figures"
+    stem = "allscale_continuum_dust_freefree_sqrt"
+    written: list[Path] = []
+
+    annotated_outputs = _prepare_outputs(
+        output_root / stem,
+        figures["annotated_formats"],
+        overwrite=overwrite,
+    )
+    annotated = _create_sqrt_figure(
+        paths["combined_continuum"],
+        paths,
+        config,
+        annotated=True,
+        title="12m7mTP combined 1.3 mm continuum map",
+    )
+    _save_figure(
+        annotated,
+        annotated_outputs,
+        dpi=int(figures["combined_annotated_dpi"]),
+    )
+    written.extend(annotated_outputs)
+
+    clean_outputs = _prepare_outputs(
+        output_root / f"{stem}_clean",
+        figures["clean_formats"],
+        overwrite=overwrite,
+    )
+    clean = _create_sqrt_figure(
+        paths["combined_continuum"], paths, config, annotated=False
+    )
+    _save_figure(clean, clean_outputs, dpi=int(figures["clean_dpi"]))
+    written.extend(clean_outputs)
+    return written
+
+
 def plot_dust(
     paths: Mapping[str, Path],
     config: Mapping[str, object],
@@ -325,7 +417,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--stage",
-        choices=("inspect", "combined", "synthetic", "dust", "all"),
+        choices=("inspect", "combined", "sqrt", "synthetic", "dust", "all"),
         default="inspect",
         help="Task stage to run",
     )
@@ -350,6 +442,8 @@ def main() -> None:
     matplotlib.use("Agg")
     if args.stage in ("combined", "all"):
         plot_combined(paths, config, overwrite=args.overwrite)
+    if args.stage in ("sqrt", "all"):
+        plot_sqrt(paths, config, overwrite=args.overwrite)
     if args.stage in ("synthetic", "all"):
         plot_synthetic(paths, config, overwrite=args.overwrite)
     if args.stage in ("dust", "all"):

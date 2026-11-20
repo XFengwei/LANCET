@@ -74,3 +74,45 @@ def test_task_reads_delivered_jcomb_and_miriad_pb() -> None:
         DELIVERED + "IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
     )
     assert {"pdf", "png"} <= set(config["figures"]["annotated_formats"])
+
+
+def test_sqrt_style_is_single_inferno_scale() -> None:
+    style = TASK.load_task_config(CONFIG)["styles"]["sqrt"]
+
+    assert style["colour_map"] == "inferno"
+    assert style["stretch"] == "sqrt"
+    assert style["vmin"] < style["vmax"]
+
+
+def test_sqrt_stage_writes_annotated_and_clean_views(tmp_path, monkeypatch) -> None:
+    calls = []
+
+    class FakeFigure:
+        def savefig(self, output, **kwargs):
+            Path(output).write_bytes(b"x")
+
+    def fake_figure(data, header, **kwargs):
+        calls.append(kwargs)
+        return FakeFigure()
+
+    image = tmp_path / "image.fits"
+    _write_image(image, np.ones((3, 3)), "MJy/sr")
+    monkeypatch.setattr(TASK, "create_single_scale_figure", fake_figure)
+    monkeypatch.setattr(TASK, "_close", lambda figure: None)
+    config = TASK.load_task_config(CONFIG)
+    paths = {
+        "combined_continuum": image,
+        "primary_beam": None,
+        "output_root": tmp_path / "out",
+    }
+
+    written = TASK.plot_sqrt(paths, config)
+
+    names = sorted(path.name for path in written)
+    assert names == [
+        "allscale_continuum_dust_freefree_sqrt.pdf",
+        "allscale_continuum_dust_freefree_sqrt.png",
+        "allscale_continuum_dust_freefree_sqrt_clean.png",
+    ]
+    assert [call["annotated"] for call in calls] == [True, False]
+    assert all(call["colour_map"] == "inferno" for call in calls)

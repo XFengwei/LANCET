@@ -127,13 +127,14 @@ def add_primary_beam_contour(
     path: str | Path,
     *,
     minimum_response: float = 0.2,
+    colour: str = "yellow",
 ) -> Any:
     """Overlay the selection gain on its own celestial grid."""
     response, header = fits.getdata(path, header=True, memmap=True)
     return axis.contour(
         image_plane(response),
         levels=[minimum_response],
-        colors="yellow",
+        colors=colour,
         linewidths=0.8,
         transform=axis.get_transform(WCS(header).celestial),
     )
@@ -352,4 +353,142 @@ def create_dual_colour_figure(
         length=2,
         rotation=0,
     )
+    return figure
+
+
+_STRETCHES = {"linear": LinearStretch, "sqrt": SqrtStretch}
+
+
+def create_single_scale_figure(
+    data: np.ndarray,
+    header: fits.Header,
+    *,
+    center_ra_deg: float,
+    center_dec_deg: float,
+    width_deg: float,
+    height_deg: float,
+    vmin: float,
+    vmax: float,
+    colour_map: str = "inferno",
+    stretch: str = "sqrt",
+    figsize: tuple[float, float] = (10.0, 6.0),
+    annotated: bool = False,
+    primary_beam_path: str | Path | None = None,
+    minimum_primary_beam_response: float = 0.2,
+    title: str | None = None,
+    resolution_label: str | None = None,
+    scalebar_length_deg: float = 0.02,
+    scalebar_label: str = "1 pc",
+    colourbar_label: str = r"Intensity (MJy sr$^{-1}$)",
+    annotation_colour: str = "white",
+    primary_beam_colour: str = "cyan",
+    image_axes_rect: tuple[float, float, float, float] = (
+        0.05,
+        0.05,
+        0.84,
+        0.90,
+    ),
+) -> Any:
+    """Create a one-colour-bar all-scale continuum view."""
+    if stretch not in _STRETCHES:
+        raise ValueError(
+            f"Unknown stretch {stretch!r}; expected one of "
+            + ", ".join(sorted(_STRETCHES))
+        )
+    if not vmin < vmax:
+        raise ValueError("Expected vmin < vmax")
+
+    from matplotlib import pyplot as plt
+
+    image = image_plane(data)
+    wcs = WCS(header).celestial
+    limits = world_crop_limits(
+        header,
+        center_ra_deg=center_ra_deg,
+        center_dec_deg=center_dec_deg,
+        width_deg=width_deg,
+        height_deg=height_deg,
+    )
+    norm = ImageNormalize(
+        stretch=_STRETCHES[stretch](),
+        vmin=vmin,
+        vmax=vmax,
+        clip=False,
+    )
+    import matplotlib
+
+    cmap = matplotlib.colormaps[colour_map].copy()
+    cmap.set_bad("white")
+    cmap.set_under(cmap(0.0))
+    cmap.set_over(cmap(1.0))
+    figure = plt.figure(figsize=figsize, dpi=100)
+    axis = figure.add_axes(image_axes_rect, projection=wcs)
+    artist = axis.imshow(
+        np.ma.masked_invalid(image),
+        origin="lower",
+        cmap=cmap,
+        norm=norm,
+    )
+    _apply_crop(axis, limits)
+
+    if not annotated:
+        axis.set_xlabel("")
+        axis.set_ylabel("")
+        axis.tick_params(axis="x", bottom=False, labelbottom=False, top=False)
+        axis.tick_params(axis="y", left=False, labelleft=False, right=False)
+        return figure
+
+    if primary_beam_path is not None:
+        add_primary_beam_contour(
+            axis,
+            primary_beam_path,
+            minimum_response=minimum_primary_beam_response,
+            colour=primary_beam_colour,
+        )
+    axis.set_xlabel("RA (ICRS)")
+    axis.set_ylabel("Dec (ICRS)", labelpad=0)
+    if all(key in header for key in ("BMAJ", "BMIN", "BPA")):
+        add_beam(
+            axis,
+            header,
+            edgecolor="black",
+            facecolor="white",
+            frame=True,
+        )
+    add_scalebar(
+        axis,
+        length=scalebar_length_deg * u.deg,
+        label=scalebar_label,
+        color=annotation_colour,
+    )
+    if resolution_label:
+        axis.text(
+            0.96,
+            0.12,
+            resolution_label,
+            transform=axis.transAxes,
+            horizontalalignment="right",
+            verticalalignment="top",
+            color=annotation_colour,
+            size=10,
+        )
+    if title:
+        axis.text(
+            0.02,
+            0.98,
+            title,
+            transform=axis.transAxes,
+            horizontalalignment="left",
+            verticalalignment="top",
+            color=annotation_colour,
+            size=15,
+            weight="bold",
+            path_effects=[
+                path_effects.withStroke(linewidth=2.5, foreground="black")
+            ],
+        )
+    colourbar_axis = figure.add_axes([0.90, 0.05, 0.03, 0.90])
+    colourbar = figure.colorbar(artist, cax=colourbar_axis)
+    colourbar.set_label(colourbar_label, fontsize=12)
+    colourbar.ax.tick_params(axis="y", labelsize=8, length=2)
     return figure

@@ -12,6 +12,7 @@ import pytest
 from lancet.continuum_plotting import (
     add_primary_beam_contour,
     create_dual_colour_figure,
+    create_single_scale_figure,
     highlighted_emission,
     image_plane,
     world_crop_limits,
@@ -143,3 +144,64 @@ def test_allscale_plot_inspection_is_read_only() -> None:
     assert "IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits" in completed.stdout
     assert "synthetic_continuum" in completed.stdout
     assert "Output root:" in completed.stdout
+
+
+def test_single_scale_figure_uses_sqrt_stretch_and_colour_map(
+    tmp_path: Path,
+) -> None:
+    from astropy.visualization import SqrtStretch
+
+    # Other modules update plt.rcParams globally; render with the defaults.
+    with matplotlib.rc_context(matplotlib.rcParamsDefault):
+        _check_single_scale_figure(tmp_path, SqrtStretch)
+
+
+def _check_single_scale_figure(tmp_path: Path, SqrtStretch) -> None:
+    data = np.linspace(-1.0, 10.0, 31 * 41).reshape(31, 41)
+    data[0, 0] = np.nan
+    beam = tmp_path / "pb.fits"
+    fits.writeto(beam, np.tile(np.linspace(0.0, 1.0, 41), (31, 1)), _header())
+    figure = create_single_scale_figure(
+        data,
+        _header(),
+        center_ra_deg=221.2346,
+        center_dec_deg=-59.7738,
+        width_deg=20.0 / 3600.0,
+        height_deg=10.0 / 3600.0,
+        vmin=0.0,
+        vmax=10.0,
+        colour_map="inferno",
+        stretch="sqrt",
+        annotated=True,
+        primary_beam_path=beam,
+        title="test",
+        resolution_label="label",
+    )
+    image = figure.axes[0].images[0]
+
+    assert image.get_cmap().name == "inferno"
+    assert isinstance(image.norm.stretch, SqrtStretch)
+    assert (image.norm.vmin, image.norm.vmax) == (0.0, 10.0)
+    # Blank pixels are drawn white, not at the top of the colour map.
+    np.testing.assert_allclose(image.get_cmap().get_bad(), (1, 1, 1, 1))
+    rgba = image.to_rgba(image.get_array())
+    np.testing.assert_allclose(rgba[0, 0], (1.0, 1.0, 1.0, 1.0))
+    assert len(figure.axes) == 2  # image and one colour bar
+    output = tmp_path / "single.png"
+    figure.savefig(output, dpi=50)
+    assert output.stat().st_size > 0
+
+
+def test_single_scale_figure_rejects_unknown_stretch() -> None:
+    with pytest.raises(ValueError, match="stretch"):
+        create_single_scale_figure(
+            np.ones((31, 41)),
+            _header(),
+            center_ra_deg=221.2346,
+            center_dec_deg=-59.7738,
+            width_deg=20.0 / 3600.0,
+            height_deg=10.0 / 3600.0,
+            vmin=0.0,
+            vmax=10.0,
+            stretch="cubic",
+        )
