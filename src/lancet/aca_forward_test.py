@@ -16,10 +16,16 @@ from pathlib import Path
 import numpy as np
 
 from .combination_tests import (
-    matching_cells, row_values, subset_rows, _write_rows_csv,
+    matching_cells, require_inputs, row_values, subset_rows, _write_rows_csv,
 )
 from .full_sampling import _cell_statistics
 from .tp_beam_test import _predict, smooth_to_circular_beam
+
+
+def source_path(paths, source):
+    """Path named by a ``group.name`` source (e.g. ``products.jcomb_continuum``) in the task paths."""
+    group, name = source.split(".")
+    return Path(paths[group][name])
 
 
 def sky_model(path, pixel_arcsec):
@@ -99,12 +105,14 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
     from astropy.io import fits
     from matplotlib import pyplot as plt
 
+    test = config["aca_forward_test"]
+    sky_paths = {label: source_path(paths, spec["source"]) for label, spec in test["sky_models"].items()}
+    require_inputs(list(sky_paths.values()), "jcomb/feather")
     root = Path(paths["output_root"])
     out = root/"aca_forward_test"
-    out.mkdir(parents=True, exist_ok=True)
     if (out/"profiles.csv").exists() and not overwrite:
         raise FileExistsError("ACA forward test exists; use --overwrite")
-    test = config["aca_forward_test"]
+    out.mkdir(parents=True, exist_ok=True)
     settings = config["overlap_tests"]
     sectors = settings["orientation_sectors"]
     coverage = json.loads((root/"full_sampling/summary.json").read_text())
@@ -114,13 +122,13 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
     edges = np.asarray(test["uv_edges_klambda"], float)
     n_bins = len(edges)-1
 
-    tp_path = Path(paths["reduction_inputs"]["total_power"])
+    tp_path = Path(paths["inputs"]["tp_dust_ff"])
     tp, tp_header = fits.getdata(tp_path, header=True)
     if tp_header["BUNIT"].strip().lower() != "jy/beam":
         raise ValueError("TP input must have Jy/beam units")
     tp_beam = float(np.sqrt(tp_header["BMAJ"]*tp_header["BMIN"])*3600)
     half = 2*np.log(2)/(np.pi*(tp_beam*np.pi/648000))/1000
-    tp_limit = half*np.sqrt(np.log(1/config["figure1"]["tp_minimum_response"])/np.log(2))
+    tp_limit = half*np.sqrt(np.log(1/config["figure2"]["tp_minimum_response"])/np.log(2))
     tp_area = np.pi/(4*np.log(2))*tp_header["BMAJ"]*tp_header["BMIN"]*(np.pi/180)**2
     tp_image = np.where(np.isfinite(tp), tp, 0)*1e-6/tp_area
 
@@ -141,8 +149,7 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
     sources = [cache, meta_path, tp_path, root/"full_sampling/summary.json"]
     support, scales, beam_info = {}, {}, {}
     for label, spec in test["sky_models"].items():
-        group, name = spec["source"].split(".")
-        path = Path(paths[group][name])
+        path = sky_paths[label]
         print(f"ACA forward test: {label}", flush=True)
         sky, header = sky_model(path, settings["model_pixel_arcsec"])
         predictions[label] = _predict(rows, meta, pairs, sky, header, settings, target_pb=False)

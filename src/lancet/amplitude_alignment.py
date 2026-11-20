@@ -23,9 +23,9 @@ from pathlib import Path
 
 import numpy as np
 
-from .aca_forward_test import sky_model
+from .aca_forward_test import sky_model, source_path
 from .combination_tests import (
-    _broad_ddids, matching_cells, row_values, sample_image_visibilities, subset_rows,
+    _broad_ddids, matching_cells, require_inputs, row_values, sample_image_visibilities, subset_rows,
 )
 from .full_sampling import _cell_statistics, separate_array_profiles
 from .tp_beam_test import smooth_to_circular_beam
@@ -164,11 +164,13 @@ def _write_csv(path, records):
 def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
     from astropy.io import fits
 
+    require_inputs([paths["products"]["jcomb_continuum"], paths["products"]["feather_continuum"]],
+                   "jcomb/feather")
     root = Path(paths["output_root"])
     out = root/"amplitude_alignment"
-    out.mkdir(parents=True, exist_ok=True)
     if (out/"overlap.csv").exists() and not overwrite:
         raise FileExistsError("Amplitude alignment outputs exist; use --overwrite")
+    out.mkdir(parents=True, exist_ok=True)
     task = config["amplitude_alignment"]
     settings = config["overlap_tests"]
     sectors = int(settings["orientation_sectors"])
@@ -182,7 +184,7 @@ def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
     n_bins = len(edges)-1
     size = len(targets)*2*n_bins*sectors
 
-    tp_path = Path(paths["reduction_inputs"]["total_power"])
+    tp_path = Path(paths["inputs"]["tp_dust_ff"])
     tp, tp_header = fits.getdata(tp_path, header=True)
     if tp_header["BUNIT"].strip().lower() != "jy/beam":
         raise ValueError("TP input must have Jy/beam units")
@@ -191,8 +193,7 @@ def run_amplitude_alignment(paths, config, *, save_figure, overwrite=False):
     tp_image = np.where(np.isfinite(tp), tp, 0)*1e-6/tp_area
     limit = response_limit(tp_beam, float(task["tp_minimum_response"]))
 
-    group, name = task["sky_model"].split(".")
-    sky_path = Path(paths[group][name])
+    sky_path = source_path(paths, task["sky_model"])
     print("Amplitude alignment: loading sky model", flush=True)
     sky, sky_header = sky_model(sky_path, settings["model_pixel_arcsec"])
     sky_beam, beam_info = smooth_to_circular_beam(sky, sky_header, tp_beam)

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .combination_tests import sample_image_visibilities
+from .combination_tests import require_inputs, sample_image_visibilities
 from .visibility_diagnostics import C_METRES_PER_SECOND
 
 
@@ -81,8 +81,10 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     from matplotlib.patches import Circle, ConnectionPatch, Rectangle
     from matplotlib.ticker import FixedLocator
 
+    require_inputs([paths["products"]["jcomb_continuum"], paths["products"]["feather_continuum"]],
+                   "jcomb/feather")
     root = Path(paths["output_root"])
-    settings = config["figure1"]
+    settings = config["figure2"]
     tp_display_scale = float(settings.get("tp_display_scale", 1.0))
     stem = "Figure1_combination_diagnostics" + ("_three_panel" if three_panel else "") + settings.get("output_suffix", "")
     outputs = [root/"figures"/f"{stem}.{suffix}" for suffix in settings["output_formats"]]
@@ -97,7 +99,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
 
         build_full_sampling_profiles(paths, config)
     coverage = json.loads((sampling/"summary.json").read_text())
-    if coverage["uv_edges_klambda"] != config["figure1"]["amplitude_uv_edges_klambda"] or coverage["settings"] != config["overlap_tests"]:
+    if coverage["uv_edges_klambda"] != settings["amplitude_uv_edges_klambda"] or coverage["settings"] != config["overlap_tests"]:
         raise ValueError("Full-sampling settings changed; rerun the full-sampling stage")
     from .full_sampling import build_separate_array_profiles
 
@@ -140,7 +142,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
                 raise ValueError("Figure 1 requires the flag-aware UV cache")
             coords[name] = (z["u"], z["v"])
     tp_u, tp_amp, tp_meta = tp_amplitude_reference(
-        paths["reduction_inputs"]["total_power"], sampling/"cell_statistics.npz",
+        paths["inputs"]["tp_dust_ff"], sampling/"cell_statistics.npz",
         coverage, float(settings["tp_minimum_response"]))
     tp_fixed = None
     amplitude_source = settings.get("amplitude_source", "full_sampling")
@@ -151,7 +153,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
         array_profiles, _, curves, alignment = read_products(root/"amplitude_alignment")
         tp_u, tp_amp, tp_fixed = (curves["uv_klambda"], curves["tp_raw_common_mjy"],
                                   curves["tp_corrected_common_mjy"])
-        tp_meta = {**tp_meta, "amplitude_source": "results/combination_diagnostic/amplitude_alignment",
+        tp_meta = {**tp_meta, "amplitude_source": str(root/"amplitude_alignment"),
                    "translation_sky_model": alignment["sky_model"],
                    "tp_response_limit_klambda": alignment["tp_response_limit_klambda"],
                    "description": alignment["method"]}
@@ -321,7 +323,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False, thre
     plt.close(fig)
     sources = [sampling/"amplitudes.csv", sampling/"separate_array_amplitudes.csv", sampling/"summary.json", sampling/"cell_statistics.npz", test/"summary.json",
                *observation_sources.values(),
-               *[root/"uv_coordinates"/f"{n}.npz" for n in COLORS], Path(paths["reduction_inputs"]["total_power"])]
+               *[root/"uv_coordinates"/f"{n}.npz" for n in COLORS], Path(paths["inputs"]["tp_dust_ff"])]
     amplitude_panel = "c" if three_panel else "b"
     manifest = {"date": "2026-10-28", "status": "Three-panel Figure 1 selected for manuscript; four-panel output retained" if three_panel else "Four-panel output retained; verified adoption provenance is recorded by the referee-response task",
                 "tp": tp_meta, "tp_half_response_metres": tp_half_metres,

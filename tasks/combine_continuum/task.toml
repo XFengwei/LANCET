@@ -184,13 +184,10 @@ output_formats = ["pdf", "svg", "png"]
 dpi = 300
 
 [dirty_beam]
-# R4b: rerun of Shuting Lin's MIRIAD workflow (script.zip) through the final invert;
-# robust 0.5 as the paper image. The reference Gaussian is the paper restoring beam.
-psf_fits = "data/reduction/alma/7MTM2TM1/cont/miriad_run/work/combined.robust0.5.psf.fits"
-imfit_log = "data/reduction/alma/7MTM2TM1/cont/miriad_run/work/combined.robust0.5.psf.imfit.log"
+# The delivered MIRIAD mosaic PSF (inputs.psf) and its imfit log (inputs.psf_imfit_log). The
+# reference Gaussian is the restoring beam of the 12m+7m image (inputs.interferometer).
 # restor fits (bmaj, bmin arcsec; pa deg) of the rerun vs delivered images, for the record.
 rerun_restor_beams = { robust0_5 = [0.707, 0.600, 47.2], robust1_0 = [0.772, 0.681, 47.7], robust2_0 = [0.792, 0.704, 47.8] }
-paper_image = "data/delivered/alma/7MTM2TM1/cont/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
 zoom_half_arcsec = 1.5
 # MIRIAD restor fits the Gaussian to the central 11x11 beam pixels (restor.for, beamFit NP=11).
 restor_fit_box_pixels = 11
@@ -202,9 +199,7 @@ output_formats = ["pdf", "svg", "png"]
 dpi = 600
 
 [joint_image_comparison]
-casa = "results/prepare_continuum_images/converted/7MTM2TM1_casa/IRDC316.8.TM1TM2ACA.selfcal.cont.image.tt0.pbcor.MJysr.fits"
-miriad = "results/prepare_continuum_images/converted/7MTM2TM1/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.MJysr.fits"
-casa_pb = "data/delivered/alma/7MTM2TM1/cont/casa/IRDC316.8.TM1TM2ACA.selfcal.cont.pb.tt0.fits"
+# CASA (inputs.casa_image, inputs.casa_pb) and MIRIAD (inputs.interferometer) 12m+7m images.
 minimum_pb = 0.2
 cutout_arcsec = 100.0
 region_centres_deg = [[221.244, -59.8020], [221.359, -59.8227]]
@@ -222,18 +217,16 @@ random_seed = 3168
 figure_selection = "interior_pairs"
 output_formats = ["pdf", "png"]
 
-# Task 4 replaces these sky models with the new images.
+# Each source is "<path group>.<name>" in the resolved task paths. The TP model itself is always
+# predicted (through the native 7 m PB); it is not listed as a sky model.
 [aca_forward_test.sky_models]
-aca_only = { source = "images.aca_pbcor", label = "ACA-only image" }
-interferometer = { source = "reduction_inputs.interferometer", label = "12m+7m (no TP)", tp_scale = 0.0, tp_beam_transfer = true }
-feather_1p0 = { source = "reduction_inputs.feather_1p0", label = "Feather, TP x1", tp_scale = 1.0, tp_beam_transfer = true }
-feather_2p0 = { source = "reduction_inputs.feather_2p0", label = "Feather, TP x2", tp_scale = 2.0 }
-feather_2p5 = { source = "reduction_inputs.feather_2p5", label = "Feather, TP x2.5", tp_scale = 2.5 }
-feather_3p0 = { source = "reduction_inputs.feather_3p0", label = "Feather, TP x3", tp_scale = 3.0 }
-jcomb = { source = "images.allscale_sky", label = "J-comb (delivered)" }
+interferometer = { source = "inputs.interferometer", label = "12m+7m (no TP)", tp_scale = 0.0, tp_beam_transfer = true }
+jcomb = { source = "products.jcomb_continuum", label = "J-comb", tp_scale = 1.0, tp_beam_transfer = true }
+feather = { source = "products.feather_continuum", label = "Feather", tp_scale = 1.0, tp_beam_transfer = true }
+aca_only = { source = "inputs.aca_pbcor", label = "ACA-only image" }
 
 [amplitude_alignment]
-sky_model = "images.combined_pbcut"
+sky_model = "inputs.interferometer"
 tp_minimum_response = 0.1
 continuous_min_klambda = 1.0
 continuous_points = 60
@@ -247,12 +240,10 @@ dpi = 600
 
 [pointing_coverage]
 # Pointing centres of each array (FIELD tables of the measurement sets above) on the MIRIAD
-# mosaic gain and the CASA 12m+7m mosaic pb. Runs on its own inputs, not resolve_task_paths.
-gain = "data/delivered/alma/7MTM2TM1/cont/IRDC316.8.7MTM2TM1.robust0.5.gain.fits"
-pb = "data/delivered/alma/7MTM2TM1/cont/casa-archived/IRDC316.8.TM1TM2ACA.selfcal.cont.pb.tt0.fits"
+# mosaic gain (inputs.gain) and the CASA 12m+7m mosaic pb (inputs.casa_pb). Primary beams are
+# drawn at the TP model frequency (FREQGHZ of inputs.tp_dust_ff).
 twelve_m_sets = ["configuration_c5", "configuration_c2"]
 seven_m_sets = ["aca_7m"]
-frequency_ghz = 224.4
 beam_factor = 1.13
 duplicate_tolerance_arcsec = 1.0
 pb_levels = [0.5, 0.2, 0.1]

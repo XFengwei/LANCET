@@ -9,7 +9,7 @@ import numpy as np
 
 from .combination_tests import (
     _broad_ddids, _concat_rows, _write_rows_csv, matching_cells,
-    predict_primary_beams, read_test_rows, row_values, subset_rows,
+    predict_primary_beams, read_test_rows, require_inputs, row_values, subset_rows,
 )
 
 
@@ -134,15 +134,18 @@ def build_separate_array_profiles(paths, coverage):
 
 def build_full_sampling_profiles(paths, config, *, overwrite=False):
     """Keep ACA's shorter modes and the entire observed 12 m baseline range."""
+    images = {"allscale": Path(paths["products"]["jcomb_continuum"]),
+              "twelve_m": Path(paths["inputs"]["twelve_m_pbcor"])}
+    require_inputs(list(images.values()), "jcomb")
     root = Path(paths["output_root"])
     out = root/"full_sampling"
-    out.mkdir(parents=True, exist_ok=True)
     if (out/"amplitudes.csv").exists() and not overwrite:
         raise FileExistsError("Full sampling profiles exist; use --overwrite")
+    out.mkdir(parents=True, exist_ok=True)
     test = root/"overlap_tests"
     summary = json.loads((test/"summary.json").read_text())
     settings = config["overlap_tests"]
-    edges = np.array(config["figure1"]["amplitude_uv_edges_klambda"])
+    edges = np.array(config["figure2"]["amplitude_uv_edges_klambda"])
     fields = sorted(p["alma_field"] for p in summary["matched_pointings"])
     rows, meta = {}, {}
     for name in ("configuration_c5", "configuration_c2"):
@@ -175,9 +178,8 @@ def build_full_sampling_profiles(paths, config, *, overwrite=False):
         ra, dec = np.rad2deg(np.asarray(meta["configuration_c5"]["subtables"]["FIELD"][p["alma_field"]]["PHASE_DIR"]).ravel())
         targets.append({**p, "ra_deg": float(ra % 360), "dec_deg": float(dec)})
     models = {}
-    for label, image in [("allscale", "allscale_sky"), ("twelve_m", "twelve_m_pbcor")]:
-        native, target, _ = predict_primary_beams(aca, meta["aca_7m"], targets,
-            "aca", Path(paths["images"][image]), settings)
+    for label, image in images.items():
+        native, target, _ = predict_primary_beams(aca, meta["aca_7m"], targets, "aca", image, settings)
         models[label+"_native"], models[label+"_target"] = native, target
     sectors = int(settings["orientation_sectors"])
     ca, ga = matching_cells(aca, targets, "aca", edges, sectors)
@@ -195,7 +197,7 @@ def build_full_sampling_profiles(paths, config, *, overwrite=False):
         _, _, radius = row_values(data)
         ranges[name] = [float(radius.min()), float(radius.max())]
         if np.any((radius < edges[0]) | (radius > edges[-1])):
-            raise ValueError("Figure-1 radial bins omit usable full-range data")
+            raise ValueError("Figure 2 radial bins omit usable full-range data")
     report = {"ranges_klambda": ranges,
               "overlap_klambda": [max(ranges["aca"][0], ranges["alma"][0]), min(ranges["aca"][1], ranges["alma"][1])],
               "target_pointings": targets, "settings": dict(settings), "uv_edges_klambda": edges.tolist(),

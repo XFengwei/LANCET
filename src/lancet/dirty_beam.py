@@ -67,21 +67,20 @@ def _read_imfit(log_path):
     return result
 
 
-def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
+def run_dirty_beam(paths, config, *, save_figure, overwrite=False):
     """Plot the effective mosaic PSF from MIRIAD mospsf with its Gaussian fit."""
     from astropy.io import fits
     from matplotlib import pyplot as plt
     from matplotlib.patches import Ellipse, Rectangle
 
     settings = config["dirty_beam"]
-    root = Path(project_root)
-    out = root/config["outputs"]["root"]/"dirty_beam"
-    out.mkdir(parents=True, exist_ok=True)
+    out = Path(paths["output_root"])/"dirty_beam"
     summary_path = out/"summary.json"
     if summary_path.exists() and not overwrite:
         raise FileExistsError("Dirty-beam outputs exist; use --overwrite")
+    out.mkdir(parents=True, exist_ok=True)
 
-    psf_path = root/settings["psf_fits"]
+    psf_path = Path(paths["inputs"]["psf"])
     with fits.open(psf_path) as hdul:
         psf = np.squeeze(hdul[0].data).astype(float)
         header = hdul[0].header
@@ -92,8 +91,8 @@ def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
     psf = psf/psf[peak_y, peak_x]
     center = (peak_x, peak_y)
 
-    imfit = _read_imfit(root/settings["imfit_log"])
-    paper = fits.getheader(root/settings["paper_image"])
+    imfit = _read_imfit(paths["inputs"]["psf_imfit_log"])
+    paper = fits.getheader(paths["inputs"]["interferometer"])
     paper_beam = {"bmaj_arcsec": paper["BMAJ"]*3600, "bmin_arcsec": paper["BMIN"]*3600,
                   "bpa_deg": float(paper["BPA"])}
     # The restoring beam of the paper image is the reference clean beam.
@@ -185,7 +184,8 @@ def run_dirty_beam(project_root, config, *, save_figure, overwrite=False):
                np.column_stack([mids, psf_mean, psf_min, gauss_mean, psf_volume/gauss_volume]),
                delimiter=",", comments="",
                header="radius_arcsec,psf_mean,psf_min,gaussian_mean,cumulative_volume_ratio")
-    summary = {"psf_fits": str(settings["psf_fits"]), "pixel_arcsec": pixel,
+    summary = {"psf_fits": str(psf_path), "paper_image": str(paths["inputs"]["interferometer"]),
+               "pixel_arcsec": pixel,
                "peak_pixel_xy": [int(peak_x), int(peak_y)], "imfit_beam_6arcsec_box": imfit,
                "paper_restoring_beam": paper_beam, "rerun_restor_beams": settings["rerun_restor_beams"], "first_null_arcsec": first_null,
                "sidelobes_beyond_2bmaj": sidelobe, "gaussian_volume_arcsec2": gauss_volume,

@@ -11,10 +11,12 @@ from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 from radio_beam import Beam
 from reproject import reproject_interp
+from .imaging import read_mjysr
 from .interferometry import beam_match_and_reproject
 
 
-def run_joint_image_comparison(root, config, *, save_figure, overwrite=False):
+def run_joint_image_comparison(paths, config, *, save_figure, overwrite=False):
+    """CASA and MIRIAD 12m+7m images, beam-matched, in two regions (MJy/sr)."""
     import matplotlib
     matplotlib.use('Agg')
     from matplotlib import pyplot as plt
@@ -23,18 +25,18 @@ def run_joint_image_comparison(root, config, *, save_figure, overwrite=False):
     from matplotlib.patches import Ellipse
 
     settings = config['joint_image_comparison']
-    out = root / config['outputs']['root'] / 'joint_image_comparison'
-    out.mkdir(exist_ok=True, parents=True)
+    out = Path(paths['output_root']) / 'joint_image_comparison'
     stem = out / 'CASA_MIRIAD_central_south'
     if stem.with_suffix('.pdf').exists() and not overwrite:
         raise FileExistsError(stem)
-    paths = {name: root/settings[name] for name in ['casa', 'miriad', 'casa_pb']}
+    out.mkdir(exist_ok=True, parents=True)
+    sources = {'casa': Path(paths['inputs']['casa_image']), 'miriad': Path(paths['inputs']['interferometer']),
+               'casa_pb': Path(paths['inputs']['casa_pb'])}
     arrays, headers = {}, {}
-    for name, path in paths.items():
-        arrays[name], headers[name] = fits.getdata(path, header=True)
-        arrays[name] = np.squeeze(arrays[name])
     for name in ['casa', 'miriad']:
-        assert headers[name]['BUNIT'].strip().lower() == 'mjy/sr'
+        arrays[name], headers[name] = read_mjysr(sources[name])
+    arrays['casa_pb'], headers['casa_pb'] = fits.getdata(sources['casa_pb'], header=True)
+    arrays['casa_pb'] = np.squeeze(arrays['casa_pb'])
     beam = Beam.from_fits_header(headers['miriad'])
     kernel = beam.deconvolve(Beam.from_fits_header(headers['casa']))
     plt.rcParams.update({'font.size': 10, 'font.family': 'sans-serif',
@@ -82,7 +84,7 @@ def run_joint_image_comparison(root, config, *, save_figure, overwrite=False):
             ax.text(-27.4,-25,'0.2 pc',color='white',ha='center',fontsize=9)
             h = rh.copy()
             h.add_history('Common PB>=0.2 and finite-data mask; CASA convolved to MIRIAD beam in surface-brightness units.')
-            fits.writeto(out/f'{name.lower()}_{label.lower()}_matched.fits',data,h,overwrite=True)
+            fits.writeto(out/f'{name.lower()}_{label.lower()}_matched.fits',data.astype(np.float32),h,overwrite=True)
         bounds=axes[row,1].get_position()
         cax=fig.add_axes([.85,bounds.y0,.018,bounds.height])
         ticks = [0,100,200,300,400,500]
@@ -96,7 +98,7 @@ def run_joint_image_comparison(root, config, *, save_figure, overwrite=False):
     save_figure(fig,[stem.with_suffix(e) for e in ['.pdf','.svg','.png']],dpi=400,bbox_inches=None,
                 exclude_axes=fig.axes[4:])
     plt.close(fig)
-    report={'source_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths.values()},
+    report={'source_sha256':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in sources.values()},
             'target_beam_arcsec':[beam.major.to_value(u.arcsec),beam.minor.to_value(u.arcsec)],
             'target_pa_deg':beam.pa.to_value(u.deg),
             'convolution_kernel_arcsec':[kernel.major.to_value(u.arcsec),kernel.minor.to_value(u.arcsec)],

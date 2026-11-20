@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 import csv
 import json
 from pathlib import Path
 
 import numpy as np
 
+from .imaging import read_mjysr
 from .visibility_diagnostics import (
     C_METRES_PER_SECOND, _table_tool, average_visibility_rows,
     measurement_set_metadata,
@@ -19,6 +21,13 @@ ARRAYS = {
     "configuration_c2": ("12 m C2", "#007A9E"),
     "aca_7m": ("ACA 7 m", "#D87821"),
 }
+
+
+def require_inputs(paths: Sequence[Path], stage: str) -> None:
+    """Fail naming ``stage`` when one of the files it produces is missing."""
+    for path in paths:
+        if not Path(path).exists():
+            raise FileNotFoundError(f"Run stage '{stage}' first: missing {path}")
 
 
 def read_test_rows(path, maximum_klambda, chunk_rows=20000, field_ids=None):
@@ -254,14 +263,14 @@ def sample_image_visibilities(image, header, ra_deg, dec_deg, u_lambda, v_lambda
 
 
 def binned_sky_model(path, pixel_arcsec):
-    """Area-average restored MJy/sr pixels before sampling the sky model."""
-    from astropy.io import fits
+    """Area-average restored pixels, in MJy/sr, before sampling the sky model.
+
+    Jy/beam images are converted with their own beam; 4-D images are squeezed.
+    """
     from astropy.nddata import block_reduce
 
-    data, header = fits.getdata(path, header=True, memmap=True)
-    data = np.squeeze(data)
-    if header.get("BUNIT", "").strip() != "MJy/sr":
-        raise ValueError("Sky model must be in MJy/sr")
+    data, header = read_mjysr(path)
+    data = np.asarray(data, dtype=float)
     factor = int(round(pixel_arcsec / (abs(header["CDELT2"]) * 3600)))
     if factor < 1:
         raise ValueError("Model pixels cannot be smaller than the native grid")
@@ -423,12 +432,15 @@ def check_model_sampling(rows, meta, pair, array, model_path, settings, native, 
 
 def run_overlap_tests(paths, config, *, save_figure, overwrite=False):
     """Run and retain all three requested factor tests in the owning task."""
+    images = {"allscale": Path(paths["products"]["jcomb_continuum"]),
+              "twelve_m": Path(paths["inputs"]["twelve_m_pbcor"])}
+    require_inputs(list(images.values()), "jcomb")
     settings = config["overlap_tests"]
     edges = np.array(settings["uv_edges_klambda"], dtype=float)
     root = Path(paths["output_root"]) / "overlap_tests"
-    root.mkdir(parents=True, exist_ok=True)
     if (root / "summary.json").exists() and not overwrite:
         raise FileExistsError("Overlap tests already exist; use --overwrite")
+    root.mkdir(parents=True, exist_ok=True)
     rows, metadata, kappa, noise, profiles, smearing = {}, {}, {}, {}, {}, {}
     for name in ARRAYS:
         cache = root / f"{name}_rows.npz"
@@ -472,8 +484,7 @@ def run_overlap_tests(paths, config, *, save_figure, overwrite=False):
     alma, kb, cb = subset_rows(alma, gb), kb[gb], cb[gb]
     ga, gb = np.ones(len(ca), bool), np.ones(len(cb), bool)
     model_a, model_b, model_notes, sampling_checks = {}, {}, {}, []
-    for label, image_name in [("allscale", "allscale_sky"), ("twelve_m", "twelve_m_pbcor")]:
-        path = Path(paths["images"][image_name])
+    for label, path in images.items():
         a, ac, wa = predict_primary_beams(aca, metadata["aca_7m"], pairs, "aca", path, settings)
         b, bc, wb = predict_primary_beams(alma, metadata["configuration_c5"], pairs, "alma", path, settings)
         model_a[label + "_native"], model_a[label + "_common"] = a, ac

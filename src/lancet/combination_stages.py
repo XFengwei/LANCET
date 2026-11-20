@@ -25,6 +25,7 @@ from lancet.combination_figures import (
     plot_tp_factor,
     plot_zero_spacing,
 )
+from lancet.combination_tests import require_inputs
 from lancet.imaging import frequency_label, read_frequency_ghz
 from lancet.combination_prep import (
     azimuthal_power,
@@ -562,8 +563,7 @@ def run_box_spectrum(paths: Mapping[str, Path], config: Mapping, overwrite: bool
     guard_outputs(list(out.values()), overwrite)
     flavour = config["tp_factor"]["determined_from"]
     truth_path = paths["products"][f"jcomb_{FLAVOUR_KIND[flavour]}"]
-    if not truth_path.is_file():
-        raise FileNotFoundError(f"Run stage 'jcomb' first: missing {truth_path}")
+    require_inputs([truth_path], "jcomb")
     low, high, gain, header, pix, high_beam, low_beam = load_prepared(paths, flavour)
     tp_fwhm, k2 = config["prepare"]["tp_fwhm_arcsec"], config["jcomb"]["k2_klambda"]
     margin = int(np.ceil(3.0 * tp_fwhm / pix))

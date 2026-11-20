@@ -5,7 +5,8 @@ Combination stages: ``inspect``, ``prepare``, ``tp_factor``, ``box_spectrum``,
 ``planck_calibration``, ``jcomb``, ``feather``. Diagnostic stages: ``uv``, ``overlap``,
 ``full_sampling``, ``amplitude_alignment``, ``figure2``, ``compare_images``, ``dirty_beam``,
 ``aca_forward_test``, ``joint_images``, ``pointing_coverage``. ``combine``, ``diagnostics`` and
-``all`` select groups of stages. The combination stages are registered; ``inspect`` writes nothing.
+``all`` select groups of stages. ``inspect`` writes nothing. Diagnostic stages write under
+``diagnostics/`` in the output root.
 """
 
 from __future__ import annotations
@@ -20,9 +21,16 @@ import tomllib
 from astropy.io import fits
 
 from lancet import ProjectPaths
+from lancet import combination_diagnostics as diagnostics
 from lancet import combination_stages
+from lancet.aca_forward_test import run_aca_forward_test
+from lancet.combination_figure import make_combination_figure
 from lancet.combination_stages import input_hashes, write_json
+from lancet.combination_tests import require_inputs, run_overlap_tests
+from lancet.dirty_beam import run_dirty_beam
+from lancet.full_sampling import build_full_sampling_profiles
 from lancet.imaging import frequency_label, read_frequency_ghz
+from lancet.joint_image_comparison import run_joint_image_comparison
 
 DEFAULT_CONFIG = Path("tasks/combine_continuum/task.toml")
 DELIVERED_INPUTS = ("interferometer", "gain", "psf", "psf_imfit_log", "aca_pbcor", "twelve_m_pbcor",
@@ -104,19 +112,23 @@ def stages_for(selection: str) -> list[str]:
     raise ValueError(f"Unknown stage: {selection}")
 
 
-def require_outputs(paths: Sequence[Path], stage: str) -> None:
-    """Fail naming ``stage`` when one of its products is missing."""
-    for path in paths:
-        if not Path(path).exists():
-            raise FileNotFoundError(f"Run stage '{stage}' first: missing {path}")
+# Fails naming the stage when one of its products is missing.
+require_outputs = require_inputs
+
+
+def diagnostic_paths(paths: Mapping) -> dict:
+    """The task paths with the output root moved to the diagnostics folder."""
+    return {**paths, "output_root": paths["diagnostics_root"]}
 
 
 def output_paths(result) -> list[str]:
-    """Paths found in a stage's return value (a path, or a mapping of paths)."""
+    """Paths found in a stage's return value (a path, or a mapping or list of paths)."""
     if isinstance(result, Path):
         return [str(result)]
     if isinstance(result, Mapping):
         return [p for value in result.values() for p in output_paths(value)]
+    if isinstance(result, (list, tuple)):
+        return [p for value in result for p in output_paths(value)]
     return []
 
 
@@ -150,11 +162,31 @@ def run_inspect(paths: dict, config: dict, overwrite: bool) -> None:
     print(f"output root: {paths['output_root']}")
 
 
+# ---------------------------------------------------------------- diagnostics
+
+def _diagnostic(function: Callable, *, figure: bool = True) -> Callable[[dict, dict, bool], object]:
+    """A stage that runs ``function`` on the diagnostic paths."""
+    def stage(paths: dict, config: dict, overwrite: bool) -> object:
+        extra = {"save_figure": diagnostics._save_figure} if figure else {}
+        return function(diagnostic_paths(paths), config, overwrite=overwrite, **extra)
+    return stage
+
+
 STAGES: dict[str, Callable[[dict, dict, bool], object]] = {
     "inspect": run_inspect, "prepare": combination_stages.run_prepare,
     "tp_factor": combination_stages.run_tp_factor, "box_spectrum": combination_stages.run_box_spectrum,
     "planck_calibration": combination_stages.run_planck_calibration, "jcomb": combination_stages.run_jcomb,
-    "feather": combination_stages.run_feather}
+    "feather": combination_stages.run_feather,
+    "uv": _diagnostic(diagnostics.plot_uv_coverage, figure=False),
+    "overlap": _diagnostic(run_overlap_tests),
+    "full_sampling": _diagnostic(build_full_sampling_profiles, figure=False),
+    "amplitude_alignment": _diagnostic(diagnostics.run_amplitude_alignment),
+    "figure2": _diagnostic(make_combination_figure),
+    "compare_images": _diagnostic(diagnostics.plot_image_comparison, figure=False),
+    "dirty_beam": _diagnostic(run_dirty_beam),
+    "aca_forward_test": _diagnostic(run_aca_forward_test),
+    "joint_images": _diagnostic(run_joint_image_comparison),
+    "pointing_coverage": _diagnostic(diagnostics.run_pointing_coverage, figure=False)}
 
 
 def main(argv: Sequence[str] | None = None) -> int:
