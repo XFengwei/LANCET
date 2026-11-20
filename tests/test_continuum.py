@@ -273,6 +273,7 @@ def test_fill_stage_fills_only_outside_the_dust_model(tmp_path: Path) -> None:
 
     assert written["dust"].name == "dust_224GHz_fill36.fits"
     assert written["continuum"].name == "continuum_224GHz_fill36.fits"
+    assert "freefree" not in written
     dust = np.squeeze(fits.getdata(DUST)).astype(float)
     filled = fits.getdata(written["dust"]).astype(float)
     inside = np.isfinite(dust)

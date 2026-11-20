@@ -315,7 +315,7 @@ def build_filled_models(
         beam_fwhm_arcsec=float(config["beam"]["model_fwhm_arcsec"]),
     )
     dust_filled = fill_missing(dust, filler)
-    dust_out, freefree_out, total = synthesize_continuum(
+    dust_out, _, total = synthesize_continuum(
         dust_filled,
         freefree,
         reference_frequency_ghz=frequency,
@@ -332,14 +332,13 @@ def build_filled_models(
     directory = paths["output_root"] / "model"
     products = {
         component: directory / f"{component}_{label}_{suffix}.fits"
-        for component in ("dust", "freefree", "continuum")
+        for component in ("dust", "continuum")   # free-free is unchanged
     }
     report_path = directory / f"fill_{label}_{suffix}.json"
     for output in (*products.values(), report_path):
         _prepare_output(output, overwrite=overwrite)
     for component, data in (
         ("dust", dust_out),
-        ("freefree", freefree_out),
         ("continuum", total),
     ):
         header = _component_header(

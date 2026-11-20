@@ -64,7 +64,8 @@ Check (`model/fill_224GHz_fill36.json`): where both exist, fill / dust model =
 = (18.0/18.1)², so the delivered dust model's Jy/beam correspond to an 18.0″
 beam although its header gives 18.1″.
 
-Products: `model/{dust,freefree,continuum}_224GHz_fill36.fits` (header
+Products: `model/{dust,continuum}_224GHz_fill36.fits` (no free-free file: the
+free-free part is `freefree_224GHz.fits` unchanged, 18″ everywhere) (header
 `FILLED = T`, `FILLKAPG`). `combine_continuum` uses them for its extended
 products only.
 
