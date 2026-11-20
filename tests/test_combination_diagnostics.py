@@ -131,12 +131,19 @@ def test_figure_has_no_three_panel_switch():
     assert "three_panel" not in inspect.signature(make_combination_figure).parameters
 
 
-def test_image_curve_limit_is_the_lower_of_beam_and_nyquist():
-    from lancet.amplitude_alignment import image_curve_limit, response_limit
-    half_nyquist = 0.5 / (2 * 0.5 * np.pi / 648000) / 1000          # 0.5 x 206.26 klambda
+def test_image_curve_limit_is_the_lowest_of_beam_nyquist_and_interpolation():
+    from lancet.amplitude_alignment import image_curve_limit, interpolation_limit, response_limit
+    pixel_rad = 0.5 * np.pi / 648000
+    half_nyquist = 0.5 / (2 * pixel_rad) / 1000                       # 0.5 x 206.26 klambda
+    # Half-pixel linear interpolation response |cos(pi u p)| = 0.98 at u = arccos(0.98) / (pi p).
+    analytic = np.arccos(0.98) / (np.pi * pixel_rad) / 1000
+    assert abs(analytic - 26.306) < 1e-3
+    assert abs(interpolation_limit(0.5, 0.02) - analytic) < 1e-9
+    assert np.isclose(np.cos(np.pi * interpolation_limit(0.5, 0.02) * 1000 * pixel_rad), 0.98)
     assert response_limit(0.66, 0.1) > 240
-    assert abs(image_curve_limit(0.66, 0.1, 0.5) - half_nyquist) < 1e-3
-    assert image_curve_limit(18.1, 0.1, 0.5) == response_limit(18.1, 0.1)
+    assert abs(image_curve_limit(0.66, 0.1, 0.5, 0.02) - analytic) < 1e-9
+    assert abs(image_curve_limit(0.66, 0.1, 0.5, 1.0) - half_nyquist) < 1e-3   # loss 1: Nyquist itself
+    assert image_curve_limit(18.1, 0.1, 0.5, 0.02) == response_limit(18.1, 0.1)
 
 
 def test_pixel_binning_transfer_is_the_box_response():
@@ -163,27 +170,48 @@ def _gaussian_image(path, *, source_fwhm, beam_fwhm, size=2048, pixel=0.1, centr
     return restored
 
 
-def test_beam_and_binning_corrected_curve_recovers_a_gaussian(tmp_path):
-    from lancet.amplitude_alignment import (
-        _image_curve, gaussian_transfer, image_curve_limit, pixel_binning_transfer,
-    )
+IMAGE_CURVE_TASK = {"tp_minimum_response": 0.1, "continuous_min_klambda": 1.0, "image_curve_points": 60,
+                    "image_curve_max_interpolation_loss": 0.02}
+
+
+def _gaussian_curve(tmp_path, shift_arcsec):
+    """Corrected curve of a unit-flux 2" Gaussian (beam 0.7"), the pointing shifted in RA and Dec.
+
+    One pointing pair (0), one band (216.74 GHz), one orientation sector; the PB is flat over the
+    source. Returns the grid, the corrected curve and the analytic truth: continuous_rms returns
+    mJy of the image times the Gaussian PB, so a unit-flux source keeps the PB-weighted flux
+    pb^2 / (pb^2 + restored^2).
+    """
+    from lancet.amplitude_alignment import _image_curve, gaussian_transfer
     path = tmp_path / "gaussian.fits"
     restored = _gaussian_image(path, source_fwhm=2.0, beam_fwhm=0.7)
-    settings = {**_config()["overlap_tests"], "pb_12m_fwhm_arcsec": 2000.0}    # flat over the source
-    task = {"tp_minimum_response": 0.1, "continuous_min_klambda": 1.0, "image_curve_points": 60}
-    # One pointing pair (0) at the source, one band (216.74 GHz), one orientation sector.
-    centre = {0: (221.25, -59.8)}
-    grid, rms, info = _image_curve(path, centre, np.array([0]), 1, 8, settings, task)
-    limit = image_curve_limit(0.7, 0.1, 0.5)
-    assert np.isclose(grid.max(), limit) and np.isclose(info["beam_fwhm_arcsec"], 0.7)
-    # continuous_rms returns mJy of the image times the Gaussian PB: a unit-flux source keeps the
-    # PB-weighted flux pb^2 / (pb^2 + restored^2) (PB at 216.74 GHz, centred on the source).
+    settings = {**_config()["overlap_tests"], "pb_12m_fwhm_arcsec": 2000.0}
+    ra, dec = 221.25, -59.8
+    centre = {0: (ra + shift_arcsec / 3600 / np.cos(np.deg2rad(dec)), dec + shift_arcsec / 3600)}
+    grid, rms, info = _image_curve(path, centre, np.array([0]), 1, 8, settings, IMAGE_CURVE_TASK)
+    assert np.isclose(info["beam_fwhm_arcsec"], 0.7)
     pb = 2000.0 * float(settings["pb_reference_frequency_ghz"]) / 216.74
-    expected = 1000 * pb**2 / (pb**2 + restored**2) * gaussian_transfer(grid, 2.0)
+    return grid, rms, 1000 * pb**2 / (pb**2 + restored**2) * gaussian_transfer(grid, 2.0)
+
+
+def test_beam_and_binning_corrected_curve_recovers_a_gaussian(tmp_path):
+    from lancet.amplitude_alignment import gaussian_transfer, image_curve_limit, pixel_binning_transfer
+    grid, rms, expected = _gaussian_curve(tmp_path, 0.0)          # pointing on a binned pixel centre
+    limit = image_curve_limit(0.7, 0.1, 0.5, 0.02)
+    assert np.isclose(grid.max(), limit)
     assert np.all(np.abs(rms / expected - 1) < 0.02), np.max(np.abs(rms / expected - 1))
-    # Each correction matters at the limit: the beam by ~35 %, the binning by ~10 %.
-    assert rms[-1] * gaussian_transfer(limit, 0.7) / expected[-1] < 0.7
-    assert rms[-1] * pixel_binning_transfer(limit, 0.5) / expected[-1] < 0.95
+    # Both corrections are applied: at the limit the beam is ~2.8 %, the binning ~0.7 %.
+    assert rms[-1] * gaussian_transfer(limit, 0.7) / expected[-1] < 0.98
+    assert rms[-1] * pixel_binning_transfer(limit, 0.5) / expected[-1] < 0.995
+
+
+def test_image_curve_stops_before_half_pixel_interpolation_loss(tmp_path):
+    # Pointing half a binned pixel (0.25") off the grid on both axes: the patch interpolation
+    # (|cos(pi u p)| per axis) is not corrected, so the curve is ~2 % low at the limit and no lower.
+    grid, rms, expected = _gaussian_curve(tmp_path, 0.25)
+    error = rms / expected - 1
+    assert np.all(np.abs(error) < 0.02), np.max(np.abs(error))
+    assert error[-1] < -0.015
 
 
 def test_read_products_returns_image_curves(tmp_path):

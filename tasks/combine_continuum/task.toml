@@ -232,9 +232,12 @@ continuous_min_klambda = 1.0
 continuous_points = 60
 # Image curves for Fig. 2 panel (c), each "<path group>.<name>": the image through the matched
 # 12 m PB with the TP curve's population, its restoring beam and the pixel binning divided out,
-# up to the beam limit (tp_minimum_response) or half the model-grid Nyquist limit.
+# up to the lowest of the beam limit (tp_minimum_response), half the model-grid Nyquist limit and the
+# uv distance where interpolating the sampling patch half a pixel off the binned grid loses this
+# fraction (|cos(pi u p)|; about 26 klambda at 0.5 arcsec).
 image_curves = { interferometer = "inputs.interferometer", jcomb = "products.jcomb_continuum", feather = "products.feather_continuum" }
 image_curve_points = 60
+image_curve_max_interpolation_loss = 0.02
 overlap_uv_edges_klambda = [4.8, 5.4, 6.0, 6.6, 7.2, 7.8, 8.4, 9.165]
 bootstrap_repeats = 500
 random_seed = 3168
@@ -265,8 +268,8 @@ uv_max_klambda = 3000.0
 reference_frequency_ghz = 225.0
 
 [figure2]
+# The height follows from three equal square panels at this width.
 width_inches = 7.2440944882
-height_inches = 7.2440944882
 output_formats = ["pdf", "svg", "png"]
 dpi = 600
 tp_minimum_response = 0.1

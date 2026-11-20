@@ -254,9 +254,17 @@ Image curves use the TP-curve method (`continuous_rms` in the
   pointing, band and orientation population as the TP curve, and sampled
   along a continuous radius from 1 kλ;
 - the image's restoring beam and the 0.5″ pixel-binning response are divided
-  out; the curve stops where the beam response falls to 0.1 or at half the
-  model-grid Nyquist limit (about 100 kλ), whichever is lower. The beam rule
-  is the one the TP curve uses.
+  out. The beam is corrected as the circular Gaussian of the geometric mean
+  of BMAJ and BMIN; for the 12m+7m beam (0.712″ × 0.606″) the residual
+  depends on orientation and stays within 0.5 % at 26 kλ;
+- the curve stops at the lowest of three limits: the beam response falling
+  to 0.1 (the rule the TP curve uses); half the model-grid Nyquist limit
+  (about 103 kλ); and the interpolation limit. The sampling patch is
+  interpolated linearly from the binned grid, which is not corrected: a
+  pointing half a pixel off the grid multiplies each axis by |cos(π u p)|.
+  The curve stops where that falls to 1 − `image_curve_max_interpolation_loss`
+  (0.02), about 26 kλ at 0.5″. In practice this limit applies, so the image
+  curves cover 1–26 kλ.
 
 Expected: 12m+7m falls away below about 7 kλ; J-comb and feather follow the
 TP there and meet the 7m points across 5–9 kλ.

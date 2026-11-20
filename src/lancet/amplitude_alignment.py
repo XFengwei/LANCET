@@ -52,10 +52,22 @@ def pixel_binning_transfer(u_klambda, pixel_arcsec):
     return np.sinc(np.asarray(u_klambda)*1000*pixel_arcsec*np.pi/648000)
 
 
-def image_curve_limit(beam_fwhm_arcsec, minimum_response, model_pixel_arcsec):
-    """Last uv distance (kλ) of an image curve: the beam limit or half the model-grid Nyquist limit."""
+def interpolation_limit(model_pixel_arcsec, maximum_loss):
+    """uv distance (kλ) where linear interpolation half a pixel off the grid loses `maximum_loss`.
+
+    The sampling patch is interpolated linearly from the binned grid; a pointing centre a fraction
+    f of a pixel off the grid multiplies each axis by |1 - f + f exp(2πiup)|, at worst (f = 1/2)
+    |cos(πup)|. This is the uv distance where that response falls to 1 - `maximum_loss`.
+    """
+    return float(np.arccos(1-maximum_loss)/(np.pi*model_pixel_arcsec*np.pi/648000)/1000)
+
+
+def image_curve_limit(beam_fwhm_arcsec, minimum_response, model_pixel_arcsec, maximum_interpolation_loss):
+    """Last uv distance (kλ) of an image curve: the lowest of the beam limit, half the model-grid
+    Nyquist limit and the half-pixel interpolation limit."""
     half_nyquist = 0.5/(2*model_pixel_arcsec*np.pi/648000)/1000
-    return min(response_limit(beam_fwhm_arcsec, minimum_response), half_nyquist)
+    return min(response_limit(beam_fwhm_arcsec, minimum_response), half_nyquist,
+               interpolation_limit(model_pixel_arcsec, maximum_interpolation_loss))
 
 
 def image_curve_method(task, settings):
@@ -64,9 +76,13 @@ def image_curve_method(task, settings):
     return (f"Each image is area-binned to the {settings['model_pixel_arcsec']}-arcsec model grid, multiplied by "
             f"the actual matched 12 m pointing PB at both basebands ({bands} GHz) with the pointing, "
             "band and orientation population of the TP curve, and sampled along a continuous radius from "
-            f"{task['continuous_min_klambda']} klambda. The image's restoring beam (geometric mean of BMAJ and "
-            "BMIN) and the pixel-binning response are divided out; the curve stops where the beam response falls "
-            f"to {task['tp_minimum_response']} or at half the model-grid Nyquist limit, whichever is lower.")
+            f"{task['continuous_min_klambda']} klambda. The image's restoring beam and the pixel-binning response "
+            "are divided out. The beam is corrected as the circular Gaussian of the geometric mean of BMAJ and "
+            "BMIN; for the 12m+7m beam (0.712 x 0.606 arcsec) the residual depends on orientation and is within "
+            "0.5% at 26 klambda. The curve stops at the lowest of: the beam response falling to "
+            f"{task['tp_minimum_response']}; half the model-grid Nyquist limit; and the uv distance where linear "
+            "interpolation of the sampling patch from the binned grid, at worst half a pixel off, loses "
+            f"{task['image_curve_max_interpolation_loss']:.0%} (|cos(pi u p)|; about 26 klambda at 0.5 arcsec).")
 
 
 def _image_curve(path, centres, keys, n_bins, sectors, settings, task):
@@ -74,7 +90,8 @@ def _image_curve(path, centres, keys, n_bins, sectors, settings, task):
     pixel = float(settings["model_pixel_arcsec"])
     image, header = sky_model(path, pixel)
     beam = float(np.sqrt(header["BMAJ"]*header["BMIN"])*3600)
-    limit = image_curve_limit(beam, float(task["tp_minimum_response"]), pixel)
+    limit = image_curve_limit(beam, float(task["tp_minimum_response"]), pixel,
+                              float(task["image_curve_max_interpolation_loss"]))
     grid = np.geomspace(float(task["continuous_min_klambda"]), limit, int(task["image_curve_points"]))
     rms = continuous_rms({"image": (image, header)}, centres, keys, n_bins, sectors, grid, settings,
                          "pb_12m_fwhm_arcsec")["image"]

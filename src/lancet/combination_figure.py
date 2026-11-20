@@ -73,16 +73,17 @@ def tp_amplitude_reference(path, statistics_path, summary, minimum_response):
     }
 
 
-IMAGE_CURVES = {"interferometer": ("12m+7m", "--"), "jcomb": ("J-comb", "-"), "feather": ("Feather", ":")}
+# Hues outside the array colours and the TP greys (here hue means array). With the array colours,
+# every pair involving these is >= 15 OKLab dE x100 in normal vision and >= 6.7 under protan/deutan
+# simulation (crimson/green, pink/C2); line style is the secondary encoding.
+IMAGE_CURVES = {"interferometer": ("12m+7m", "--", "#B2182B"), "jcomb": ("J-comb", "-", "#006837"),
+                "feather": ("Feather", ":", "#CC79A7")}
 
 
 def _plot_image_curves(axis, curves):
-    """12m+7m, J-comb and feather amplitudes (beam and pixel binning divided out), with their legend.
-
-    The colours are the module palette in order; the line style separates them from the array profiles.
-    """
+    """12m+7m, J-comb and feather amplitudes (beam and pixel binning divided out), with their legend."""
     handles = []
-    for (name, (label, style)), color in zip(IMAGE_CURVES.items(), COLORS.values()):
+    for name, (label, style, color) in IMAGE_CURVES.items():
         u, rms = curves[name]
         handles += axis.plot(u, rms, color=color, linestyle=style, linewidth=1.1, label=label, zorder=4)
     # Below the direct "TP, beam-corrected" label, above the long-baseline profiles.
@@ -178,7 +179,8 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         image_table = root/"figures"/f"{stem}_image_curves.csv"
         shutil.copyfile(alignment_root/"image_curves.csv", image_table)
         image_meta = {**alignment["image_curves"], "source_csv": str(image_table),
-                      "labels": {name: label for name, (label, _) in IMAGE_CURVES.items()}}
+                      "styles": {name: {"label": label, "linestyle": style, "color": color}
+                                 for name, (label, style, color) in IMAGE_CURVES.items()}}
     tp_table = root/"figures"/f"{stem}_tp_reference.csv"
     if tp_fixed is None:
         np.savetxt(tp_table, np.column_stack([tp_u, tp_amp]), delimiter=",",
