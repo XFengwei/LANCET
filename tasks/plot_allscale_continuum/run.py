@@ -252,21 +252,21 @@ def plot_synthetic(
     *,
     overwrite: bool = False,
 ) -> list[Path]:
-    """Plot the current synthesized-continuum model."""
+    """Plot the TP model (synthesize_continuum) on one inferno scale."""
     figures = config["figures"]
     if not isinstance(figures, Mapping):
         raise TypeError("Figure settings must be a TOML table")
     outputs = _prepare_outputs(
-        paths["output_root"] / "figures" / "synthetic_continuum_clean",
+        paths["output_root"] / "figures" / "tp_continuum",
         figures["clean_formats"],
         overwrite=overwrite,
     )
-    figure = _create_figure(
+    figure = _create_sqrt_figure(
         paths["synthetic_continuum"],
         paths,
         config,
-        style_name="synthetic",
         annotated=False,
+        style_name="synthetic",
     )
     _save_figure(figure, outputs, dpi=int(figures["clean_dpi"]))
     return outputs
@@ -279,8 +279,9 @@ def _create_sqrt_figure(
     *,
     annotated: bool,
     title: str | None = None,
+    style_name: str = "sqrt",
 ):
-    view, style = _plot_settings(config, style_name="sqrt")
+    view, style = _plot_settings(config, style_name=style_name)
     data, header = read_mjysr(path)
     return create_single_scale_figure(
         data,

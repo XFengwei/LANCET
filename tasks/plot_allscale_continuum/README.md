@@ -26,7 +26,8 @@ the TP model must be a task result. All inputs are read-only.
   map on one colour bar
   (inferno, square-root stretch), annotated (PDF, PNG) and clean (PNG):
   `allscale_continuum_dust_freefree_sqrt*`.
-- `synthetic`: clean view of the TP model.
+- `synthetic`: clean view of the TP model, `tp_continuum.png`, in the Fig. 3
+  style (inferno, square root).
 - `dust`: annotated and clean views of the dust-only map.
 - `all`: the four plotting stages.
 
@@ -48,8 +49,8 @@ are kept unless `--overwrite` is given.
 - `sqrt`: 0 to 1200 MJy/sr, inferno, square-root stretch, one colour bar.
   Values below 0 take the lowest colour; blank pixels (outside the TP model)
   are black (`blank_colour`). The pb 0.2 contour is cyan and the labels white.
-- `synthetic`: −2.292 / 57.31 / 275.07, the former Jy/beam limits
-  (−0.02 / 0.5 / 2.4) converted with the 18.1″ beam, so that view is unchanged.
+- `synthetic`: 0 to 275.07 MJy/sr, inferno, square root, blank pixels black.
+  275.07 is the former top (2.4 Jy/beam on the 18.1″ beam).
 
 ## Review check (2026-11-20)
 

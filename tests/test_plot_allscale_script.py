@@ -117,3 +117,32 @@ def test_sqrt_stage_writes_annotated_and_clean_views(tmp_path, monkeypatch) -> N
     ]
     assert [call["annotated"] for call in calls] == [True, False]
     assert all(call["colour_map"] == "inferno" for call in calls)
+
+
+def test_tp_view_is_inferno_and_named_tp_continuum(tmp_path, monkeypatch) -> None:
+    calls = []
+
+    class FakeFigure:
+        def savefig(self, output, **kwargs):
+            Path(output).write_bytes(b"x")
+
+    def fake_figure(data, header, **kwargs):
+        calls.append(kwargs)
+        return FakeFigure()
+
+    image = tmp_path / "tp.fits"
+    _write_image(image, np.ones((3, 3)), "Jy/beam")
+    monkeypatch.setattr(TASK, "create_single_scale_figure", fake_figure)
+    monkeypatch.setattr(TASK, "_close", lambda figure: None)
+    config = TASK.load_task_config(CONFIG)
+    paths = {
+        "synthetic_continuum": image,
+        "primary_beam": None,
+        "output_root": tmp_path / "out",
+    }
+
+    written = TASK.plot_synthetic(paths, config)
+
+    assert [path.name for path in written] == ["tp_continuum.png"]
+    assert calls[0]["colour_map"] == "inferno"
+    assert calls[0]["annotated"] is False

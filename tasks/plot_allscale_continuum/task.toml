@@ -44,12 +44,15 @@ stretch = "sqrt"
 # Colour of blank pixels (outside the TP model).
 blank_colour = "black"
 
-# MJy/sr: the former Jy/beam limits -0.02 / 0.5 / 2.4 times 114.61 MJy/sr per
-# Jy/beam of the 18.1" TP beam, so the view is unchanged.
+# TP model view (stage `synthetic`, figures/tp_continuum.png), MJy/sr, same
+# style as Fig. 3. vmax is the former top (2.4 Jy/beam x 114.61 MJy/sr per
+# Jy/beam of the 18.1" beam).
 [styles.synthetic]
-background_vmin = -2.292
-transition = 57.31
-highlight_vmax = 275.07
+vmin = 0.0
+vmax = 275.07
+colour_map = "inferno"
+stretch = "sqrt"
+blank_colour = "black"
 
 [figures]
 annotated_formats = ["pdf", "png"]
