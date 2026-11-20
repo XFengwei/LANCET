@@ -130,7 +130,7 @@ def test_allscale_plot_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/plot_allscale_continuum.py",
+            "tasks/plot_allscale_continuum/run.py",
             "--stage",
             "inspect",
         ],
@@ -140,6 +140,6 @@ def test_allscale_plot_inspection_is_read_only() -> None:
         text=True,
     )
 
-    assert "allscale_combined_v3_dust_ff.MJysr.fits" in completed.stdout
+    assert "IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits" in completed.stdout
     assert "synthetic_continuum" in completed.stdout
     assert "Output root:" in completed.stdout

@@ -2,10 +2,13 @@
 name = "plot_allscale_continuum"
 
 [inputs]
-combined_continuum = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.fits"
-dust_continuum = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.MJysr.fits"
+# J-comb 12m+7m+TP (TP factor 1.0), Jy/beam, converted to MJy/sr in the task.
+# The extended products continue into the TP-only area beyond the mosaic.
+combined_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits"
+dust_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended.fits"
 synthetic_continuum = "results/synthesize_continuum/model/continuum_224GHz.fits"
-primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+# MIRIAD mosaic pb; its 0.2 contour is drawn on the annotated views.
+primary_beam = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 
 [primary_beam]
 minimum_response = 0.20
@@ -24,18 +27,22 @@ scalebar_length_deg = 0.02
 scalebar_label = "1 pc"
 resolution_label = "0.65 arcsec = 1820 au"
 
+# MJy/sr (author, 2026-11-20). Paper II (v3 map, TP about 3.1 x): -21 / 233 / 1500.
+# -20 is about -2 sigma (9.2 MJy/sr).
 [styles.allscale]
-background_vmin = -21.0
-transition = 233.0
-highlight_vmax = 1500.0
+background_vmin = -20.0
+transition = 50.0
+highlight_vmax = 800.0
 
+# MJy/sr: the former Jy/beam limits -0.02 / 0.5 / 2.4 times 114.61 MJy/sr per
+# Jy/beam of the 18.1" TP beam, so the view is unchanged.
 [styles.synthetic]
-background_vmin = -0.02
-transition = 0.5
-highlight_vmax = 2.4
+background_vmin = -2.292
+transition = 57.31
+highlight_vmax = 275.07
 
 [figures]
-annotated_formats = ["pdf"]
+annotated_formats = ["pdf", "png"]
 clean_formats = ["png"]
 combined_annotated_dpi = 200
 dust_annotated_dpi = 300

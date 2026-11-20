@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Plot the delivered all-scale continuum images."""
+"""Plot the delivered all-scale (12m+7m+TP) continuum images in MJy/sr."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from astropy.io import fits
 
 from lancet import ProjectPaths
 from lancet.continuum_plotting import create_dual_colour_figure
+from lancet.imaging import read_mjysr
 
 
 DEFAULT_CONFIG = Path("tasks/plot_allscale_continuum/task.toml")
@@ -156,37 +157,35 @@ def _create_figure(
     title: str | None = None,
 ):
     view, style = _plot_settings(config, style_name=style_name)
-    with fits.open(path, memmap=True) as hdul:
-        data = hdul[0].data
-        header = hdul[0].header.copy()
-        figure = create_dual_colour_figure(
-            data,
-            header,
-            center_ra_deg=float(view["center_ra_deg"]),
-            center_dec_deg=float(view["center_dec_deg"]),
-            width_deg=float(view["width_deg"]),
-            height_deg=float(view["height_deg"]),
-            background_vmin=float(style["background_vmin"]),
-            transition=float(style["transition"]),
-            highlight_vmax=float(style["highlight_vmax"]),
-            figsize=(
-                float(view["figure_width_inches"]),
-                float(view["figure_height_inches"]),
-            ),
-            annotated=annotated,
-            primary_beam_path=(
-                paths["primary_beam"] if annotated else None
-            ),
-            minimum_primary_beam_response=float(
-                config["primary_beam"]["minimum_response"]
-            ),
-            title=title,
-            resolution_label=(
-                str(view["resolution_label"]) if annotated else None
-            ),
-            scalebar_length_deg=float(view["scalebar_length_deg"]),
-            scalebar_label=str(view["scalebar_label"]),
-        )
+    data, header = read_mjysr(path)
+    figure = create_dual_colour_figure(
+        data,
+        header,
+        center_ra_deg=float(view["center_ra_deg"]),
+        center_dec_deg=float(view["center_dec_deg"]),
+        width_deg=float(view["width_deg"]),
+        height_deg=float(view["height_deg"]),
+        background_vmin=float(style["background_vmin"]),
+        transition=float(style["transition"]),
+        highlight_vmax=float(style["highlight_vmax"]),
+        figsize=(
+            float(view["figure_width_inches"]),
+            float(view["figure_height_inches"]),
+        ),
+        annotated=annotated,
+        primary_beam_path=(
+            paths["primary_beam"] if annotated else None
+        ),
+        minimum_primary_beam_response=float(
+            config["primary_beam"]["minimum_response"]
+        ),
+        title=title,
+        resolution_label=(
+            str(view["resolution_label"]) if annotated else None
+        ),
+        scalebar_length_deg=float(view["scalebar_length_deg"]),
+        scalebar_label=str(view["scalebar_label"]),
+    )
     return figure
 
 
