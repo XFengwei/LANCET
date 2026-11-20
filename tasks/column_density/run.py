@@ -21,9 +21,12 @@ from lancet.column_density import (
     dense_mass_msun,
 )
 from lancet.continuum_plotting import create_dual_colour_figure
+from lancet.imaging import read_mjysr
 
 
 DEFAULT_CONFIG = Path("tasks/column_density/task.toml")
+COMBINATION_PRODUCTS = Path("combine_continuum/products")
+GRID_CARDS = ("CTYPE", "CRVAL", "CRPIX", "CDELT", "CUNIT")
 
 
 def load_task_config(path: Path) -> dict[str, object]:
@@ -60,14 +63,46 @@ def resolve_task_paths(
         "temperature_lowres",
         "column_density_lowres",
         "column_density_multiscale",
-        "dust_continuum_allscale",
+        "grid_reference",
     ):
         if not paths[name].is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be delivered: {paths[name]}")
+    allscale = paths["dust_continuum_allscale"]
+    combination = (project.results / COMBINATION_PRODUCTS).resolve()
+    if not (
+        allscale.is_relative_to(project.delivered.resolve())
+        or allscale.is_relative_to(combination)
+    ):
+        raise ValueError(
+            "dust_continuum_allscale must be delivered or a combine_continuum "
+            f"product: {allscale}"
+        )
     for name, path in paths.items():
         if name != "output_root" and not path.is_file():
             raise FileNotFoundError(f"{name} not found: {path}")
     return paths
+
+
+def grid_header(path: Path) -> fits.Header:
+    """Return the 2-D celestial grid (and beam) of an image, dropping
+    degenerate frequency and Stokes axes."""
+    source = fits.getheader(path)
+    header = fits.Header()
+    header["NAXIS"] = 2
+    header["NAXIS1"] = int(source["NAXIS1"])
+    header["NAXIS2"] = int(source["NAXIS2"])
+    for axis in (1, 2):
+        for card in GRID_CARDS:
+            key = f"{card}{axis}"
+            if key in source:
+                header[key] = source[key]
+    for key in (
+        "RADESYS", "EQUINOX", "EPOCH", "LONPOLE", "LATPOLE",
+        "BMAJ", "BMIN", "BPA",
+    ):
+        if key in source:
+            header[key] = source[key]
+    return header
 
 
 def _describe(path: Path) -> str:
@@ -90,9 +125,11 @@ def inspect_inputs(
         "temperature_lowres",
         "column_density_lowres",
         "column_density_multiscale",
+        "grid_reference",
         "dust_continuum_allscale",
         "intercore_background",
         "freefree_smoothed",
+        "primary_beam",
     ):
         print(f"  {name}: {paths[name]}")
         print(f"    {_describe(paths[name])}")
@@ -182,7 +219,7 @@ def prepare_products(
         header=True,
         memmap=True,
     )
-    target_header = fits.getheader(paths["dust_continuum_allscale"])
+    target_header = grid_header(paths["grid_reference"])
     regridded = hcongrid(temperature, temperature_header, target_header)
     output_header = target_header.copy()
     for key in ("BUNIT", "BMAJ", "BMIN", "BPA"):
@@ -263,11 +300,7 @@ def build_maps(
                 "surface_density_intercore",
             ),
         ):
-            intensity, header = fits.getdata(
-                paths[input_name],
-                header=True,
-                memmap=True,
-            )
+            intensity, header = read_mjysr(paths[input_name])
             if intensity.shape != temperature.shape:
                 raise ValueError(
                     f"{input_name} shape {intensity.shape} does not match "
@@ -281,6 +314,7 @@ def build_maps(
                 mean_molecular_weight=float(
                     model["mean_molecular_weight"]
                 ),
+                zero_nonpositive=bool(model["zero_nonpositive_intensity"]),
             )
             _write_float32(
                 products[column_name],

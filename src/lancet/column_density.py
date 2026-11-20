@@ -67,8 +67,13 @@ def brightness_to_column_density(
     frequency_ghz: float,
     opacity_cm2_per_g: float,
     mean_molecular_weight: float = 2.8,
+    zero_nonpositive: bool = False,
 ) -> np.ndarray:
-    """Invert dust brightness to H2 column density in cm^-2."""
+    """Invert dust brightness to H2 column density in cm^-2.
+
+    With ``zero_nonpositive``, pixels with intensity <= 0 get column density
+    0; NaN stays NaN.
+    """
     intensity = np.asarray(intensity_mjysr, dtype=float)
     opacity = float(opacity_cm2_per_g)
     molecular_weight = float(mean_molecular_weight)
@@ -78,7 +83,10 @@ def brightness_to_column_density(
     blackbody = planck_mjysr(frequency_ghz, temperature_k)
     with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
         optical_depth = -np.log1p(-intensity / blackbody)
-    return optical_depth / (molecular_weight * _M_P_G * opacity)
+    column = optical_depth / (molecular_weight * _M_P_G * opacity)
+    if zero_nonpositive:
+        column = np.where(intensity <= 0, 0.0, column)
+    return column
 
 
 def column_density_to_surface_density(

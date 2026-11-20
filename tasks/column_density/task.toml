@@ -5,14 +5,20 @@ name = "column_density"
 temperature_lowres = "data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits"
 column_density_lowres = "data/delivered/sedfitter/combine/NH2_18arcsec+36arcsec.fits"
 column_density_multiscale = "data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec+36arcsec.fits"
-dust_continuum_allscale = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.MJysr.rp.fits"
+# Output grid of every all-scale product: the 12m+7m MIRIAD image.
+grid_reference = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.fits"
+# J-comb 12m+7m + dust-only TP (combine_continuum, Jy/beam, converted to
+# MJy/sr here). The extended product keeps the TP-only area beyond the
+# mosaic, as the Paper II map did. Not yet promoted to data/delivered/.
+dust_continuum_allscale = "results/combine_continuum/products/jcomb_dust_224GHz_extended.fits"
 intercore_background = "extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
 freefree_smoothed = "results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec.fits"
 box_regions = "region/box2arcmin_three_regions.reg"
 dense_young_region = "region/trichotomy/trichotomy_young.reg"
 dense_intermediate_region = "region/trichotomy/trichotomy_intermediate.reg"
 dense_evolved_region = "region/trichotomy/trichotomy_evolved.reg"
-primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
+# Mosaic primary beam (MIRIAD); its 0.2 contour is drawn on the full-field maps.
+primary_beam = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 
 [primary_beam]
 minimum_response = 0.20
@@ -25,6 +31,8 @@ frequency_ghz = 223.8
 opacity_cm2_per_g = 0.005
 mean_molecular_weight = 2.8
 distance_pc = 2800.0
+# Intensity <= 0 (interferometric negatives) gives column density 0 (author, 2026-11-20).
+zero_nonpositive_intensity = true
 
 [view]
 center_ra_deg = 221.2346
@@ -39,14 +47,15 @@ subregion_height_deg = 0.03333333333333333
 subregion_scalebar_pc = 0.1
 
 [plot_style]
+# Scaled for the TP-factor-1.0 combination (Paper II, v3 map: 0-2 and 2-10).
 background_vmin = 0.0
-transition = 2.0
-highlight_vmax = 10.0
-background_ticks = [0.0, 0.5, 1.0, 1.5, 2.0]
+transition = 1.0
+highlight_vmax = 3.0
+background_ticks = [0.0, 0.25, 0.5, 0.75, 1.0]
 freefree_levels = [0.05, 0.10, 0.20, 0.40, 0.80]
 
 [figures]
-formats = ["pdf"]
+formats = ["pdf", "png"]
 full_field_dpi = 200
 subregion_dpi = 100
 
