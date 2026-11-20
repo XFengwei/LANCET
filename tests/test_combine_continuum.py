@@ -82,6 +82,8 @@ def test_stage_selection():
     assert TASK.stages_for("diagnostics") == list(TASK.DIAGNOSTIC_STAGES)
     assert TASK.stages_for("all") == [*TASK.COMBINE_STAGES, *TASK.DIAGNOSTIC_STAGES]
     assert TASK.stages_for("jcomb") == ["jcomb"]
+    order = TASK.stages_for("combine")
+    assert order.index("jcomb") < order.index("box_spectrum")   # box_spectrum reads the J-comb product
     with pytest.raises(ValueError):
         TASK.stages_for("nope")
 

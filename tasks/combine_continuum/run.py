@@ -21,7 +21,7 @@ from astropy.io import fits
 
 from lancet import ProjectPaths
 from lancet import combination_stages
-from lancet.combination_stages import input_hashes, sha256, write_json  # noqa: F401  (sha256 re-exported)
+from lancet.combination_stages import input_hashes, write_json
 from lancet.imaging import frequency_label, read_frequency_ghz
 
 DEFAULT_CONFIG = Path("tasks/combine_continuum/task.toml")
@@ -31,8 +31,9 @@ DELIVERED_INPUTS = ("interferometer", "gain", "psf", "psf_imfit_log", "aca_pbcor
 # TP models are the products of the synthesize_continuum task.
 SYNTHESIS_INPUTS = ("tp_dust", "tp_dust_ff")
 SYNTHESIS_RESULTS = Path("results/synthesize_continuum")
-COMBINE_STAGES = ("inspect", "prepare", "tp_factor", "box_spectrum", "planck_calibration", "jcomb",
-                  "feather")
+# box_spectrum reads the J-comb product as its mock truth image, so it runs after jcomb.
+COMBINE_STAGES = ("inspect", "prepare", "tp_factor", "jcomb", "feather", "box_spectrum",
+                  "planck_calibration")
 DIAGNOSTIC_STAGES = ("uv", "overlap", "full_sampling", "amplitude_alignment", "figure2",
                      "compare_images", "dirty_beam", "aca_forward_test", "joint_images",
                      "pointing_coverage")

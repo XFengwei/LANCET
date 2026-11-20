@@ -1,5 +1,6 @@
 """Tests for the combine_continuum phase 1 stages (src/lancet/combination_stages.py)."""
 
+import json
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 import sys
@@ -140,10 +141,25 @@ def test_tp_factor_has_only_the_prepared_variant():
     assert set(stages.TP_FACTOR_VARIANTS) == {"prepared"}
 
 
-def test_tp_factor_stage_does_not_read_psd_matched():
-    import inspect
-    assert "psd_matched" not in inspect.getsource(stages.run_tp_factor)
-    assert "as_determined" not in inspect.getsource(stages.run_tp_factor)
+def test_tp_factor_stage_runs_without_psd_matched(tmp_path):
+    paths = _inputs(tmp_path)
+    config = _prepare_config()
+    config["tp_factor"] = {k: config["tp_factor"][k] for k in (
+        "value", "determined_from", "matching_range_arcsec", "window_taper_arcsec", "bins_klambda")}
+    stages.run_prepare(paths, config)
+    out = stages.run_tp_factor(paths, config)
+    summary_path = paths["output_root"] / "checks" / "tp_factor" / "tp_factor.json"
+    assert out["summary"] == summary_path and summary_path.is_file()
+    text = summary_path.read_text()
+    assert "psd_matched" not in text and "as_determined" not in json.loads(text)["dust_ff"]
+    assert set(json.loads(text)["dust_ff"]) == {"prepared"}
+
+
+def test_box_spectrum_requires_the_jcomb_product(tmp_path):
+    paths = _method_inputs(tmp_path)
+    with pytest.raises(FileNotFoundError, match="jcomb"):
+        stages.run_box_spectrum(paths, _config({}))
+    assert not (paths["output_root"] / "checks").exists()
 
 
 def _method_inputs(tmp_path):

@@ -561,11 +561,13 @@ def run_box_spectrum(paths: Mapping[str, Path], config: Mapping, overwrite: bool
            for ext in ("json", "pdf", "png")}
     guard_outputs(list(out.values()), overwrite)
     flavour = config["tp_factor"]["determined_from"]
+    truth_path = paths["products"][f"jcomb_{FLAVOUR_KIND[flavour]}"]
+    if not truth_path.is_file():
+        raise FileNotFoundError(f"Run stage 'jcomb' first: missing {truth_path}")
     low, high, gain, header, pix, high_beam, low_beam = load_prepared(paths, flavour)
     tp_fwhm, k2 = config["prepare"]["tp_fwhm_arcsec"], config["jcomb"]["k2_klambda"]
     margin = int(np.ceil(3.0 * tp_fwhm / pix))
-    truth_path = paths["products"][f"jcomb_{FLAVOUR_KIND[flavour]}"]
-    truth_full = fits.getdata(truth_path) if truth_path.is_file() else None
+    truth_full = fits.getdata(truth_path)
     for box in s["boxes"]:
         centre = SkyCoord(box["centre"], unit=(u.hourangle, u.deg))
         x, y = (int(round(float(v))) for v in WCS(header).celestial.world_to_pixel(centre))
@@ -588,21 +590,20 @@ def run_box_spectrum(paths: Mapping[str, Path], config: Mapping, overwrite: bool
                                                              gain.shape[1] - x - half_x) * pix),
                    **data}
         # Known-answer check: truth = the J-comb image (unit factor); mock TP = truth at the TP beam / F.
-        if truth_full is not None:
-            f_true = float(s["mock_true_factor"])
-            truth = np.nan_to_num(jybeam_to_mjysr(truth_full[cut], *high_beam[:2]))
-            mock_tp = np.nan_to_num(smooth_to(truth, pix, high_beam, tp_fwhm)) / f_true
-            _, _, k = uv_distance_klambda(truth.shape, pix)
-            cutoff = float(s["mock_missing_below_klambda"])
-            filtered = _fft.irfft2(_fft.rfft2(truth) * (1.0 - 1.0 / (1.0 + (k / cutoff) ** 10)), s=truth.shape)
-            summary["mock_check"] = {"true_factor": f_true}
-            for name, mock_int in (("interferometer_complete", truth),
-                                   ("interferometer_without_large_scales", filtered)):
-                mock = box_estimates(mock_tp, mock_int * defined, defined, *args)
-                summary["mock_check"][name] = mock["factor_in_matching_range"]
-            summary["mock_check"]["note"] = (
-                "Mock TP = the J-comb image at the TP beam divided by the true factor. Mock 12m+7m = the J-comb "
-                f"image inside the mosaic, as is and with scales below {cutoff:g} klambda removed.")
+        f_true = float(s["mock_true_factor"])
+        truth = np.nan_to_num(jybeam_to_mjysr(truth_full[cut], *high_beam[:2]))
+        mock_tp = np.nan_to_num(smooth_to(truth, pix, high_beam, tp_fwhm)) / f_true
+        _, _, k = uv_distance_klambda(truth.shape, pix)
+        cutoff = float(s["mock_missing_below_klambda"])
+        filtered = _fft.irfft2(_fft.rfft2(truth) * (1.0 - 1.0 / (1.0 + (k / cutoff) ** 10)), s=truth.shape)
+        summary["mock_check"] = {"true_factor": f_true}
+        for name, mock_int in (("interferometer_complete", truth),
+                               ("interferometer_without_large_scales", filtered)):
+            mock = box_estimates(mock_tp, mock_int * defined, defined, *args)
+            summary["mock_check"][name] = mock["factor_in_matching_range"]
+        summary["mock_check"]["note"] = (
+            "Mock TP = the J-comb image at the TP beam divided by the true factor. Mock 12m+7m = the J-comb "
+            f"image inside the mosaic, as is and with scales below {cutoff:g} klambda removed.")
         write_json(out[f"{box['name']}_json"], summary)
         aligned = data["factor_in_matching_range"]["psd_tp_res_lowest_tp_point"]
         plot_box_spectrum(root / f"box_{box['name']}", np.where(defined[core], high[cut][core], np.nan),

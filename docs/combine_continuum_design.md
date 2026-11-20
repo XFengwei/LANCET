@@ -86,10 +86,10 @@ Phase 1, combination:
 | `inspect` | inputs, grids, beams, units, frequencies, provenance; footprint margin | nothing |
 | `prepare` | 12m+7m true-sky in MJy/sr, mask from its finite pixels; both TP models regridded to its grid with the edge taper | `prepared/` |
 | `tp_factor` | global overlap factor on the prepared inputs (documented, not applied) | `checks/tp_factor/` |
-| `box_spectrum` | power spectra in the middle and south boxes, with the mock correction | `checks/box_spectrum/` |
-| `planck_calibration` | TP against Planck 217 GHz: linear fits and the brightest beam; nothing applied | `checks/planck_calibration/` |
 | `jcomb` | J-comb, dust and dust + free-free, plus its measurements | `products/`, `checks/jcomb/`, `checks/zero_spacing/` |
 | `feather` | feather, same inputs and measurements | `products/`, `checks/feather/`, `checks/zero_spacing/` |
+| `box_spectrum` | power spectra in the middle and south boxes, with the mock correction | `checks/box_spectrum/` |
+| `planck_calibration` | TP against Planck 217 GHz: linear fits and the brightest beam; nothing applied | `checks/planck_calibration/` |
 
 Phase 2, diagnostics (needs the phase 1 products). Its outputs go under
 `results/combine_continuum/diagnostics/`, in the subfolders the modules already
