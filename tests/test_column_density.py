@@ -72,25 +72,3 @@ def test_invalid_physical_parameters_are_rejected() -> None:
             opacity_cm2_per_g=0.0,
         )
 
-
-def test_nonpositive_intensity_can_be_floored_to_zero() -> None:
-    intensity = np.array([-5.0, 0.0, 10.0, np.nan])
-
-    floored = brightness_to_column_density(
-        intensity,
-        20.0,
-        frequency_ghz=223.8,
-        opacity_cm2_per_g=0.005,
-        zero_nonpositive=True,
-    )
-    plain = brightness_to_column_density(
-        intensity,
-        20.0,
-        frequency_ghz=223.8,
-        opacity_cm2_per_g=0.005,
-    )
-
-    assert floored[0] == 0.0 and floored[1] == 0.0
-    assert floored[2] == plain[2] > 0
-    assert np.isnan(floored[3])
-    assert plain[0] < 0

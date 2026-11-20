@@ -148,7 +148,8 @@ def test_task_reads_new_combination_and_miriad_products() -> None:
     inputs = config["inputs"]
 
     assert inputs["dust_continuum_allscale"] == (
-        "results/combine_continuum/products/jcomb_dust_224GHz_extended.fits"
+        "data/delivered/alma/continuum/"
+        "IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits"
     )
     assert inputs["grid_reference"] == (
         "data/delivered/alma/continuum/"
@@ -161,7 +162,97 @@ def test_task_reads_new_combination_and_miriad_products() -> None:
     assert {"pdf", "png"} <= set(config["figures"]["formats"])
 
 
-def test_task_floors_nonpositive_intensity() -> None:
+def test_maps_keep_signed_version_and_blank_negatives(tmp_path: Path) -> None:
+    config = TASK.load_task_config(CONFIG)
+    paths = _write_map_inputs(tmp_path, "MJy/sr")
+    with fits.open(paths["dust_continuum_allscale"], mode="update") as hdul:
+        hdul[0].data[0, 0] = -5.0
+        hdul[0].data[0, 1] = 0.0
+
+    products = TASK.build_maps(paths, config)
+
+    signed = fits.getdata(products["surface_density_allscale_signed"])
+    surface = fits.getdata(products["surface_density_allscale"])
+    column = fits.getdata(products["column_density_allscale"])
+    assert signed[0, 0] < 0
+    assert np.isnan(surface[0, 0]) and np.isnan(column[0, 0])
+    assert surface[0, 1] == 0.0
+    np.testing.assert_array_equal(surface.ravel()[1:], signed.ravel()[1:])
+    assert products["surface_density_intercore_signed"].is_file()
+    assert signed.dtype.byteorder in ">=" and signed.dtype.itemsize == 4
+
+
+def test_mirror_display_is_absolute_signed_value() -> None:
+    signed = np.array([-0.07, 0.4, -0.2, np.nan, 2.0])
+
+    shown = TASK.mirror_negative(signed)
+
+    np.testing.assert_allclose(
+        shown, [0.07, 0.4, 0.2, np.nan, 2.0], rtol=1e-6
+    )
+    assert shown.dtype == np.float32
+
+
+def test_figures_mirror_negative_pixels() -> None:
     config = TASK.load_task_config(CONFIG)
 
-    assert config["model"]["zero_nonpositive_intensity"] is True
+    assert config["plot_style"]["fill_negative"] == "mirror"
+    assert "zero_nonpositive_intensity" not in config["model"]
+
+
+def test_block_average_keeps_world_grid_and_blanks_partial_blocks() -> None:
+    header = _celestial_header(4, 6)
+    header["NAXIS"] = 2
+    header["NAXIS1"], header["NAXIS2"] = 6, 4
+    data = np.arange(24, dtype=float).reshape(4, 6)
+    data[0, 0] = np.nan
+
+    averaged, block_header = TASK.block_average(data, header, factor=2)
+
+    assert averaged.shape == (2, 3)
+    assert np.isnan(averaged[0, 0])
+    assert averaged[1, 2] == pytest.approx(np.mean(data[2:4, 4:6]))
+    world_block = WCS(block_header).pixel_to_world_values(1, 1)
+    world_native = WCS(header).pixel_to_world_values(2.5, 2.5)
+    np.testing.assert_allclose(world_block, world_native, atol=1e-10)
+
+
+def test_smooth_to_beam_keeps_constant_and_blanks_edges() -> None:
+    data = np.full((60, 60), 3.0)
+    data[:, :5] = np.nan
+
+    smoothed = TASK.smooth_to_beam(
+        data,
+        pixel_arcsec=1.0,
+        native_beam_arcsec=0.5,
+        target_beam_arcsec=6.0,
+        minimum_support=0.99,
+    )
+
+    assert smoothed[30, 40] == pytest.approx(3.0, rel=1e-6)
+    assert np.isnan(smoothed[30, 6])
+
+
+def test_ratio_statistics_reports_median_and_sum_ratio() -> None:
+    denominator = np.array([0.01, 1.0, 2.0, 3.0, np.nan])
+    numerator = 2.0 * denominator
+    mask = np.array([True, True, True, True, True])
+
+    stats = TASK.ratio_statistics(
+        numerator, denominator, mask, minimum_denominator=0.02
+    )
+
+    assert stats["n"] == 3
+    assert stats["median"] == pytest.approx(2.0)
+    assert stats["sum_ratio"] == pytest.approx(2.0)
+
+
+def test_consistency_settings_are_declared() -> None:
+    config = TASK.load_task_config(CONFIG)
+    settings = config["consistency"]
+
+    assert config["inputs"]["tp_dust_model"] == (
+        "results/synthesize_continuum/model/dust_224GHz_fill36.fits"
+    )
+    assert settings["target_beam_arcsec"] == 18.1
+    assert settings["block_factor"] == 10

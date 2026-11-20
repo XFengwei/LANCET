@@ -130,6 +130,7 @@ def inspect_inputs(
         "intercore_background",
         "freefree_smoothed",
         "primary_beam",
+        "tp_dust_model",
     ):
         print(f"  {name}: {paths[name]}")
         print(f"    {_describe(paths[name])}")
@@ -201,6 +202,12 @@ def map_paths(paths: Mapping[str, Path]) -> dict[str, Path]:
         "column_density_intercore": root / "column_density_intercore.fits",
         "surface_density_allscale": root / "surface_density_allscale.fits",
         "surface_density_intercore": root / "surface_density_intercore.fits",
+        "surface_density_allscale_signed": (
+            root / "surface_density_allscale_signed.fits"
+        ),
+        "surface_density_intercore_signed": (
+            root / "surface_density_intercore_signed.fits"
+        ),
     }
 
 
@@ -314,8 +321,28 @@ def build_maps(
                 mean_molecular_weight=float(
                     model["mean_molecular_weight"]
                 ),
-                zero_nonpositive=bool(model["zero_nonpositive_intensity"]),
             )
+            signed_surface = column_density_to_surface_density(
+                column,
+                mean_molecular_weight=float(
+                    model["mean_molecular_weight"]
+                ),
+            )
+            _write_float32(
+                products[f"{surface_name}_signed"],
+                signed_surface,
+                _float_header(
+                    header,
+                    unit="g cm^-2",
+                    history=(
+                        "LANCET column_density: H2 surface density, "
+                        "negative intensities kept"
+                    ),
+                ),
+                overwrite=overwrite,
+            )
+            del signed_surface
+            column = np.where(intensity < 0, np.nan, column)
             _write_float32(
                 products[column_name],
                 column,
@@ -343,13 +370,19 @@ def build_maps(
                     unit="g cm^-2",
                     history=(
                         "LANCET column_density: H2 column to gas surface "
-                        "density"
+                        "density; negative intensities blanked"
                     ),
                 ),
                 overwrite=overwrite,
             )
             del intensity, column, surface
     return products
+
+
+def mirror_negative(signed: np.ndarray) -> np.ndarray:
+    """Display version of the signed map: negative pixels shown as |value|,
+    i.e. their own noise."""
+    return np.asarray(np.abs(signed), dtype=np.float32)
 
 
 def _figure_outputs(
@@ -404,6 +437,17 @@ def plot_products(
     ):
         raise TypeError("Plot settings must be TOML tables")
     data, header = fits.getdata(surface_path, header=True, memmap=True)
+    fill = str(style.get("fill_negative", "none"))
+    if fill == "mirror":
+        signed_path = map_paths(paths)["surface_density_allscale_signed"]
+        if not signed_path.is_file():
+            raise FileNotFoundError(
+                f"Signed surface-density map not found: {signed_path}; "
+                "run --stage maps first"
+            )
+        data = mirror_negative(fits.getdata(signed_path))
+    elif fill != "none":
+        raise ValueError(f"Unsupported fill_negative: {fill!r}")
     figure = create_dual_colour_figure(
         data,
         header,
@@ -622,12 +666,191 @@ def measure_dense_gas(
     return output
 
 
+def block_average(
+    data: np.ndarray,
+    header: fits.Header,
+    *,
+    factor: int,
+) -> tuple[np.ndarray, fits.Header]:
+    """Average ``factor`` x ``factor`` blocks; blocks with any NaN are NaN."""
+    ny = (data.shape[0] // factor) * factor
+    nx = (data.shape[1] // factor) * factor
+    blocks = np.asarray(data[:ny, :nx], dtype=float).reshape(
+        ny // factor, factor, nx // factor, factor
+    )
+    averaged = blocks.mean(axis=(1, 3))
+    output = header.copy()
+    output["NAXIS1"], output["NAXIS2"] = nx // factor, ny // factor
+    for axis in (1, 2):
+        output[f"CDELT{axis}"] = header[f"CDELT{axis}"] * factor
+        output[f"CRPIX{axis}"] = (header[f"CRPIX{axis}"] - 0.5) / factor + 0.5
+    return averaged, output
+
+
+def smooth_to_beam(
+    data: np.ndarray,
+    *,
+    pixel_arcsec: float,
+    native_beam_arcsec: float,
+    target_beam_arcsec: float,
+    minimum_support: float,
+) -> np.ndarray:
+    """Gaussian-smooth to the target beam (normalised over finite pixels);
+    pixels whose kernel support is below ``minimum_support`` are NaN."""
+    from astropy.convolution import Gaussian2DKernel, convolve_fft
+
+    fwhm = np.sqrt(target_beam_arcsec**2 - native_beam_arcsec**2)
+    kernel = Gaussian2DKernel(fwhm / pixel_arcsec / np.sqrt(8 * np.log(2)))
+    finite = np.isfinite(data)
+    filled = np.where(finite, data, 0.0)
+    total = convolve_fft(filled, kernel, normalize_kernel=True)
+    support = convolve_fft(finite.astype(float), kernel, normalize_kernel=True)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        smoothed = total / support
+    smoothed[support < minimum_support] = np.nan
+    return smoothed
+
+
+def ratio_statistics(
+    numerator: np.ndarray,
+    denominator: np.ndarray,
+    mask: np.ndarray,
+    *,
+    minimum_denominator: float,
+) -> dict[str, float | int]:
+    """Median, 16-84 % range and sum ratio of numerator / denominator."""
+    select = (
+        mask
+        & np.isfinite(numerator)
+        & np.isfinite(denominator)
+        & (denominator > minimum_denominator)
+    )
+    ratio = numerator[select] / denominator[select]
+    if ratio.size == 0:
+        return {"n": 0}
+    return {
+        "n": int(ratio.size),
+        "median": float(np.median(ratio)),
+        "p16": float(np.percentile(ratio, 16)),
+        "p84": float(np.percentile(ratio, 84)),
+        "sum_ratio": float(
+            numerator[select].sum() / denominator[select].sum()
+        ),
+    }
+
+
+def check_consistency(
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    overwrite: bool = False,
+) -> Path:
+    """Compare the all-scale surface density, smoothed to the low-resolution
+    beam, with the low-resolution and TP-model surface densities."""
+    from reproject import reproject_interp
+
+    settings = config["consistency"]
+    model = config["model"]
+    assert isinstance(settings, Mapping) and isinstance(model, Mapping)
+    output = paths["output_root"] / "consistency" / "statistics.json"
+    _prepare_output(output, overwrite=overwrite)
+    low_path = prepared_paths(paths)["surface_density_lowres"]
+    if not low_path.is_file():
+        raise FileNotFoundError(
+            f"Low-resolution surface density not found: {low_path}; "
+            "run --stage prepare first"
+        )
+    low, low_header = fits.getdata(low_path, header=True)
+
+    high = fits.getdata(map_paths(paths)["surface_density_allscale_signed"])
+    high_header = grid_header(paths["grid_reference"])
+    factor = int(settings["block_factor"])
+    averaged, block_header = block_average(high, high_header, factor=factor)
+    del high
+    pixel_arcsec = abs(float(block_header["CDELT2"])) * 3600.0
+    native_beam = 3600.0 * np.sqrt(
+        float(high_header["BMAJ"]) * float(high_header["BMIN"])
+    )
+    smoothed = smooth_to_beam(
+        averaged,
+        pixel_arcsec=pixel_arcsec,
+        native_beam_arcsec=native_beam,
+        target_beam_arcsec=float(settings["target_beam_arcsec"]),
+        minimum_support=float(settings["minimum_support"]),
+    )
+    smoothed_low, _ = reproject_interp((smoothed, WCS(block_header)), low_header)
+
+    tp_intensity, _ = read_mjysr(paths["tp_dust_model"])
+    temperature = np.asarray(
+        fits.getdata(paths["temperature_lowres"]), dtype=float
+    )
+    temperature[~(temperature > 0)] = np.nan
+    molecular_weight = float(model["mean_molecular_weight"])
+    tp_surface = column_density_to_surface_density(
+        brightness_to_column_density(
+            tp_intensity,
+            temperature,
+            frequency_ghz=float(model["frequency_ghz"]),
+            opacity_cm2_per_g=float(model["opacity_cm2_per_g"]),
+            mean_molecular_weight=molecular_weight,
+        ),
+        mean_molecular_weight=molecular_weight,
+    )
+    beam = np.squeeze(fits.getdata(paths["primary_beam"])).astype(float)
+    beam_low, _ = reproject_interp(
+        (beam, WCS(fits.getheader(paths["primary_beam"])).celestial),
+        low_header,
+    )
+
+    minimum = float(settings["minimum_lowres_g_cm2"])
+    comparisons = {
+        "smoothed_allscale_over_lowres": (smoothed_low, low),
+        "tp_model_over_lowres": (tp_surface, low),
+        "smoothed_allscale_over_tp_model": (smoothed_low, tp_surface),
+    }
+    summary: dict[str, object] = {
+        "settings": dict(settings),
+        "native_beam_arcsec": float(native_beam),
+        "temperature_nonpositive_pixels_masked": int(
+            np.sum(~np.isfinite(temperature))
+        ),
+        "regions": {},
+    }
+    regions = summary["regions"]
+    assert isinstance(regions, dict)
+    for region in settings["regions"]:
+        mask = (beam_low >= float(region["pb_min"])) & (
+            beam_low < float(region["pb_max"])
+        )
+        if region.get("include_outside_mosaic", False):
+            mask |= ~np.isfinite(beam_low)
+        regions[str(region["name"])] = {
+            name: ratio_statistics(
+                numerator, denominator, mask, minimum_denominator=minimum
+            )
+            for name, (numerator, denominator) in comparisons.items()
+        }
+        for name, stats in regions[str(region["name"])].items():
+            if stats["n"]:
+                print(
+                    f"{region['name']}: {name} n={stats['n']} "
+                    f"median={stats['median']:.3f} "
+                    f"sum ratio={stats['sum_ratio']:.3f}"
+                )
+    output.write_text(json.dumps(summary, indent=2) + "\n")
+    print(f"Wrote {output}")
+    return output
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "prepare", "maps", "plot", "dense", "all"),
+        choices=(
+            "inspect", "prepare", "maps", "plot", "dense", "consistency",
+            "all",
+        ),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
@@ -647,6 +870,8 @@ def main() -> None:
         plot_products(paths, config, overwrite=args.overwrite)
     if args.stage in ("dense", "all"):
         measure_dense_gas(paths, config, overwrite=args.overwrite)
+    if args.stage in ("consistency", "all"):
+        check_consistency(paths, config, overwrite=args.overwrite)
 
 
 if __name__ == "__main__":

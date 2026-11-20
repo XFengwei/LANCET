@@ -10,9 +10,10 @@ grid and the Paper I column densities as surface densities.
 | Key | File | Notes |
 |---|---|---|
 | `grid_reference` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.fits` | 12m+7m MIRIAD image; only its 2-D grid is used |
-| `dust_continuum_allscale` | `results/combine_continuum/products/jcomb_dust_224GHz_extended.fits` | J-comb 12m+7m + dust-only TP (TP factor 1.0), Jy/beam, converted to MJy/sr here. The extended product continues into the TP-only area beyond the mosaic. Not yet promoted to `data/delivered/`; only a delivered file or a `combine_continuum` product is accepted |
+| `dust_continuum_allscale` | `data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits` | delivered J-comb 12m+7m + dust-only TP (TP factor 1.0), Jy/beam, converted to MJy/sr here. Beyond the mosaic it is the TP alone, continued past the Paper I dust model with the 18″+36″ SED maps (`synthesize_continuum` `fill`), so it covers the whole 12m+7m grid. Only a delivered file or a `combine_continuum` product is accepted |
 | `intercore_background` | `extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits` | getsf background of the 12m+7m image, MJy/sr; getsf is not rerun (D7) |
 | `temperature_lowres`, `column_density_lowres`, `column_density_multiscale` | `data/delivered/sedfitter/combine/` | Paper I SED products (unscaled originals) |
+| `tp_dust_model` | `results/synthesize_continuum/model/dust_224GHz_fill36.fits` | the filled TP dust model contained in the extended36 product, on the low-resolution grid; `consistency` stage only |
 | `freefree_smoothed` | `results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec.fits` | contours on the overlay figure |
 | `primary_beam` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits` | MIRIAD mosaic pb; its 0.2 contour is drawn |
 | region files | `region/` | subregion boxes and the dense-gas regions |
@@ -22,8 +23,11 @@ grid and the Paper I column densities as surface densities.
 Finite-opacity inversion at 223.8 GHz with a total-gas opacity of
 0.005 cm² g⁻¹ (dust κ = 0.5 cm² g⁻¹, R_gd ≈ 100) and μ_H2 = 2.8. The
 temperature is the Paper I 18″+36″ dust temperature, regridded to the ALMA
-grid. Pixels with intensity ≤ 0 get column density 0
-(`zero_nonpositive_intensity`); NaN stays NaN. All settings are in `task.toml`.
+grid. `maps` writes two versions of each surface-density map: `*_signed`
+keeps negative values (interferometric noise and bowls), and the main maps
+(`surface_density_*`, `column_density_*`) set pixels with negative intensity
+to NaN. Exact zeros stay 0 (the getsf background is 0 outside its extraction
+area). All settings are in `task.toml`.
 
 ## Stages
 
@@ -33,9 +37,20 @@ grid. Pixels with intensity ≤ 0 get column density 0
 - `maps`: all-scale and intercore column- and surface-density maps (`maps/`).
 - `plot`: full-field, free-free overlay, subregion boxes and three subregion
   figures, PDF and PNG (`figures/`).
+  The figures show |Σ| of the signed map (`[plot_style] fill_negative =
+  "mirror"`), so negative pixels appear as their own noise instead of white
+  holes.
 - `dense`: mass above 1 g cm⁻² and its fraction of the configured cloud masses
   in the three evolutionary regions (`measurements/dense_gas.json`). No other
   task reads it.
+- `consistency` (after `prepare` and `maps`): the signed all-scale Σ is
+  block-averaged to 1″, smoothed to the 18.1″ low-resolution beam and reprojected onto the 6″ grid. It is compared, by pb region, with
+  the low-resolution (Paper I) Σ and with Σ of the TP dust model
+  (`tp_dust_model`, converted with this task's settings). Writes
+  `consistency/statistics.json`. First result (2026-11-20): smoothed
+  all-scale / TP-model Σ = 0.998–1.005 (median), so the combination keeps
+  the large scales; both are 3–8 % below the Paper I Σ, an offset of the
+  brightness-to-Σ conversion.
 - `all`: all stages in order.
 
 ```bash
@@ -67,7 +82,7 @@ diffuse gas and close to unchanged at the brightest cores:
   0.05, 0.10, 0.23.
 
 The figure colour scale follows the lower values: grey 0–1 g cm⁻² (linear),
-colour 1–3 g cm⁻² (square root), against 0–2 and 2–10 in Paper II
+colour 1–5 g cm⁻² (square root; author), against 0–2 and 2–10 in Paper II
 (`[plot_style]`, author 2026-11-20).
 
 The temperature and the intercore maps are byte-identical to the Paper II
@@ -76,6 +91,6 @@ the Paper I column-density maps; they are not task inputs.
 
 ## Known limitations
 
-- The combined map's absolute scale is marked "pending" in `combine_continuum`;
-  rerun this task once the product is promoted.
+- Outside the Paper I dust model the all-scale map is the 36″ SED fill
+  (`synthesize_continuum` `fill`), not new information at 18″.
 - The intercore background comes from the old (CASA) 12m+7m image used by getsf.
