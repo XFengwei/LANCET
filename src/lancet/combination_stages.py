@@ -314,11 +314,22 @@ def combine_settings(config: Mapping, method: str, tp_factor: float) -> dict:
     return settings
 
 
+def pb_taper(pb: np.ndarray, pb0: float, pb1: float) -> np.ndarray:
+    """Cosine weight in the primary beam: 0 for pb <= pb0 (and NaN), 1 for pb >= pb1, float32."""
+    if not 0 < pb0 < pb1 <= 1:
+        raise ValueError(f"The taper needs 0 < pb0 < pb1 <= 1, got ({pb0}, {pb1})")
+    pb = np.asarray(pb, dtype=np.float32)
+    t = np.clip((pb - np.float32(pb0)) / np.float32(pb1 - pb0), 0.0, 1.0)
+    weight = np.float32(0.5) * (1.0 - np.cos(np.float32(np.pi) * t))
+    return np.where(np.isfinite(pb), weight, 0.0).astype(np.float32)
+
+
 def product_metadata(config: Mapping, method: str, flavour: str, settings: Mapping,
-                     tp_frequency_ghz: float) -> dict:
-    """Header settings (COMB_*) of one combined product."""
+                     tp_frequency_ghz: float, fill_outside_mosaic: bool | None = None) -> dict:
+    """Header settings (COMB_*) of one combined product; ``fill_outside_mosaic`` overrides the configured value."""
+    fill = config["combine"]["fill_outside_mosaic"] if fill_outside_mosaic is None else fill_outside_mosaic
     return {"method": method, "tp_flavour": flavour, "tp_frequency_ghz": tp_frequency_ghz,
-            "working_unit": "MJy/sr", "fill_outside_mosaic": bool(config["combine"]["fill_outside_mosaic"]),
+            "working_unit": "MJy/sr", "fill_outside_mosaic": bool(fill),
             "padding_mode": PADDING_MODE, "absolute_scale": config["absolute_scale"]["status"], **settings}
 
 
@@ -368,7 +379,7 @@ def measurement_context(paths: Mapping[str, Path], config: Mapping, flavour: str
             "window": mosaic_window(gain, m["min_gain"], pix, m["window_smooth_arcsec"]),
             "tp_high": tp_at_high_resolution(low, pix, low_beam, high_beam, config["jcomb"]["k2_klambda"],
                                              config["prepare"]["padding_arcsec"]),
-            "blank": product_blank(gain, footprint, bool(config["combine"]["fill_outside_mosaic"]))}
+            "footprint": footprint, "blank": product_blank(gain, footprint, bool(config["combine"]["fill_outside_mosaic"]))}
 
 
 def measure_product(product: np.ndarray, ctx: Mapping, config: Mapping, tp_factor: float) -> dict:
@@ -445,6 +456,42 @@ def zero_spacing(product, ctx: Mapping, config: Mapping, tp_factor: float):
     return summary, np.where(valid, combined_tp, np.nan), ratio, mosaic, tp_only
 
 
+def _run_extended(method, flavour, ctx, standard, paths, config, settings, out, frequency) -> dict:
+    """Write the extended product of one flavour and its zero-spacing check; return its measurements.
+
+    The 12m+7m plane is weighted by the primary-beam taper, then combined with the same TP and
+    settings; only the TP footprint blanks it. Runs after the standard product's work, so that the
+    full-size planes of the two combinations are never held together.
+    """
+    factor, (pb0, pb1) = settings["tp_factor"], config["combine"]["extended_taper_pb"]
+    tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
+    hashes = input_hashes(paths, ["interferometer", "gain", "pb", f"tp_{flavour}"])
+    pb = read_gain(paths["pb"], ctx["high"].shape)
+    high = ctx["high"] * pb_taper(pb, pb0, pb1)
+    blank = product_blank(ctx["gain"], ctx["footprint"], True)
+    product = combine_prepared(ctx["low"], high, ctx["pix"], ctx["high_beam"], ctx["low_beam"], method, settings,
+                               blank=blank)
+    del high
+    meta = product_metadata(config, method, flavour, {**settings, "extended": True, "taper_pb0": pb0, "taper_pb1": pb1},
+                            frequency, fill_outside_mosaic=True)
+    write_product(out[f"image_extended_{flavour}"], product, ctx["header"], meta, hashes, beam=ctx["high_beam"])
+    ctx = {**ctx, "blank": blank}
+    check, at_tp_beam, ratio, _, _ = zero_spacing(product, ctx, config, factor)
+    info = {"taper_pb": [pb0, pb1], "zero_spacing": check,
+            "tp_only_ratio_to_scaled_tp": tp_only_ratio(product, factor * ctx["low"], ctx["high_beam"],
+                                                        ~blank & (ctx["gain"] == 0))}
+    keep = (pb >= 0.35) & np.isfinite(standard) & (standard > 3.0 * ctx["sigma"])
+    info["ratio_to_standard_pb_ge_0.35"] = float(np.median(product[keep] / standard[keep])) if keep.any() else None
+    tp_meta = {"stage": method, "tp_flavour": flavour, "tp_factor": factor, "extended": True}
+    write_product(out[f"at_tp_beam_extended_{flavour}"], at_tp_beam, ctx["tp_header"],
+                  {**tp_meta, "quantity": "extended image smoothed to the TP beam, on the TP grid"}, hashes,
+                  bunit="MJy/sr", beam=(tp_fwhm, tp_fwhm, 0.0))
+    write_product(out[f"ratio_extended_{flavour}"], ratio, ctx["tp_header"],
+                  {**tp_meta, "quantity": "extended image at the TP beam / (TP factor x TP)"}, hashes, bunit="",
+                  beam=(tp_fwhm, tp_fwhm, 0.0))
+    return info
+
+
 def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrite: bool = False) -> dict[str, Path]:
     """Combined images of one method for both TP models, each with the zero-spacing check
     (combined image at the TP beam against the TP), measurements and figures."""
@@ -458,6 +505,9 @@ def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrit
         out[f"image_{flavour}"] = paths["products"][f"{method}_{kind}"]
         out[f"at_tp_beam_{flavour}"] = zero_root / f"{method}_{kind}_{label}_at_tp_beam.fits"
         out[f"ratio_{flavour}"] = zero_root / f"zero_spacing_ratio_{method}_{kind}_{label}.fits"
+        out[f"image_extended_{flavour}"] = paths["products"][f"{method}_{kind}_extended"]
+        out[f"at_tp_beam_extended_{flavour}"] = zero_root / f"{method}_{kind}_{label}_extended_at_tp_beam.fits"
+        out[f"ratio_extended_{flavour}"] = zero_root / f"zero_spacing_ratio_{method}_{kind}_{label}_extended.fits"
         for name in ("comparison", "zero_spacing", "power_spectrum"):
             for ext in ("pdf", "png"):
                 out[f"{name}_{flavour}_{ext}"] = root / f"{name}_{flavour}.{ext}"
@@ -512,6 +562,8 @@ def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrit
                 v["aca_shortest_klambda"], v["min_gain"], flux_tolerance=v["gate_flux_tolerance"],
                 rms_tolerance=v["gate_rms_tolerance"])
             print("mock sky test", measurements["mock_sky_test"], flush=True)
+        measurements[flavour]["extended"] = _run_extended(method, flavour, ctx, product, paths, config, settings,
+                                                          out, frequency)
         del ctx, product
     measurements["flags"] = sorted(f"{flavour}/{name}" for flavour in TP_FLAVOURS
                                    for name, c in measurements[flavour]["checks"].items() if c["flag"])

@@ -33,7 +33,7 @@ from lancet.imaging import frequency_label, read_frequency_ghz
 from lancet.joint_image_comparison import run_joint_image_comparison
 
 DEFAULT_CONFIG = Path("tasks/combine_continuum/task.toml")
-DELIVERED_INPUTS = ("interferometer", "gain", "psf", "psf_imfit_log", "aca_pbcor", "twelve_m_pbcor",
+DELIVERED_INPUTS = ("interferometer", "gain", "pb", "psf", "psf_imfit_log", "aca_pbcor", "twelve_m_pbcor",
                     "casa_image", "casa_pb", "planck_217", "planck_co", "planck_rimo",
                     "planck_fetch_record", "atlasgal_870")
 # TP models are the products of the synthesize_continuum task.
@@ -69,9 +69,12 @@ def _project_path(project: ProjectPaths, value: object) -> Path:
 
 
 def product_paths(output_root: Path, label: str = DEFAULT_LABEL) -> dict[str, Path]:
-    """Combined images, named by method, TP model and the TP frequency label."""
-    return {f"{method}_{kind}": Path(output_root) / "products" / f"{method}_{kind}_{label}.fits"
-            for method in ("jcomb", "feather") for kind in ("continuum", "dust")}
+    """Combined images, named by method, TP model and the TP frequency label; ``_extended`` keys continue
+    into the TP-only area."""
+    root = Path(output_root) / "products"
+    standard = {f"{method}_{kind}": root / f"{method}_{kind}_{label}.fits"
+                for method in ("jcomb", "feather") for kind in ("continuum", "dust")}
+    return {**standard, **{f"{key}_extended": root / f"{key}_{label}_extended.fits" for key in standard}}
 
 
 def resolve_task_paths(project: ProjectPaths, config: Mapping) -> dict:

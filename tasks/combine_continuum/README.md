@@ -39,8 +39,8 @@ product for its mock correction and stops if it is missing.
 | `inspect` | inputs, grids, beams, units, frequencies, provenance | nothing |
 | `prepare` | 12m+7m true sky in MJy/sr with its mask; both TP models regridded to its grid with the edge taper; checks the TP footprint margin and the regridding power change | `prepared/` |
 | `tp_factor` | global overlap factor on the prepared inputs (documented, not applied) | `checks/tp_factor/` |
-| `jcomb` | J-comb with dust + free-free and with dust only, and its measurements | `products/`, `checks/jcomb/`, `checks/zero_spacing/` |
-| `feather` | feather, same inputs and measurements | `products/`, `checks/feather/`, `checks/zero_spacing/` |
+| `jcomb` | J-comb with dust + free-free and with dust only, standard and extended products, and their measurements | `products/`, `checks/jcomb/`, `checks/zero_spacing/` |
+| `feather` | feather, same inputs, products and measurements | `products/`, `checks/feather/`, `checks/zero_spacing/` |
 | `box_spectrum` | power spectra in the middle and south boxes, with the mock correction | `checks/box_spectrum/` |
 | `planck_calibration` | TP against Planck 217 GHz; nothing is applied | `checks/planck_calibration/` |
 
@@ -73,6 +73,7 @@ All inputs are declared in `task.toml`; the code checks each key's source.
 |---|---|---|---|
 | `interferometer` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits` | delivered | prepare, figure2, compare_images, joint_images, amplitude_alignment |
 | `gain` | `…7MTM2TM1.robust0.5.cont.gain.fits` | delivered | measurement region, pointing_coverage |
+| `pb` | `…7MTM2TM1.robust0.5.cont.pb.fits` | delivered | extended products (taper weight) |
 | `psf` (+ `psf_imfit_log`) | `…7MTM2TM1.robust0.5.cont.psf.fits` (+ `.psf.imfit.log`) | delivered | dirty_beam |
 | `aca_pbcor` | `…IRDC316.8.7M.robust0.5.cont.image.pbcor.fits` | delivered | compare_images, aca_forward_test |
 | `twelve_m_pbcor` | `…IRDC316.8.TM2TM1.robust0.5.cont.image.pbcor.fits` | delivered | compare_images |
@@ -85,8 +86,8 @@ All inputs are declared in `task.toml`; the code checks each key's source.
 
 - Phase 1 reads the 12m+7m image and the TP models with `read_plane`, which
   accepts only Jy/beam with a beam; `prepare` converts them to MJy/sr with each
-  image's own beam. The gain is read with `read_gain` (no unit or beam
-  expected). Phase 2 reads images with `read_mjysr` or, for the sampled sky
+  image's own beam. The gain and pb maps are read with `read_gain` (no unit or
+  beam expected; the shape must match the 12m+7m image). Phase 2 reads images with `read_mjysr` or, for the sampled sky
   models, its own reader: Jy/beam is converted with the image's own beam,
   MJy/sr is passed through, anything else is refused.
 - The TP frequency is read from the `FREQGHZ` card of the TP models (223.8 GHz;
@@ -165,6 +166,23 @@ returns too low a value. The brightest-beam Planck ratio depends on how much of
 Planck's signal is assigned to a background the TP model lacks, and rests on
 under one independent beam.
 
+### Extended products
+
+Each stage also writes, per TP model, an extended product that continues the
+combination into the TP-only area beyond the mosaic. The 12m+7m plane is
+multiplied by a weight in the mosaic primary beam (`pb`):
+`w = 0` for pb ≤ pb₀, `w = 1` for pb ≥ pb₁ and
+`w = ½[1 − cos(π (pb − pb₀)/(pb₁ − pb₀))]` between, with
+`[combine] extended_taper_pb = [0.2, 0.3]`. The small scales fade out across
+that rim instead of stopping at pb 0.2, where the true-sky noise is 2.5 times
+the centre value. The TP, its factor and all settings are those of the standard
+product. The extended product is blank only outside the TP footprint; beyond
+the mosaic it is the TP part of the combination alone. Where pb ≥ pb₁ it equals
+the standard product apart from the small large-scale change that the rim
+weight makes through the FFT. The two combinations run one after the other, so
+the full-size planes of both are never held at once. The diagnostics keep using
+the standard, blanked products.
+
 ## Outputs
 
 `results/combine_continuum/products/` (float32, Jy/beam of the 12m+7m
@@ -175,12 +193,21 @@ restoring beam, on the 12m+7m grid):
 | `jcomb_continuum_224GHz.fits` | 12m+7m + dust + free-free TP (adopted) |
 | `jcomb_dust_224GHz.fits` | 12m+7m + dust-only TP |
 | `feather_continuum_224GHz.fits`, `feather_dust_224GHz.fits` | cross-check |
+| `{jcomb,feather}_{continuum,dust}_224GHz_extended.fits` | the four products continued into the TP-only area (see "Extended products") |
 
 - Products are blank outside the input mosaic mask (pb ≥ 0.2,
   `fill_outside_mosaic = false`). The previous task kept TP-only pixels there.
 - Header: `COMB_*` cards (method, k1, k2, order, minimum TP response, TP factor,
   TP flavour, TP frequency from `FREQGHZ`, padding, absolute scale "pending")
-  and the SHA-256 of every input.
+  and the SHA-256 of every input. The extended products add `COMB_EXTENDED = T`,
+  `COMB_TAPER_PB0` and `COMB_TAPER_PB1`, and carry `COMB_FILL_OUTSIDE_MOSAIC = T`.
+- Extended checks: `checks/zero_spacing/{method}_{kind}_224GHz_extended_at_tp_beam.fits`
+  and `zero_spacing_ratio_{method}_{kind}_224GHz_extended.fits`; in
+  `checks/<method>/measurements.json`, per TP model, `extended` holds the
+  zero-spacing check over `mosaic`, `tp_only` and `all`,
+  `tp_only_ratio_to_scaled_tp`, and `ratio_to_standard_pb_ge_0.35` (median
+  extended / standard where pb ≥ 0.35 and the standard is above 3σ). All other
+  measurements stay on the standard products.
 
 Checks, written as JSON plus figures (PDF and PNG):
 

@@ -93,7 +93,8 @@ def test_resolved_groups():
 
 def test_product_paths_follow_label(tmp_path):
     products = TASK.product_paths(tmp_path, "250GHz")
-    assert set(products) == {"jcomb_continuum", "jcomb_dust", "feather_continuum", "feather_dust"}
+    standard = {"jcomb_continuum", "jcomb_dust", "feather_continuum", "feather_dust"}
+    assert set(products) == standard | {f"{key}_extended" for key in standard}
     assert products["feather_dust"] == tmp_path / "products" / "feather_dust_250GHz.fits"
 
 
@@ -129,3 +130,16 @@ def test_inspect_writes_nothing():
     assert "TP frequency: 223.8 GHz" in run.stdout
     assert "truesky.pb0.2" in run.stdout
     assert _files() == before
+
+
+@pytest.mark.parametrize("key", ["jcomb_continuum", "jcomb_dust", "feather_continuum", "feather_dust"])
+def test_extended_product_paths(tmp_path, key):
+    products = TASK.product_paths(tmp_path, "224GHz")
+    assert products[f"{key}_extended"] == tmp_path / "products" / f"{key}_224GHz_extended.fits"
+
+
+def test_pb_is_a_delivered_input():
+    config = TASK.load_task_config(CONFIG)
+    assert "pb" in TASK.DELIVERED_INPUTS
+    assert config["inputs"]["pb"].endswith("IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits")
+    assert config["combine"]["extended_taper_pb"] == [0.2, 0.3]

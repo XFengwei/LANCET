@@ -5,6 +5,8 @@ name = "combine_continuum"
 # MIRIAD 12m+7m joint mosaic: true-sky (primary-beam corrected) image cut at gain 0.2, and its gain.
 interferometer = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits"
 gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits"
+# Mosaic primary beam on the same grid; only the weight of the extended products reads it.
+pb = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 psf = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.fits"
 psf_imfit_log = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.imfit.log"
 # 7m-only and 12m-only (C5+C2) primary-beam corrected images.
@@ -74,6 +76,10 @@ bins_klambda = [1.0, 30.0, 24]
 # Keep the product wherever the TP model exists. Outside the 12m+7m mosaic it is TP-only.
 # false blanks it where the mosaic gain is undefined (< 0.2).
 fill_outside_mosaic = false
+# Extended products (jcomb and feather, both TP models) are blank only outside the TP model. The
+# 12m+7m image is multiplied by a cosine weight in the mosaic primary beam: 0 at pb <= the first value,
+# 1 at pb >= the second.
+extended_taper_pb = [0.2, 0.3]
 
 [jcomb]
 # TP weight: 1 below k1, 0 above k2, Butterworth in between; the TP is multiplied by G_high/G_low.

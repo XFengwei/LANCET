@@ -121,7 +121,8 @@ All declared in `task.toml`; the code checks each key's source.
 | Key | Path | Source rule | Used by |
 |---|---|---|---|
 | `interferometer` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits` | delivered | prepare, figure2, compare_images, joint_images, amplitude_alignment sky model |
-| `gain` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits` | delivered | measurement region, pointing_coverage |
+| `gain` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits` | delivered | prepare, measurement region, pointing_coverage |
+| `pb` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits` | delivered | extended products |
 | `psf` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.fits` (+ `.psf.imfit.log`) | delivered | dirty_beam |
 | `aca_pbcor` | `data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.image.pbcor.fits` | delivered | compare_images, aca_forward_test |
 | `twelve_m_pbcor` | `data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.image.pbcor.fits` | delivered | compare_images |
@@ -132,8 +133,10 @@ All declared in `task.toml`; the code checks each key's source.
 | `core_catalogue` | `results/source_catalogue/tables/source_catalogue.ecsv` | task product | compact-source check |
 | `[reduction_inputs]` | the four measurement sets in `data/reduction/alma/7MTM2TM1/cont/ms/` (12m combined, C5, C2, 7m) | declared read-only intermediate | uv, overlap, full_sampling, amplitude_alignment, aca_forward_test, pointing_coverage |
 
-- Every image is read with `read_mjysr` (Jy/beam converted with its own beam;
-  MJy/sr passed through; anything else refused).
+- Phase 1 reads Jy/beam images with `read_plane` (a beam is required); the
+  gain and pb maps are read with `read_gain` (no unit or beam). Phase 2 reads
+  images with `read_mjysr` (Jy/beam converted with its own beam; MJy/sr passed
+  through; anything else refused).
 - The TP frequency is read from the TP header (`FREQGHZ`), not set in the
   configuration. The old `tp_frequency_ghz = 224.0` and the
   `pointing_coverage` `frequency_ghz = 224.4` are removed; the primary-beam
