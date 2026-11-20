@@ -1,13 +1,8 @@
 import numpy as np
 from astropy.io import fits
 
-from lancet.aca_forward_test import binned_rms, pair_weights, scale_for_unit_ratio, sky_model
-
-
-def test_scale_for_unit_ratio_interpolates_inside_range():
-    assert np.isclose(scale_for_unit_ratio([0, 1, 2, 3], [0.4, 0.8, 1.2, 1.6]), 1.5)
-    assert np.isnan(scale_for_unit_ratio([0, 1], [1.2, 1.5]))
-    assert np.isnan(scale_for_unit_ratio([0, 1, 2], [0.5, 1.4, 1.1]))
+from lancet import aca_forward_test
+from lancet.aca_forward_test import binned_rms, pair_weights, sky_model
 
 
 def test_bootstrap_weights_repeat_pairs():
@@ -38,13 +33,29 @@ def test_gaussian_transfer_and_limit_are_consistent():
     assert np.isclose(half, 5.0287, rtol=1e-3)  # matches the TP summary half-response radius
 
 
-def test_tp_scale_is_interpolated_per_model_against_the_interferometer():
-    from lancet.aca_forward_test import tp_scales_reproducing_aca
+def test_no_tp_scale_is_derived_from_the_forward_test():
+    # The 12m+7m image is not the f = 0 member of J-comb or feather, so no TP scale is
+    # interpolated between them; the stage reports only the predicted / measured ratios.
+    assert not hasattr(aca_forward_test, "tp_scales_reproducing_aca")
+    assert not hasattr(aca_forward_test, "scale_for_unit_ratio")
+    import inspect
+    assert "tp_scale" not in inspect.getsource(aca_forward_test).replace("tp_scale_given", "")
 
-    scales = {"interferometer": 0.0, "jcomb": 1.0, "feather": 1.0}
-    result = tp_scales_reproducing_aca({"interferometer": 0.6, "jcomb": 0.9, "feather": 1.1}, scales)
-    assert set(result) == {"jcomb", "feather"}
-    assert np.isnan(result["jcomb"])                 # 0.6 -> 0.9 does not reach 1
-    assert np.isclose(result["feather"], 0.8)        # 0.6 at scale 0, 1.1 at scale 1
-    swapped = tp_scales_reproducing_aca({"interferometer": 0.6, "jcomb": 1.1, "feather": 0.9}, scales)
-    assert np.isclose(swapped["jcomb"], 0.8) and np.isnan(swapped["feather"])
+
+def test_signal_panel_draws_the_flagged_models(tmp_path):
+    from matplotlib import pyplot as plt
+    models = {"interferometer": {"label": "12m+7m", "signal_panel": True},
+              "jcomb": {"label": "J-comb", "signal_panel": True}, "aca_only": {"label": "ACA-only image"}}
+    test = {"sky_models": models, "figure_selection": "interior_pairs", "output_formats": ["png"]}
+    profiles = []
+    for uv in (6.0, 8.0):
+        record = {"selection": "interior_pairs", "sideband": "both", "uv_klambda": uv, "aca_rms_mjy": 10.0,
+                  "tp_rms_mjy": 9.0, "tp_to_aca": 0.9}
+        for model in models:
+            record.update({model+"_rms_mjy": 8.0, model+"_to_aca": 0.8, model+"_to_aca_p16": 0.7,
+                           model+"_to_aca_p84": 0.9})
+        profiles.append(record)
+    figures = []
+    aca_forward_test._plot(profiles, test, tmp_path, lambda fig, outputs, **_: figures.append(fig), plt)
+    signal = figures[0].axes[1]
+    assert len(signal.lines) == 2 + 2          # measured ACA, TP model, and the two flagged models

@@ -301,4 +301,5 @@ def test_sky_model_sources_resolve_to_path_groups():
     models = config["aca_forward_test"]["sky_models"]
     assert set(models) == {"interferometer", "jcomb", "feather", "aca_only"}
     assert models["jcomb"]["source"] == "products.jcomb_continuum"
+    assert not any("tp_scale" in spec for spec in models.values())     # no TP scale is derived
     assert config["amplitude_alignment"]["sky_model"] == "inputs.interferometer"

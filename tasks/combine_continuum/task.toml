@@ -218,11 +218,12 @@ figure_selection = "interior_pairs"
 output_formats = ["pdf", "png"]
 
 # Each source is "<path group>.<name>" in the resolved task paths. The TP model itself is always
-# predicted (through the native 7 m PB); it is not listed as a sky model.
+# predicted (through the native 7 m PB); it is not listed as a sky model. signal_panel = true draws
+# the model's predicted RMS beside the measured ACA RMS in panel (b).
 [aca_forward_test.sky_models]
-interferometer = { source = "inputs.interferometer", label = "12m+7m (no TP)", tp_scale = 0.0, tp_beam_transfer = true }
-jcomb = { source = "products.jcomb_continuum", label = "J-comb", tp_scale = 1.0, tp_beam_transfer = true }
-feather = { source = "products.feather_continuum", label = "Feather", tp_scale = 1.0, tp_beam_transfer = true }
+interferometer = { source = "inputs.interferometer", label = "12m+7m (no TP)", signal_panel = true, tp_beam_transfer = true }
+jcomb = { source = "products.jcomb_continuum", label = "J-comb", signal_panel = true, tp_beam_transfer = true }
+feather = { source = "products.feather_continuum", label = "Feather", signal_panel = true, tp_beam_transfer = true }
 aca_only = { source = "inputs.aca_pbcor", label = "ACA-only image" }
 
 [amplitude_alignment]

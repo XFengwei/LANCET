@@ -72,34 +72,6 @@ def binned_rms(power, use, cell_pair, weights):
     return float(np.sqrt(mean)) if mean > 0 else np.nan
 
 
-def scale_for_unit_ratio(scales, ratios):
-    """Interpolate the TP scale at which a predicted/measured RMS ratio is one.
-
-    `ratios` must increase with `scales`. Returns NaN outside the tested range.
-    """
-    scales, ratios = np.asarray(scales, float), np.asarray(ratios, float)
-    good = np.isfinite(ratios)
-    scales, ratios = scales[good], ratios[good]
-    if len(ratios) < 2 or np.any(np.diff(ratios) <= 0) or not ratios[0] <= 1 <= ratios[-1]:
-        return np.nan
-    return float(np.interp(1.0, ratios, scales))
-
-
-def tp_scales_reproducing_aca(ratios, scales):
-    """TP scale at which each TP-bearing model's predicted/measured RMS ratio is one.
-
-    Each model with a non-zero `tp_scale` is interpolated against the single model with scale
-    0 (the 12m+7m image without TP), alone: models from different combination methods are never
-    mixed. NaN where that pair does not bracket a ratio of one.
-    """
-    reference = [m for m, s in scales.items() if s == 0]
-    if len(reference) != 1:
-        raise ValueError(f"Need exactly one sky model with tp_scale = 0, got {reference}")
-    zero = reference[0]
-    return {m: scale_for_unit_ratio([0.0, s], [ratios[zero], ratios[m]])
-            for m, s in scales.items() if m != zero}
-
-
 def _support(rows, meta, pairs, image, header, settings):
     """PB-weighted fraction of each native ACA beam covered by nonzero model pixels."""
     mask = (np.isfinite(image) & (image != 0)).astype(float)
@@ -163,15 +135,13 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
 
     predictions = {"tp": _predict(rows, meta, pairs, tp_image, tp_header, settings, target_pb=False)}
     sources = [cache, meta_path, tp_path, root/"full_sampling/summary.json"]
-    support, scales, beam_info = {}, {}, {}
+    support, beam_info = {}, {}
     for label, spec in test["sky_models"].items():
         path = sky_paths[label]
         print(f"ACA forward test: {label}", flush=True)
         sky, header = sky_model(path, settings["model_pixel_arcsec"])
         predictions[label] = _predict(rows, meta, pairs, sky, header, settings, target_pb=False)
         support[label] = _support(rows, meta, pairs, sky, header, settings)
-        if "tp_scale" in spec:
-            scales[label] = float(spec["tp_scale"])
         if spec.get("tp_beam_transfer", False):
             smoothed, beam_info[label] = smooth_to_circular_beam(sky, header, tp_beam)
             predictions[label+"_tp_beam"] = _predict(rows, meta, pairs, smoothed, header, settings,
@@ -217,9 +187,6 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
                                     / binned_rms(stats["cross_power"], use, cell_pair, w))
                     low, high = np.nanpercentile(boot, [16, 84])
                     record[model+"_to_aca_p16"], record[model+"_to_aca_p84"] = float(low), float(high)
-                reproducing = tp_scales_reproducing_aca({m: record[m+"_to_aca"] for m in scales}, scales)
-                for model, value in reproducing.items():
-                    record[f"tp_scale_reproducing_aca_{model}"] = value
                 for model in beam_info:
                     if "tp_rms_mjy" in record:
                         record[f"tp_scale_given_{model}_transfer"] = record["tp_rms_mjy"]/record[model+"_tp_beam_rms_mjy"]
@@ -243,11 +210,11 @@ def run_aca_forward_test(paths, config, *, save_figure, overwrite=False):
                         "scaling between image and sideband frequencies; pointings are not fully independent."),
         "sources_sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources}}
     (out/"manifest.json").write_text(json.dumps(manifest, indent=2, default=float)+"\n")
-    _plot(profiles, test, scales, out, save_figure, plt)
+    _plot(profiles, test, out, save_figure, plt)
     return manifest
 
 
-def _plot(profiles, test, scales, out, save_figure, plt):
+def _plot(profiles, test, out, save_figure, plt):
     main = [r for r in profiles if r["selection"] == test["figure_selection"] and r["sideband"] == "both"]
     plt.rcParams.update({"font.family": "sans-serif", "font.size": 9, "pdf.fonttype": 42,
                          "svg.fonttype": "none", "legend.frameon": False})
@@ -279,7 +246,7 @@ def _plot(profiles, test, scales, out, save_figure, plt):
     b.plot([r["uv_klambda"] for r in tp], [r["tp_rms_mjy"] for r in tp], "s--", color="0.45",
            markersize=3, label="TP model, native ACA PB")
     for color, model in zip(colors, test["sky_models"]):
-        if model in scales:
+        if test["sky_models"][model].get("signal_panel", False):
             b.plot([r["uv_klambda"] for r in tp], [r[model+"_rms_mjy"] for r in tp], "-",
                    color=color, linewidth=.9)
     b.set(yscale="log", xlabel=r"uv distance (k$\lambda$)", ylabel="Signal RMS (mJy)")

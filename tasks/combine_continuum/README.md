@@ -219,12 +219,13 @@ method:
 
 ### ACA forward test
 
-Sky models: 12m+7m (no TP), J-comb, feather and the ACA-only image. For each
-TP-bearing model the stage reports the TP scale that reproduces the ACA
-amplitudes (`tp_scale_reproducing_aca_<model>`), interpolated between the
-12m+7m image (scale 0) and that model (scale 1). It is a two-point estimate and
-is NaN when the pair does not bracket a ratio of 1. A TP-only sky model is not
-included, because the forward-test code cannot take one.
+Sky models: 12m+7m (no TP), J-comb, feather and the ACA-only image. The TP
+model itself is always predicted. For each sky model and uv bin the stage
+reports the ratio of predicted to measured ACA amplitude (`<model>_to_aca`, with
+pointing-pair bootstrap percentiles). No TP-scale estimate is derived from it:
+the 12m+7m image is not the f = 0 member of J-comb or feather, so a scale
+interpolated between them has no meaning. A TP-only sky model is not included,
+because the forward-test code cannot take one.
 
 ## Limitations
 
