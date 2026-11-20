@@ -461,3 +461,10 @@ def test_image_curve_settings_are_validated():
         check_image_curve_settings(["feather"], {}, have)
     with pytest.raises(ValueError, match="stray"):
         check_image_curve_settings(["jcomb"], {"stray": "x"}, have)
+
+
+def test_shown_curve_values_need_no_curves_without_alignment():
+    from lancet.combination_figure import shown_curve_values
+    assert shown_curve_values({}, ["interferometer", "jcomb"]) == []
+    curves = {"jcomb": (np.array([1.0]), np.array([2.0, 3.0])), "feather": (np.array([1.0]), np.array([9.0]))}
+    assert shown_curve_values(curves, ["jcomb"]) == [2.0, 3.0]

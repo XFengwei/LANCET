@@ -108,6 +108,11 @@ def check_image_curve_settings(shown, labels, available):
                          f"image_curve_labels keys not in image_curves_shown {stray}")
 
 
+def shown_curve_values(curves, shown):
+    """Amplitudes of the drawn image curves; only the alignment path has curves."""
+    return [v for name in shown for v in curves[name][1]] if curves else []
+
+
 def _plot_image_curves(axis, curves, shown, labels):
     """Amplitudes of the shown image curves (beam and pixel binning divided out), with their legend."""
     handles = []
@@ -256,7 +261,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     # (c) amplitudes and visibility counts
     short = {"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}
     values = list(tp_amp) + ([] if tp_fixed is None else list(tp_fixed))
-    values += [v for name in shown_curves for v in image_curves[name][1]]
+    values += shown_curve_values(image_curves, shown_curves)
     for name, marker in [("aca_7m", "o"), ("configuration_c2", "s"), ("configuration_c5", "^")]:
         profile = [r for r in array_profiles if r["array"] == name]
         radius = np.array([r["uv_klambda"] for r in profile])
