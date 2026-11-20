@@ -92,3 +92,18 @@ def read_mjysr(path) -> tuple[np.ndarray, "fits.Header"]:
     header = header.copy()
     header["BUNIT"] = "MJy/sr"
     return np.asarray(data, dtype=np.float32), header
+
+
+def read_frequency_ghz(path) -> float:
+    """Return the ``FREQGHZ`` card of a FITS file."""
+    from astropy.io import fits
+
+    header = fits.getheader(path)
+    if "FREQGHZ" not in header:
+        raise ValueError(f"{path}: no FREQGHZ card")
+    return float(header["FREQGHZ"])
+
+
+def frequency_label(frequency_ghz: float) -> str:
+    """File-name label of a frequency, rounded to whole GHz (223.8 -> ``224GHz``)."""
+    return f"{round(frequency_ghz):d}GHz"

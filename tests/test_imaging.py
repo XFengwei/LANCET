@@ -8,9 +8,11 @@ import pytest
 
 from lancet.imaging import (
     apply_primary_beam_mask,
+    frequency_label,
     gaussian_beam_solid_angle_sr,
     jybeam_to_mjysr,
     jybeam_to_mjysr_from_header,
+    read_frequency_ghz,
     read_mjysr,
 )
 
@@ -88,3 +90,13 @@ def test_read_mjysr_passes_mjysr_and_rejects_other_units(tmp_path: Path) -> None
     fits.writeto(other, np.ones((2, 2), dtype=np.float32), fits.Header({"BUNIT": "K"}))
     with pytest.raises(ValueError, match="BUNIT"):
         read_mjysr(other)
+
+
+def test_read_frequency_ghz(tmp_path):
+    path = tmp_path / "tp.fits"
+    fits.PrimaryHDU(np.zeros((2, 2), np.float32)).writeto(path)
+    with pytest.raises(ValueError, match="FREQGHZ"):
+        read_frequency_ghz(path)
+    fits.setval(path, "FREQGHZ", value=223.8)
+    assert read_frequency_ghz(path) == 223.8
+    assert frequency_label(223.8) == "224GHz"
