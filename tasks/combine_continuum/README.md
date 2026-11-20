@@ -72,7 +72,7 @@ All inputs are declared in `task.toml`; the code checks each key's source.
 | Key | File | Source | Used by |
 |---|---|---|---|
 | `interferometer` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits` | delivered | prepare, figure2, compare_images, joint_images, amplitude_alignment |
-| `gain` | `…7MTM2TM1.robust0.5.cont.gain.fits` | delivered | measurement region, pointing_coverage |
+| `gain` | `…7MTM2TM1.robust0.5.cont.gain.fits` | delivered | prepare, measurement region, pointing_coverage |
 | `pb` | `…7MTM2TM1.robust0.5.cont.pb.fits` | delivered | extended products (taper weight) |
 | `psf` (+ `psf_imfit_log`) | `…7MTM2TM1.robust0.5.cont.psf.fits` (+ `.psf.imfit.log`) | delivered | dirty_beam |
 | `aca_pbcor` | `…IRDC316.8.7M.robust0.5.cont.image.pbcor.fits` | delivered | compare_images, aca_forward_test |
@@ -179,8 +179,7 @@ the centre value. The TP, its factor and all settings are those of the standard
 product. The extended product is blank only outside the TP footprint; beyond
 the mosaic it is the TP part of the combination alone. Where pb ≥ pb₁ it equals
 the standard product apart from the small large-scale change that the rim
-weight makes through the FFT. The two combinations run one after the other, so
-the full-size planes of both are never held at once. The diagnostics keep using
+weight makes through the FFT. The two combinations run one after the other, so the FFT planes of both are never held at once. The diagnostics keep using
 the standard, blanked products.
 
 ## Outputs

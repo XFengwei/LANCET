@@ -257,16 +257,17 @@ def test_pb_taper():
             stages.pb_taper(pb, *bad)
 
 
-def _extended_setup(monkeypatch, n=128, pix=2.0):
-    """Real combination and zero-spacing check on a synthetic mosaic (pb 0.2 at its edge) inside a wider TP."""
+def _extended_setup(monkeypatch, n=512, pix=2.0):
+    """Synthetic mosaic wide compared with the J-comb kernel (pb 0.2 at 200 px), flat inside (half the TP level, so that the edge ringing of the J-comb kernel stays below 1e-3), in a wider TP."""
     from astropy.wcs import WCS
     yy, xx = np.mgrid[:n, :n]
     radius = np.hypot(yy - n / 2 + 0.5, xx - n / 2 + 0.5)
-    pb = np.clip(1.0 - 0.8 * radius / 24.0, 0.0, 1.0).astype(np.float32)   # 0.2 at 24 px
-    pb[radius > 24] = 0.1
+    # 1 inside 40 px, 0.35 at 100 px, 0.2 at 200 px (the mosaic edge): the taper acts 80-100 px past pb 0.35
+    pb = np.interp(radius, [0.0, 40.0, 100.0, 200.0], [1.0, 1.0, 0.35, 0.2]).astype(np.float32)
+    pb[radius > 200] = 0.1
     mosaic = pb >= 0.2
     gain = np.where(mosaic, np.minimum(1.0, pb / 0.508), 0.0).astype(np.float32)
-    high = np.where(mosaic, 50.0 * np.exp(-radius ** 2 / (2 * 5.0 ** 2)), 0.0).astype(np.float32)
+    high = np.where(mosaic, 0.5, 0.0).astype(np.float32)
     header, tp_header = _header(n, pix, 4.0), _header(n // 4, 4 * pix, 18.1)
     ctx = {"low": np.ones((n, n), np.float32), "high": high, "gain": gain, "header": header,
            "tp_header": tp_header, "tp_wcs": WCS(tp_header), "pix": pix, "high_beam": (4.0, 4.0, 0.0),
@@ -281,36 +282,55 @@ def _extended_setup(monkeypatch, n=128, pix=2.0):
     monkeypatch.setattr(stages, "synthetic_gate", lambda *a, **k: {})
     for name in ("plot_comparison", "plot_zero_spacing", "plot_power_spectrum"):
         monkeypatch.setattr(stages, name, lambda *a, **k: None)
-    return pb
+    return pb, ctx
 
 
-def test_method_writes_extended_products(tmp_path, monkeypatch):
-    n = 128
-    pb = _extended_setup(monkeypatch, n)
+@pytest.mark.parametrize("method", ["jcomb", "feather"])
+def test_method_writes_extended_products(tmp_path, monkeypatch, method):
+    n = 512
+    pb, ctx = _extended_setup(monkeypatch, n)
     paths = _method_inputs(tmp_path, n)
     fits.PrimaryHDU(pb[None, None], _gain_header(n)).writeto(paths["pb"], overwrite=True)
+    calls, real = [], stages.combine_prepared
+
+    def spy(low, high, *args, **kwargs):
+        calls.append({"low": low, "high": high, "blank": kwargs["blank"]})
+        return real(low, high, *args, **kwargs)
+
+    monkeypatch.setattr(stages, "combine_prepared", spy)
     config, root = _config({}), paths["output_root"]
-    stages.run_method("jcomb", paths, config)
+    stages.run_method(method, paths, config)
+    assert len(calls) == 4                          # standard, extended; for each of the two flavours
+    standard_call, extended_call = calls[0], calls[1]
+    np.testing.assert_array_equal(standard_call["high"], ctx["high"])
+    t = np.clip((pb.astype(np.float64) - 0.2) / 0.1, 0.0, 1.0)         # the cosine weight, written out
+    expected = ctx["high"] * (0.5 * (1.0 - np.cos(np.pi * t)))
+    assert 0.0 < expected[expected > 0].min() < 0.5 * ctx["high"].max() and (expected == 0).any()
+    np.testing.assert_allclose(extended_call["high"], expected, rtol=1e-5, atol=1e-7)
+    assert extended_call["low"] is ctx["low"] or np.array_equal(extended_call["low"], ctx["low"])
+    np.testing.assert_array_equal(extended_call["blank"], ~ctx["footprint"])
     for kind in ("continuum", "dust"):
-        standard = fits.getdata(root / "products" / f"jcomb_{kind}_224GHz.fits")
-        path = root / "products" / f"jcomb_{kind}_224GHz_extended.fits"
+        standard = fits.getdata(root / "products" / f"{method}_{kind}_224GHz.fits")
+        path = root / "products" / f"{method}_{kind}_224GHz_extended.fits"
         header, extended = fits.getheader(path), fits.getdata(path)
         assert header["BITPIX"] == -32 and header["HIERARCH COMB_EXTENDED"] is True
         assert header["HIERARCH COMB_TAPER_PB0"] == 0.2 and header["HIERARCH COMB_TAPER_PB1"] == 0.3
         assert header["HIERARCH COMB_FILL_OUTSIDE_MOSAIC"] is True
-        assert fits.getheader(root / "products" / f"jcomb_{kind}_224GHz.fits")["HIERARCH COMB_FILL_OUTSIDE_MOSAIC"] is False
+        assert fits.getheader(root / "products" / f"{method}_{kind}_224GHz.fits")[
+            "HIERARCH COMB_FILL_OUTSIDE_MOSAIC"] is False
         outside = pb < 0.2
         assert np.isfinite(extended[outside]).all() and np.isnan(standard[outside]).all()
-        core = (pb >= 0.3) & np.isfinite(standard)
+        core = (pb >= 0.35) & np.isfinite(standard)
         np.testing.assert_allclose(extended[core], standard[core], rtol=1e-3)
         zero = root / "checks" / "zero_spacing"
-        assert (zero / f"jcomb_{kind}_224GHz_extended_at_tp_beam.fits").is_file()
-        assert (zero / f"zero_spacing_ratio_jcomb_{kind}_224GHz_extended.fits").is_file()
-    measured = json.loads((root / "checks" / "jcomb" / "measurements.json").read_text())
-    extended = measured["dust_ff"]["extended"]
+        assert (zero / f"{method}_{kind}_224GHz_extended_at_tp_beam.fits").is_file()
+        assert (zero / f"zero_spacing_ratio_{method}_{kind}_224GHz_extended.fits").is_file()
+    extended = json.loads((root / "checks" / method / "measurements.json").read_text())["dust_ff"]["extended"]
     assert extended["zero_spacing"]["tp_only"]["n"] > 0
     assert extended["tp_only_ratio_to_scaled_tp"]["n"] > 0
-    assert 0.99 < extended["ratio_to_standard_pb_ge_0.35"] < 1.01
+    assert abs(extended["ratio_to_standard_pb_ge_0.35"] - 1.0) < 1e-3
+    if method == "feather":                         # beyond the mosaic the feather is the TP alone
+        assert abs(extended["tp_only_ratio_to_scaled_tp"]["median"] - 1.0) < 0.03
 
 
 def test_extended_outputs_guarded(tmp_path, monkeypatch):
@@ -319,12 +339,10 @@ def test_extended_outputs_guarded(tmp_path, monkeypatch):
     config = _config({})
     stages.run_method("jcomb", paths, config)
     assert len(calls) == 4                      # standard and extended, for both flavours
-    extended = paths["products"]["jcomb_dust_extended"]
-    extended.unlink()                           # only an extended output is left to collide
-    (paths["output_root"] / "products" / "jcomb_dust_224GHz.fits").unlink()
-    paths["products"]["jcomb_continuum_extended"].write_bytes(b"x")
-    paths["products"]["jcomb_continuum"].unlink()
-    with pytest.raises(FileExistsError, match="extended"):
+    for file in paths["output_root"].rglob("*"):    # leave one extended product and nothing else
+        if file.is_file() and file != paths["products"]["jcomb_dust_extended"]:
+            file.unlink()
+    with pytest.raises(FileExistsError, match="jcomb_dust_224GHz_extended.fits"):
         stages.run_method("jcomb", paths, config)
     assert len(calls) == 4
 
