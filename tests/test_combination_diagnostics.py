@@ -433,3 +433,19 @@ def test_image_curve_method_states_the_pb_smoothing():
     for value in ("26.99", "25.33", "6.74", "7.19", "4 ln2 / (pi theta)"):
         assert value in note, value
     assert note in image_curve_method(config["amplitude_alignment"], config["overlap_tests"])
+
+
+def test_image_curves_follow_configured_set_and_labels():
+    import matplotlib
+    matplotlib.use("Agg")
+    from matplotlib import pyplot as plt
+    from lancet.combination_figure import _plot_image_curves
+    u = np.array([1.0, 2.0, 3.0])
+    curves = {name: (u, u * k) for name, k in [("interferometer", 1), ("jcomb", 2), ("feather", 3)]}
+    figure, axis = plt.subplots()
+    _plot_image_curves(axis, curves, ["interferometer", "jcomb"],
+                       {"interferometer": "12m+7m", "jcomb": "combine"})
+    assert [line.get_label() for line in axis.get_lines()] == ["12m+7m", "combine"]
+    assert [t.get_text() for t in axis.get_legend().get_texts()] == ["12m+7m", "combine"]
+    assert not any(np.allclose(line.get_ydata(), 3 * u) for line in axis.get_lines())
+    plt.close(figure)

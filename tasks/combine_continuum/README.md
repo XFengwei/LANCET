@@ -230,8 +230,10 @@ short-baseline inset, (c) amplitudes and visibility counts.
 
 Panel (c) shows the 7m, C2 and C5 RMS in matched uv and orientation cells (7m
 moved to the 12m primary beam through the 12m+7m sky model), the TP through the
-12m beam with and without its own beam, and three image curves: 12m+7m (dashed
-crimson), J-comb (solid green) and feather (dotted pink; dust + free-free).
+12m beam with and without its own beam, and two image curves, chosen by `image_curves_shown` and
+`image_curve_labels` in `[figure2]`: 12m+7m (dashed crimson) and J-comb (solid
+green, labelled "combine"). The feather curve is computed and kept in
+`image_curves.csv` but not drawn.
 
 Image curves are computed in the `amplitude_alignment` stage with the TP-curve
 method:

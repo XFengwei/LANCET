@@ -93,14 +93,19 @@ IMAGE_CURVES = {"interferometer": ("12m+7m", "--", "#B2182B"), "jcomb": ("J-comb
                 "feather": ("Feather", ":", "#CC79A7")}
 
 
-def _plot_image_curves(axis, curves):
-    """12m+7m, J-comb and feather amplitudes (beam and pixel binning divided out), with their legend."""
+def image_curve_styles(shown, labels):
+    """Style of each shown image curve; the legend labels come from the configuration."""
+    return {name: (labels.get(name, IMAGE_CURVES[name][0]), *IMAGE_CURVES[name][1:]) for name in shown}
+
+
+def _plot_image_curves(axis, curves, shown, labels):
+    """Amplitudes of the shown image curves (beam and pixel binning divided out), with their legend."""
     handles = []
-    for name, (label, style, color) in IMAGE_CURVES.items():
+    for name, (label, style, color) in image_curve_styles(shown, labels).items():
         u, rms = curves[name]
         handles += axis.plot(u, rms, color=color, linestyle=style, linewidth=1.1, label=label, zorder=4)
     # Below the direct "TP, beam-corrected" label, above the long-baseline profiles.
-    axis.legend(handles=handles, loc="upper right", bbox_to_anchor=(1.0, 0.875), fontsize=9,
+    axis.legend(handles=handles, loc="upper right", bbox_to_anchor=(0.975, 0.875), fontsize=9,
                 labelspacing=0.1, borderpad=.15, borderaxespad=.2, handlelength=1.7, handletextpad=0.35,
                 frameon=False)
 
@@ -174,6 +179,8 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     tp_u, tp_amp, tp_meta = tp_amplitude_reference(
         paths["inputs"]["tp_dust_ff"], sampling/"cell_statistics.npz",
         coverage, float(settings["tp_minimum_response"]))
+    shown_curves = list(settings.get("image_curves_shown", IMAGE_CURVES))
+    curve_labels = dict(settings.get("image_curve_labels", {}))
     tp_fixed, image_curves, image_meta, alignment_sources = None, {}, None, []
     if amplitude_source == "amplitude_alignment":
         # 7 m translated with the 12m+7m image; TP with and without its beam; image curves.
@@ -193,7 +200,8 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         image_meta = {**alignment["image_curves"], "source_csv": str(image_table),
                       "low_uv_pb_smoothing": pb_smoothing_note(config["overlap_tests"]),
                       "styles": {name: {"label": label, "linestyle": style, "color": color}
-                                 for name, (label, style, color) in IMAGE_CURVES.items()}}
+                                 for name, (label, style, color) in image_curve_styles(shown_curves, curve_labels).items()},
+                      "shown": list(shown_curves)}
     tp_table = root/"figures"/f"{stem}_tp_reference.csv"
     if tp_fixed is None:
         np.savetxt(tp_table, np.column_stack([tp_u, tp_amp]), delimiter=",",
@@ -237,7 +245,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     # (c) amplitudes and visibility counts
     short = {"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}
     values = list(tp_amp) + ([] if tp_fixed is None else list(tp_fixed))
-    values += [v for _, rms in image_curves.values() for v in rms]
+    values += [v for name in shown_curves if name in image_curves for v in image_curves[name][1]]
     for name, marker in [("aca_7m", "o"), ("configuration_c2", "s"), ("configuration_c5", "^")]:
         profile = [r for r in array_profiles if r["array"] == name]
         radius = np.array([r["uv_klambda"] for r in profile])
@@ -256,7 +264,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     if tp_fixed is not None:
         c.plot(tp_u[positive_tp], tp_fixed[positive_tp], color="0.1", linewidth=1.1, label="TP, beam-corrected")
     if image_curves:
-        _plot_image_curves(c, image_curves)
+        _plot_image_curves(c, image_curves, shown_curves, curve_labels)
     c.set(xlabel=r"uv distance (k$\lambda$)", ylabel="Amplitude (mJy)", xlim=(1, 1000))
     c.set_xscale("log")
     c.set_xticks([1, 10, 100, 1000], labels=["1", "10", "100", "1000"])
@@ -276,10 +284,13 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         c.scatter(density_centres[occupied], np.full(occupied.sum(), y),
                   s=4*counts[occupied]/maximum_count, color=COLORS[name], linewidths=0,
                   transform=c.get_xaxis_transform(), zorder=3)
+    # One column of labels, level with their tracks but kept a text height apart (bottom to top).
+    label_gap, label_y = .085, {}
+    for name in reversed(list(observation_sources)):
+        own = track_y[[i for i, (array, _, _) in enumerate(observation_density) if array == name]].mean()
+        label_y[name] = max(own, max(label_y.values(), default=-1) + label_gap)
     for name in observation_sources if tp_fixed is not None else ():
-        indices = [i for i, (array, _, _) in enumerate(observation_density) if array == name]
-        x = 0.025 + (0.12 if name == "configuration_c5" else 0)
-        c.text(x, track_y[indices].mean(), short[name], color=COLORS[name], fontsize=10,
+        c.text(0.025, label_y[name], short[name], color=COLORS[name], fontsize=10,
                va="center", transform=c.transAxes)
     c.plot([0, 1], [count_top, count_top], color="0.8", linewidth=0.5, transform=c.transAxes)
     c.text(0.025, .30, "Visibility counts", transform=c.transAxes, fontsize=10)
@@ -322,7 +333,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     tp_handle = Line2D([], [], marker="+", linestyle="none", color="0.3", markersize=6, label="TP")
     b.legend(handles=handles+[tp_handle], loc="lower left", ncol=2, fontsize=10,
              columnspacing=.35, handlelength=.7, handletextpad=.25, labelspacing=.15,
-             frameon=True, facecolor="white", framealpha=1, edgecolor="none")
+             frameon=False)
     b.set(xlabel="u (km)", ylabel="v (km)")
     b.set_xticks([-1000, 0, 1000], labels=["−1", "0", "1"])
     b.set_yticks([-1000, 0, 1000], labels=["−1", "0", "1"])
