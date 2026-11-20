@@ -5,7 +5,7 @@ from astropy.io import fits
 
 from lancet.full_sampling import combine_sampling_cells, separate_array_profiles
 from lancet.combination_figure import tp_amplitude_reference
-from lancet.tp_beam_test import smooth_to_circular_beam
+from lancet.aca_forward_test import smooth_to_circular_beam
 
 
 def test_unique_short_and_long_modes_are_retained_outside_common_overlap():

@@ -132,9 +132,11 @@ estimate. We should not answer the report strictly in numerical order.
   `prepare_continuum_images/task.toml` exist, as do the configured combined
   12m and ACA measurement-set paths. Their suitability, settings and PSFs have
   not yet been audited. A new joint-imaging run is not automatically necessary.
-- `combination_diagnostic.py` currently exposes inspection, uv coverage,
-  image comparison and beam-match stages. Existing coverage plots do not
-  constitute the requested quantitative overlap or method-validation evidence.
+- At the time of this review, the combination-diagnostic script exposed inspection,
+  uv coverage, image comparison and beam-match stages. Existing coverage plots did
+  not constitute the requested quantitative overlap or method-validation evidence.
+  That script was later retired; its diagnostics are now stages of
+  `tasks/combine_continuum/run.py`.
 
 Sources inspected: the full comment boxes in the response draft, the current
 clean v2, and the relevant task configurations and runners. No scientific

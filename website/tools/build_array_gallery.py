@@ -14,11 +14,11 @@ from reproject import reproject_interp
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT/'scripts'), str(ROOT/'src')]
 import multiwavelength_strip as strip
-config = tomllib.loads((ROOT/'tasks/combination_diagnostic/task.toml').read_text())
+config = tomllib.loads((ROOT/'tasks/combine_continuum/task.toml').read_text())
 view = tomllib.loads((ROOT/'tasks/multiwavelength_strip/task.toml').read_text())['grid']
 # Use the exact field, rotation, and sampling of the multiwavelength gallery.
 wcs, shape = strip.strip_wcs(view)
-inputs = [(name, ROOT/config['images'][key], label) for name, key, label in [('aca','aca_pbcor','ACA 7 m'), ('12m','twelve_m_pbcor','ALMA 12 m'), ('combined','combined_pbcut','ALMA 12 m + ACA 7 m')]]
+inputs = [(name, ROOT/config['inputs'][key], label) for name, key, label in [('aca','aca_pbcor','ACA 7 m'), ('12m','twelve_m_pbcor','ALMA 12 m'), ('combined','interferometer','ALMA 12 m + ACA 7 m')]]
 inputs += [('tp', ROOT/'results/synthesize_continuum/model/continuum_230GHz.fits', 'Total-power reconstruction model'), ('full', ROOT/'results/multiwavelength_strip/grid/mm_i.fits', 'Fully combined 12 m + 7 m + TP')]
 for name, path, label in inputs:
     with fits.open(path, memmap=True) as hdul:

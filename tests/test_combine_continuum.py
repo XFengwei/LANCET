@@ -1,6 +1,7 @@
 """Tests for the combine_continuum task: configuration, input provenance, stage selection."""
 
 import os
+import re
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 import subprocess
@@ -143,3 +144,28 @@ def test_pb_is_a_delivered_input():
     assert "pb" in TASK.DELIVERED_INPUTS
     assert config["inputs"]["pb"].endswith("IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits")
     assert config["combine"]["extended_taper_pb"] == [0.2, 0.3]
+
+
+RETIRED_TASKS = re.compile(r"linear_combine_continuum|combination_diagnostic(?!s)")
+ACTIVE_ROOTS = ("tasks", "scripts", "src", "tests")
+NO_REFERENCE_EXEMPT = {
+    # This test names the retired tasks to find them.
+    "tests/test_combine_continuum.py",
+    # Fixed-format log of completed referee-response work; its history entries stay as written.
+    "tasks/paper_ii_referee_response/progress.md",
+    # Says that this task replaced the retired ones, and where their old numbers are recorded.
+    "tasks/combine_continuum/README.md",
+}
+
+
+def test_no_reference_to_retired_tasks():
+    found = []
+    for root in ACTIVE_ROOTS:
+        for path in sorted((PROJECT_ROOT / root).rglob("*")):
+            relative = path.relative_to(PROJECT_ROOT).as_posix()
+            if (not path.is_file() or "__pycache__" in path.parts or relative in NO_REFERENCE_EXEMPT
+                    or path.suffix not in {".py", ".md", ".toml", ".yaml", ".yml", ".txt", ".sh"}):
+                continue
+            found += [f"{relative}:{n}" for n, line in enumerate(path.read_text().splitlines(), 1)
+                      if RETIRED_TASKS.search(line)]
+    assert not found, "Retired tasks still named:\n" + "\n".join(found)

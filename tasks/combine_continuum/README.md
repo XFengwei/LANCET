@@ -6,9 +6,9 @@ It has two phases: the combination (J-comb, adopted; feather, cross-check) with
 the checks of the TP factor, and the diagnostics that show how complete the
 interferometric and combined images are in the uv plane (Paper II Fig. 2).
 
-It replaces `linear_combine_continuum` and `combination_diagnostic`. Both still
-exist until the comparison with this task is approved (see "Replacing the old
-tasks"). Nothing is promoted to `data/delivered/` yet.
+It replaces `linear_combine_continuum` and `combination_diagnostic`, which were
+retired on 2026-11-20 after the author approved the comparison (see "Replacing
+the old tasks"). Nothing is promoted to `data/delivered/` yet.
 
 ## Run
 
@@ -141,8 +141,8 @@ it:
 3. **`planck_calibration`**: TP against Planck 217 GHz (CO removed): linear
    fits and the brightest Planck beam.
 
-Numbers from the previous task, `linear_combine_continuum` (Paper II inputs;
-they will be rerun here with the new inputs and replaced):
+Values from the retired `linear_combine_continuum` run (Paper II inputs), recorded
+in `results/combine_continuum/comparison/old_vs_new.md` next to this task's values:
 
 | Check | Result |
 |---|---|
@@ -312,10 +312,12 @@ The feather products are not promoted.
 
 ## Replacing the old tasks
 
-After the first full run, J-comb inside gain = 1 is compared with
-`results/linear_combine_continuum/` (expected agreement about 1 %; differences
-come from the true-sky rim and the +0.27 % free-free change), the factor numbers
-are tabulated old against new, and Fig. 2 and the kept diagnostic figures are
-compared with `results/combination_diagnostic/`. Only after the author has seen
-the comparison are `linear_combine_continuum` and `combination_diagnostic`
-removed.
+After the first full run, J-comb inside gain = 1 was compared with the results
+of the retired `linear_combine_continuum` run (expected agreement about 1 %;
+differences come from the true-sky rim and the +0.27 % free-free change), the
+factor numbers were tabulated old against new, and Fig. 2 and the kept
+diagnostic figures were compared with those of the retired
+`combination_diagnostic` run. The comparison is
+`results/combine_continuum/comparison/old_vs_new.md`. After the author approved
+it, both old tasks, their scripts and their results were retired on
+2026-11-20.

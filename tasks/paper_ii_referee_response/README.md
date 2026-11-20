@@ -101,9 +101,9 @@ coordination task.
 | R2a | 2a | Scientific motivation and mosaic coverage/resolution | Clean manuscript |
 | R2b | 2b | Separate ACA and TP contributions; state result provenance | `source_catalogue`, `synthesize_continuum`, `column_density` |
 | R3 | 3 | Region definitions, L/M apertures, boundary sensitivity | `source_catalogue`, `column_density`, `core_formation` |
-| R4a | 4a | Quantitative overlap consistency under a matched sky response | `combination_diagnostic` |
-| R4b | 4b | Conventional joint imaging versus almica; dirty PSF | `combination_diagnostic`; isolated continuum-imaging diagnostic |
-| R4c | 4c | J-comb versus feathering; source/background differences | `combination_diagnostic`, `source_catalogue`, `synthesize_continuum` |
+| R4a | 4a | Quantitative overlap consistency under a matched sky response | `combine_continuum` |
+| R4b | 4b | Conventional joint imaging versus almica; dirty PSF | `combine_continuum`; isolated continuum-imaging diagnostic |
+| R4c | 4c | J-comb versus feathering; source/background differences | `combine_continuum`, `source_catalogue`, `synthesize_continuum` |
 | R5 | 5 | PB construction, noise conventions, PB=0.2 figure overlays | `prepare_continuum_images`, `plot_allscale_continuum`, `column_density`, `source_catalogue` |
 | R6 | 6 | Common footprint, parent associations, source recovery, mass completeness | `source_catalogue`, `core_formation`; isolated injection/recovery pilot |
 | R7 | 7 | Compact free–free constraints and affected mass sums | `construct_freefree_model`, `synthesize_continuum`, `physical_properties`, `core_formation` |
@@ -119,9 +119,9 @@ rerun or repurposed merely because both involve data combination.
 ## R4 combination-diagnostic ownership
 
 At the author's request, R4 uv coverage, visibility diagnostics and subsequent
-combination comparisons extend the maintained `combination_diagnostic` task.
-Its configuration is in `tasks/combination_diagnostic/` and its evidence in
-`results/combination_diagnostic/`. Keep the scientific code and
+combination comparisons belong to the `combine_continuum` task (its diagnostic
+stages). Its configuration is in `tasks/combine_continuum/` and its evidence in
+`results/combine_continuum/diagnostics/`. Keep the scientific code and
 products there; this coordination task records status and manuscript/reply
 links. Figure 1 placement is a later decision.
 

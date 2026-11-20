@@ -3,7 +3,7 @@
 This task builds the 1.3 mm total-power (TP) continuum model: the Paper I dust
 model plus the free-free model, both at 223.8 GHz. It also makes a 250 GHz
 version, which is compared with the archival SIMBA 1.2 mm map. The 223.8 GHz
-products are the TP inputs of `linear_combine_continuum`.
+products are the TP inputs of `combine_continuum`.
 
 ## Inputs
 

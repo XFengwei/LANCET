@@ -17,7 +17,7 @@ from astropy.visualization import simple_norm
 from astropy.visualization.wcsaxes import SphericalCircle
 import astropy.units as u
 root=Path(__file__).resolve().parents[2]
-arrays=[('ACA 7 m','results/combination_diagnostic/overlap_tests/aca_7m_metadata.json',43,'#ffbc69'),('ALMA 12 m C2','results/combination_diagnostic/full_sampling/configuration_c2_metadata.json',26,'#66cfff'),('ALMA 12 m C5','results/combination_diagnostic/full_sampling/configuration_c5_metadata.json',26,'#66cfff')]
+arrays=[('ACA 7 m','results/combine_continuum/diagnostics/overlap_tests/aca_7m_metadata.json',43,'#ffbc69'),('ALMA 12 m C2','results/combine_continuum/diagnostics/full_sampling/configuration_c2_metadata.json',26,'#66cfff'),('ALMA 12 m C5','results/combine_continuum/diagnostics/full_sampling/configuration_c5_metadata.json',26,'#66cfff')]
 plt.rcParams.update({'text.color':'#eeeeee','axes.labelcolor':'#eeeeee','xtick.color':'#eeeeee','ytick.color':'#eeeeee','font.size':10})
 fig=plt.figure(figsize=(13,7),facecolor='#080b10')
 for i,(file,title) in enumerate([('image_HHLI-SPIRE250.fits','Herschel / 250 μm'),('image_GLIMPSE-IRAC3.fits','Spitzer / 5.8 μm')]):

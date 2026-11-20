@@ -91,11 +91,13 @@ referee_items = ["4a"]
 topic = "Consistency in the spatial-frequency overlap"
 mode = "diagnostic_then_update"
 status = "complete"
-owners = ["combination_diagnostic"]
-scripts = ["scripts/combination_diagnostic.py"]
+owners = ["combine_continuum"]
+scripts = ["tasks/combine_continuum/run.py"]
 evidence = "Matched-response overlap comparison, relative amplitude scale and uncertainty."
 
-diagnostic_report = "results/combination_diagnostic/full_sampling/report.md"
+# Stage full_sampling of combine_continuum. The 2026-10-27 hand-written report of the retired
+# diagnostic task went to the Trash with that task's results on 2026-11-20.
+diagnostic_report = "results/combine_continuum/diagnostics/full_sampling/summary.json"
 
 [[subtasks]]
 id = "R4b"
@@ -103,8 +105,8 @@ referee_items = ["4b"]
 topic = "Conventional continuum joint imaging and dirty PSF"
 mode = "diagnostic_then_update"
 status = "complete"
-owners = ["combination_diagnostic"]
-scripts = ["scripts/combination_diagnostic.py"]
+owners = ["combine_continuum"]
+scripts = ["tasks/combine_continuum/run.py"]
 evidence = "Representative common-footprint continuum imaging comparison, settings, dirty PSF, residuals and photometry."
 
 [[subtasks]]
@@ -113,8 +115,8 @@ referee_items = ["4c"]
 topic = "J-comb versus feathering and compact/extended flux changes"
 mode = "diagnostic_then_update"
 status = "complete"
-owners = ["combination_diagnostic", "source_catalogue", "synthesize_continuum"]
-scripts = ["scripts/combination_diagnostic.py", "scripts/source_catalogue.py", "tasks/synthesize_continuum/run.py"]
+owners = ["combine_continuum", "source_catalogue", "synthesize_continuum"]
+scripts = ["tasks/combine_continuum/run.py", "scripts/source_catalogue.py", "tasks/synthesize_continuum/run.py"]
 evidence = "Author-approved count and flux discussion, and comparison of method principles with Jiao et al. (2022); original J-comb inputs and settings remain unavailable."
 
 [[subtasks]]

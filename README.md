@@ -139,21 +139,6 @@ Each task converts the delivered continuum images it reads (Jy/beam to MJy/sr,
 `lancet.imaging.read_mjysr`) itself; there is no separate image-preparation
 task (decision D8 in `docs/project_reorganization_plan.md`).
 
-Recreate the multi-array comparison products with:
-
-```bash
-conda run -n py312 python scripts/combination_diagnostic.py --stage inspect
-conda run -n py312 python scripts/combination_diagnostic.py --stage uv
-conda run -n py312 python scripts/combination_diagnostic.py --stage visibilities
-conda run -n py312 python scripts/combination_diagnostic.py --stage total-power
-conda run -n py312 python scripts/combination_diagnostic.py --stage compare-images
-conda run -n py312 python scripts/combination_diagnostic.py --stage beam-match
-```
-
-The UV stage reads the four declared measurement sets under
-`data/reduction/alma/7MTM2TM1/cont/ms/` without modifying them. Later plot
-runs reuse the compact coordinate cache unless `--refresh-uv` is requested.
-
 Combine the 12m+7m true-sky continuum mosaic with the SED-based TP models in
 the uv plane (J-comb adopted, feather as cross-check), check the TP factor and
 make the uv-completeness diagnostics (Paper II Fig. 2) with:
@@ -167,25 +152,10 @@ Settings are in
 [`tasks/combine_continuum/task.toml`](tasks/combine_continuum/task.toml); inputs,
 method, products and limitations in
 [`tasks/combine_continuum/README.md`](tasks/combine_continuum/README.md).
-Outputs go under `results/combine_continuum/`. This task replaces
-`linear_combine_continuum` and `combination_diagnostic` (below), which stay
-until the comparison is approved.
-
-The older, separate commands for the two tasks it replaces:
-
-Combine the 12m+7m continuum mosaic with the SED-based TP models in the uv
-plane (J-comb and feather), with the comparison and diagnostics of each:
-
-```bash
-PYTHONPATH=src conda run -n py312 python scripts/linear_combine_continuum.py --stage all --overwrite
-```
-
-Settings are declared in
-[`tasks/linear_combine_continuum/task.toml`](tasks/linear_combine_continuum/task.toml)
-and the method, measurements and open decisions (TP factor, absolute scale) in
-[`tasks/linear_combine_continuum/README.md`](tasks/linear_combine_continuum/README.md).
-The products, written under `results/linear_combine_continuum/` (about 1.4 GB),
-are meant to replace the unshared `allscale_combined_v3_*` products once promoted.
+Outputs go under `results/combine_continuum/`. The diagnostic stages read the
+four declared measurement sets under `data/reduction/alma/7MTM2TM1/cont/ms/` as
+read-only intermediates. This task replaced `linear_combine_continuum` and
+`combination_diagnostic`, which were retired on 2026-11-20.
 
 Create the all-scale continuum display products with:
 

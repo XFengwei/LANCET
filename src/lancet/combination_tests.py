@@ -536,42 +536,6 @@ def run_overlap_tests(paths, config, *, save_figure, overwrite=False):
     return summary
 
 
-def run_pb_amplitude_curve(paths, config, *, save_figure, overwrite=False):
-    """Reconstruct absolute matched-cell amplitudes using the existing test caches."""
-    root = Path(paths["output_root"]) / "overlap_tests"
-    if (root / "aca_pb_amplitude_curve.pdf").exists() and not overwrite:
-        raise FileExistsError("PB amplitude curve exists; use --overwrite")
-    summary = json.loads((root / "summary.json").read_text())
-    settings = config["overlap_tests"]
-    if dict(settings) != summary["settings"]:
-        raise ValueError("Settings changed; rerun overlap-tests before plotting cached predictions")
-    edges = np.asarray(settings["uv_edges_klambda"])
-    pairs = summary["matched_pointings"]
-    rows, kappa, metadata = {}, {}, {}
-    for name in ARRAYS:
-        with np.load(root / f"{name}_rows.npz") as z:
-            rows[name] = {k: z[k] for k in z.files}
-        metadata[name] = json.loads((root / f"{name}_metadata.json").read_text())
-        kappa[name] = np.array([summary["noise"][name][str(int(d))]["kappa_time"]
-                                for d in rows[name]["ddid"]])
-    take = np.isin(rows["aca_7m"]["ddid"], _broad_ddids(metadata["aca_7m"]))
-    aca, ka = subset_rows(rows["aca_7m"], take), kappa["aca_7m"][take]
-    alma = _concat_rows([rows["configuration_c5"], rows["configuration_c2"]])
-    kb = np.r_[kappa["configuration_c5"], kappa["configuration_c2"]]
-    ca, ga = matching_cells(aca, pairs, "aca", edges, int(settings["orientation_sectors"]))
-    cb, gb = matching_cells(alma, pairs, "alma", edges, int(settings["orientation_sectors"]))
-    aca, ka, ca = subset_rows(aca, ga), ka[ga], ca[ga]
-    alma, kb, cb = subset_rows(alma, gb), kb[gb], cb[gb]
-    with np.load(root / "matched_model_predictions.npz") as z:
-        if not np.array_equal(ca, z["aca_keys"]) or not np.array_equal(cb, z["alma_keys"]):
-            raise ValueError("Cached row selection differs from the saved PB predictions")
-        model_a = {k[4:]: z[k] for k in z.files if k.startswith("aca_") and k != "aca_keys"}
-        model_b = {k[5:]: z[k] for k in z.files if k.startswith("alma_") and k != "alma_keys"}
-    records, _ = common_cell_ratios(aca, alma, ca, np.ones(len(ca), bool),
-        cb, np.ones(len(cb), bool), ka, kb, pairs, edges, settings, model_a, model_b)
-    return _plot_pb_amplitude_curve(root, records, save_figure)
-
-
 def _plot_pb_amplitude_curve(root, records, save_figure):
     """Translate each array's ensemble signal RMS to the same modelled PB."""
     import matplotlib

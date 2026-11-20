@@ -24,14 +24,13 @@ from pathlib import Path
 
 import numpy as np
 
-from .aca_forward_test import sky_model, source_path
+from .aca_forward_test import sky_model, smooth_to_circular_beam, source_path
 from .combination_tests import (
     _broad_ddids, matching_cells, require_products, row_values, sample_image_visibilities, subset_rows,
 )
 from .full_sampling import (
     FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, _cell_statistics, require_stage_outputs, separate_array_profiles,
 )
-from .tp_beam_test import smooth_to_circular_beam
 from .visibility_diagnostics import C_METRES_PER_SECOND
 
 COLORS = {"configuration_c5": "#7254A3", "configuration_c2": "#007A9E", "aca_7m": "#D87821"}

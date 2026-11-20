@@ -17,10 +17,61 @@ from pathlib import Path
 import numpy as np
 
 from .combination_tests import (
-    matching_cells, require_products, row_values, subset_rows, _write_rows_csv,
+    matching_cells, require_products, row_values, sample_image_visibilities, subset_rows, _write_rows_csv,
 )
 from .full_sampling import FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, _cell_statistics, require_stage_outputs
-from .tp_beam_test import _predict, smooth_to_circular_beam
+from .visibility_diagnostics import C_METRES_PER_SECOND
+
+
+def smooth_to_circular_beam(image, header, target_arcsec):
+    """Convolve MJy/sr with a unit-integral, deconvolved Gaussian kernel."""
+    from astropy.convolution import Gaussian2DKernel
+    from astropy.wcs import WCS
+    from scipy.signal import fftconvolve
+
+    sigma = np.array([header["BMAJ"], header["BMIN"]])*3600/np.sqrt(8*np.log(2))
+    angle = np.deg2rad(header.get("BPA", 0))
+    rotation = np.array([[np.sin(angle), np.cos(angle)], [np.cos(angle), -np.sin(angle)]])
+    native = rotation @ np.diag(sigma**2) @ rotation.T
+    target = np.eye(2)*(target_arcsec/np.sqrt(8*np.log(2)))**2
+    matrix = WCS(header, naxis=2).celestial.pixel_scale_matrix*3600
+    inverse = np.linalg.inv(matrix)
+    covariance = inverse @ (target-native) @ inverse.T
+    eigenvalues, vectors = np.linalg.eigh(covariance)
+    if np.any(eigenvalues <= 0):
+        raise ValueError("Target beam must exceed the native sky-model beam")
+    extent = 2*int(np.ceil(6*np.sqrt(eigenvalues.max())))+1
+    kernel = Gaussian2DKernel(*np.sqrt(eigenvalues), theta=np.arctan2(vectors[1, 0], vectors[0, 0]),
+                              x_size=extent, y_size=extent)
+    result = fftconvolve(image, kernel.array, mode="same")
+    info = {"native_beam_arcsec": (np.array([header["BMAJ"], header["BMIN"]])*3600).tolist(),
+            "native_pa_deg": float(header.get("BPA", 0)), "target_circular_beam_arcsec": target_arcsec,
+            "kernel_sum": float(kernel.array.sum()), "kernel_covariance_pixels2": covariance.tolist(),
+            "kernel_support": "six standard deviations of the widest axis"}
+    return result, info
+
+
+def _predict(rows, meta, pairs, image, header, settings, *, target_pb):
+    prediction = np.full(len(rows["x"]), np.nan+0j)
+    for pair in pairs:
+        field = pair["aca_field"]
+        ra, dec = np.rad2deg(np.asarray(meta["subtables"]["FIELD"][field]["PHASE_DIR"]).ravel())
+        for band in (False, True):
+            use = (rows["field"] == field) & ((rows["frequency"] > 225e9) == band)
+            if not use.any():
+                continue
+            frequency = float(np.median(rows["frequency"][use]))
+            width = settings["pb_12m_fwhm_arcsec" if target_pb else "pb_7m_fwhm_arcsec"]
+            width *= settings["pb_reference_frequency_ghz"]*1e9/frequency
+            uv = rows["uvw"][use]*rows["frequency"][use, None]/C_METRES_PER_SECOND
+            prediction[use] = sample_image_visibilities(image, header, ra % 360, dec,
+                uv[:, 0], uv[:, 1], fwhm_arcsec=width,
+                pixel_arcsec=settings["model_pixel_arcsec"], patch_arcsec=settings["model_patch_arcsec"],
+                padding=settings["model_padding_factor"],
+                pb_center=(pair["ra_deg"], pair["dec_deg"]) if target_pb else None)
+    if not np.all(np.isfinite(prediction)):
+        raise ValueError("Missing model predictions for selected ACA rows")
+    return prediction
 
 
 def source_path(paths, source):

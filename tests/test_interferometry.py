@@ -75,26 +75,6 @@ def test_beam_match_uses_reference_shape_wcs_and_beam() -> None:
     assert output_header["BUNIT"] == "MJy/sr"
 
 
-def test_array_comparison_inspection_is_read_only() -> None:
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "scripts/combination_diagnostic.py",
-            "--stage",
-            "inspect",
-        ],
-        cwd=PROJECT_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-
-    assert "IRDC316.8.TM1TM2.bin.combselfcal" in completed.stdout
-    assert "combined_pbcut: shape=(5127, 7096), BITPIX=-32" in (
-        completed.stdout
-    )
-
-
 def test_uv_reader_does_not_create_casa_log(
     tmp_path: Path,
 ) -> None:
@@ -121,37 +101,3 @@ def test_uv_reader_does_not_create_casa_log(
     )
 
     assert list(tmp_path.glob("casa-*.log")) == []
-
-
-def test_generated_beam_match_agrees_with_retained_product() -> None:
-    generated = (
-        PROJECT_ROOT
-        / "results"
-        / "combination_diagnostic"
-        / "beam_match"
-        / "combined_convolved_to_ACA.fits"
-    )
-    if not generated.is_file():
-        pytest.skip("Beam-match task product has not been generated")
-    retained = (
-        PROJECT_ROOT
-        / "data"
-        / "delivered"
-        / "alma"
-        / "7MTM2TM1"
-        / "cont"
-        / "miriad"
-        / "IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.pbcut.MJysr.convolve2ACA.fits"
-    )
-    actual = fits.getdata(generated, memmap=True)
-    expected = fits.getdata(retained, memmap=True)
-
-    assert fits.getheader(generated)["BITPIX"] == -32
-    np.testing.assert_array_equal(np.isfinite(actual), np.isfinite(expected))
-    np.testing.assert_allclose(
-        actual,
-        expected,
-        rtol=2e-5,
-        atol=3e-5,
-        equal_nan=True,
-    )
