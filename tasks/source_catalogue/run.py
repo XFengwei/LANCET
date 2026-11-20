@@ -27,16 +27,22 @@ from matplotlib.ticker import LogLocator
 from lancet import ProjectPaths
 from lancet.catalogues import (
     effective_source_sizes,
+    gain_correct,
     peak_to_total_flux_ratio,
     rectangle_membership,
     relative_flux_difference,
+    remove_source_model,
     sample_at_getsf_peaks,
     select_science_sources,
     uniform_brightness_flux_ratio,
 )
+from lancet.imaging import read_mjysr
 
 
 DEFAULT_CONFIG = Path("tasks/source_catalogue/task.toml")
+# 12m+7m getsf quantities measured on the MIRIAD clean image (sky x gain);
+# divided by the gain at the source peak where gain < 1.
+GAIN_CORRECTED = ("FXP_BST01", "FXP_ERR01", "FXT_BST01", "FXT_ERR01", "Ibkg1")
 
 
 def load_task_config(path: Path) -> dict[str, object]:
@@ -77,7 +83,13 @@ def inspect_inputs(paths: Mapping[str, Path]) -> None:
     selected = select_science_sources(catalogue)
     print(f"getsf catalogue: {paths['getsf_catalogue']}")
     print(f"  rows={len(catalogue)}, rows after science cuts={len(selected)}")
-    for name in ("intercore_background", "core_background", "temperature"):
+    for name in (
+        "intercore_background",
+        "source_model",
+        "combined_continuum",
+        "gain",
+        "temperature",
+    ):
         header = fits.getheader(paths[name])
         print(
             f"{name}: {paths[name]} "
@@ -93,6 +105,44 @@ def _prepare_output(path: Path, *, overwrite: bool) -> None:
             f"Output already exists: {path}; pass --overwrite to replace it"
         )
     path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def background_path(paths: Mapping[str, Path]) -> Path:
+    return paths["output_root"] / "maps" / "background_12m7mTP.fits"
+
+
+def build_background(
+    paths: Mapping[str, Path],
+    *,
+    overwrite: bool = False,
+) -> Path:
+    """Write the 12m+7m+TP background: the combined true-sky continuum minus
+    the getsf 12m+7m source model converted to true sky (divided by gain)."""
+    combined, header = read_mjysr(paths["combined_continuum"])
+    sources, source_header = fits.getdata(paths["source_model"], header=True)
+    sources = np.squeeze(sources)
+    if str(source_header.get("BUNIT", "")).replace(" ", "").upper() != "MJY/SR":
+        raise ValueError(f"Source model must be in MJy/sr: {paths['source_model']}")
+    gain = np.squeeze(fits.getdata(paths["gain"]))
+    if not combined.shape == sources.shape == gain.shape:
+        raise ValueError(
+            "Combined continuum, source model and gain grids differ: "
+            f"{combined.shape}, {sources.shape}, {gain.shape}"
+        )
+    background = remove_source_model(combined, sources, gain)
+    output = background_path(paths)
+    _prepare_output(output, overwrite=overwrite)
+    header = header.copy()
+    header["BUNIT"] = "MJy/sr"
+    for key in ("BLANK", "BSCALE", "BZERO"):
+        header.pop(key, None)
+    header.add_history(
+        "LANCET source_catalogue: 12m7mTP background = combined continuum "
+        "- getsf 12m7m source model / gain"
+    )
+    fits.writeto(output, background.astype(np.float32), header, overwrite=overwrite)
+    print(f"Wrote {output}")
+    return output
 
 
 def output_paths(paths: Mapping[str, Path]) -> dict[str, Path]:
@@ -120,7 +170,14 @@ def build_catalogue(
         Table.read(paths["getsf_catalogue"], format="ascii")
     )
     background1 = fits.getdata(paths["intercore_background"], memmap=True)
-    background2 = fits.getdata(paths["core_background"], memmap=True)
+    background2_path = background_path(paths)
+    if not background2_path.is_file():
+        raise FileNotFoundError(
+            f"12m7mTP background not found: {background2_path}; "
+            "run --stage background first"
+        )
+    background2 = fits.getdata(background2_path, memmap=True)
+    gain_map = fits.getdata(paths["gain"], memmap=True)
     temperature, grid_header = fits.getdata(
         paths["temperature"],
         header=True,
@@ -130,6 +187,7 @@ def build_catalogue(
     y_peak = catalogue["YCO_P"]
     sampled1 = sample_at_getsf_peaks(background1, x_peak, y_peak)
     sampled2 = sample_at_getsf_peaks(background2, x_peak, y_peak)
+    sampled_gain = sample_at_getsf_peaks(gain_map, x_peak, y_peak)
     sampled_temperature = sample_at_getsf_peaks(
         temperature,
         x_peak,
@@ -165,9 +223,14 @@ def build_catalogue(
     ]
     output = catalogue[keys]
     output.add_columns(
-        [sampled1, sampled2, sampled_temperature],
-        names=["Ibkg1", "Ibkg2", "Tenv"],
+        [sampled1, sampled2, sampled_temperature, sampled_gain],
+        names=["Ibkg1", "Ibkg2", "Tenv", "Gain"],
     )
+    raw_columns = []
+    for name in GAIN_CORRECTED:
+        raw = np.asarray(output[name], dtype=float)
+        raw_columns.append(Column(raw, name=f"{name}_RAW"))
+        output[name] = gain_correct(raw, np.asarray(output["Gain"], dtype=float))
     observed_major = np.asarray(output["AFWHM01"], dtype=float)
     observed_minor = np.asarray(output["BFWHM01"], dtype=float)
     output["FWHM_OBS_str"] = [
@@ -241,6 +304,7 @@ def build_catalogue(
         f"{flux * 1e3:.1f}({error * 1e3:.1f})"
         for flux, error in zip(output["FXT_BST01"], output["FXT_ERR01"])
     ]
+    output.add_columns(raw_columns)
     output.sort(keys=["SIGN", "GOOD"], reverse=True)
     output.add_column(np.arange(1, len(output) + 1), index=0, name="ID")
 
@@ -798,7 +862,7 @@ def main() -> None:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "build", "diagnostics", "all"),
+        choices=("inspect", "background", "build", "diagnostics", "all"),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
@@ -808,11 +872,14 @@ def main() -> None:
     paths = resolve_task_paths(project, config)
     if args.stage == "inspect":
         inspect_inputs(paths)
+    elif args.stage == "background":
+        build_background(paths, overwrite=args.overwrite)
     elif args.stage == "build":
         build_catalogue(paths, config, overwrite=args.overwrite)
     elif args.stage == "diagnostics":
         build_flux_diagnostics(paths, config, overwrite=args.overwrite)
     else:
+        build_background(paths, overwrite=args.overwrite)
         build_catalogue(paths, config, overwrite=args.overwrite)
         build_flux_diagnostics(paths, config, overwrite=args.overwrite)
 

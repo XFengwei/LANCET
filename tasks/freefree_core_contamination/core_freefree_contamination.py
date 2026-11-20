@@ -63,7 +63,7 @@ assert ah['BUNIT'].lower() == 'jy/beam'
 aw = WCS(ah).celestial
 native_alma_beam_area = np.pi*ah['BMAJ']*ah['BMIN']/(4*np.log(2))
 pixel_area = abs(proj_plane_pixel_area(aw))
-aperture_path = root / 'extraction/getsf/triple/results/+sources/+catalogs/G316.sw.sources.ok.cat.1302.foo.fk5.reg'
+aperture_path = root / 'data/extraction/getsf/triple/results/+sources/+catalogs/G316.sw.sources.ok.cat.1302.foo.fk5.reg'
 apertures = {}
 for line in aperture_path.read_text().splitlines():
     line = line.lstrip('# ')

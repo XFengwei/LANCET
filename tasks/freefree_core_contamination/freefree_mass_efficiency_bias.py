@@ -22,9 +22,9 @@ template=np.where(radio>threshold,radio,0.)
 factor=metadata['spectral_factor']
 aca,ah=fits.getdata(root/'data/delivered/alma/7M/cont/IRDC316.8.ACA.p1.cont.image.fits',header=True)
 pb=fits.getdata(root/'data/delivered/alma/7M/cont/IRDC316.8.ACA.p1.cont.pb.fits')
-labels,lh=fits.getdata(root/'extraction/astrodendro/my_mask_idx.fits',header=True)
+labels,lh=fits.getdata(root/'data/extraction/astrodendro/my_mask_idx.fits',header=True)
 assert aca.shape==pb.shape==labels.shape
-cat=Table.read(root/'extraction/astrodendro/my_dendrogram.dat',format='ascii')
+cat=Table.read(root/'data/extraction/astrodendro/my_dendrogram.dat',format='ascii')
 selection=Table.read(root/'results/core_formation/tables/fragment_pb_selection.ecsv')
 selection.remove_column('flux')
 fragments=join(selection,cat[['ID','_idx','flux','area_exact']],keys='ID')

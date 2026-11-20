@@ -59,7 +59,7 @@ sigma=metadata['adopted_radio_rms_mjy_per_beam']
 levels=np.array([3,6,12,24,48])*sigma
 contours=left.contour(radio*1000,levels=levels,transform=left.get_transform(WCS(rh).celestial),colors='#f5a442',linewidths=.65)
 contours.set_rasterized(True)
-footpath=root/'extraction/getsf/triple/results/+sources/+catalogs/G316.sw.sources.ok.cat.1302.foo.fk5.reg'
+footpath=root/'data/extraction/getsf/triple/results/+sources/+catalogs/G316.sw.sources.ok.cat.1302.foo.fk5.reg'
 footprints={}
 for line in footpath.read_text().splitlines():
     line=line.lstrip('# ')

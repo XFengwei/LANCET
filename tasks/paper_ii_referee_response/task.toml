@@ -70,7 +70,7 @@ topic = "ACA versus reconstructed TP contributions"
 mode = "maintained_update"
 status = "complete"
 owners = ["source_catalogue", "synthesize_continuum", "column_density"]
-scripts = ["scripts/source_catalogue.py", "tasks/synthesize_continuum/run.py", "scripts/column_density.py"]
+scripts = ["tasks/source_catalogue/run.py", "tasks/synthesize_continuum/run.py", "tasks/column_density/run.py"]
 evidence = "Quantitative source/background comparison with explicit input and denominator provenance."
 
 [[subtasks]]
@@ -80,7 +80,7 @@ topic = "Regional definitions and evolutionary classification"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["source_catalogue", "column_density", "core_formation"]
-scripts = ["scripts/source_catalogue.py", "scripts/column_density.py", "scripts/core_formation.py"]
+scripts = ["tasks/source_catalogue/run.py", "tasks/column_density/run.py", "scripts/core_formation.py"]
 evidence = "Author-approved Introduction with cloud/clump definitions and quantitative evolutionary diagnostics, supported by the detailed characterization in Paper I; response shortened and R3 closed."
 diagnostic_report = "results/paper_ii_referee_response/diagnostics/R5_R3/2026-10-25/report.md"
 revision_evidence = "results/paper_ii_referee_response/evidence/R3/2026-10-25/notes.md"
@@ -116,7 +116,7 @@ topic = "J-comb versus feathering and compact/extended flux changes"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["combine_continuum", "source_catalogue", "synthesize_continuum"]
-scripts = ["tasks/combine_continuum/run.py", "scripts/source_catalogue.py", "tasks/synthesize_continuum/run.py"]
+scripts = ["tasks/combine_continuum/run.py", "tasks/source_catalogue/run.py", "tasks/synthesize_continuum/run.py"]
 evidence = "Author-approved count and flux discussion, and comparison of method principles with Jiao et al. (2022); original J-comb inputs and settings remain unavailable."
 
 [[subtasks]]
@@ -126,7 +126,7 @@ topic = "Primary-beam construction, sensitivity and selection boundary"
 mode = "maintained_update"
 status = "complete"
 owners = ["prepare_continuum_images", "plot_allscale_continuum", "column_density", "source_catalogue"]
-scripts = ["scripts/plot_allscale_continuum.py", "scripts/column_density.py", "scripts/source_catalogue.py"]
+scripts = ["scripts/plot_allscale_continuum.py", "tasks/column_density/run.py", "tasks/source_catalogue/run.py"]
 evidence = "Author-confirmed PB combination/attenuation/photometry sequence, updated reply/manuscript and verified PB=0.2 overlays in Figs. 2 and 3."
 diagnostic_report = "results/paper_ii_referee_response/diagnostics/R5_R3/2026-10-25/report.md"
 revision_evidence = "results/paper_ii_referee_response/evidence/R5/2026-10-25/qa_notes.md"
@@ -138,7 +138,7 @@ topic = "Shared footprint, completeness and parent associations"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["source_catalogue", "core_formation"]
-scripts = ["scripts/source_catalogue.py", "scripts/core_formation.py"]
+scripts = ["tasks/source_catalogue/run.py", "scripts/core_formation.py"]
 evidence = "Full-fragment dendrogram footprint PB >= 0.2 selection applied, mass comparison and figures updated; closed at the author's request."
 
 [[subtasks]]
@@ -158,7 +158,7 @@ topic = "Sizes/limits, opacity, brightness temperature and heating"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["source_catalogue", "physical_properties", "background_effects", "core_formation"]
-scripts = ["scripts/source_catalogue.py", "scripts/physical_properties.py", "scripts/background_effects.py", "scripts/core_temperature_stress_test.py", "scripts/core_temperature_sampling.py", "scripts/plot_core_temperature_sampling.py", "scripts/core_formation.py"]
+scripts = ["tasks/source_catalogue/run.py", "scripts/physical_properties.py", "scripts/background_effects.py", "scripts/core_temperature_stress_test.py", "scripts/core_temperature_sampling.py", "scripts/plot_core_temperature_sampling.py", "scripts/core_formation.py"]
 evidence = "Closed at the author's request after verification of the 209-core size/volume-density selection, all-source beam-averaged surface densities, corrected median 5.2e6 cm^-3, opacity estimates and 30/40/50 K temperature sampling. Both working TeX documents compile; 38 relevant tests pass."
 
 

@@ -17,9 +17,10 @@ for people; this file records the working rules.
 - `tests/test_<module>.py` — pytest tests for `src/lancet/`.
 - `region/` — small DS9 regions that tasks declare.
 - `docs/` — audits and design notes.
-- Local only (gitignored, never committed): `data/`, `results/`,
-  `extraction/`, `papers/`, `presentation/`, `references/`. A fresh clone has
-  code and tests but no data; create these folders locally with the same names.
+- Local only (gitignored, never committed): `data/` (with `data/extraction/`,
+  the getsf and astrodendro products), `results/`, `papers/`,
+  `presentation/`, `references/`. A fresh clone has code and tests but no
+  data; create these folders locally with the same names.
 
 ## Data rules
 

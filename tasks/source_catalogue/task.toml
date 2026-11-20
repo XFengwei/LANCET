@@ -2,9 +2,15 @@
 name = "source_catalogue"
 
 [inputs]
-getsf_catalogue = "extraction/getsf/triple/results/G316.sw.sources.ok.cat"
-intercore_background = "extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
-core_background = "extraction/getsf/triple/results/+components/G316.sw.1303.obs.sbackground.fits"
+getsf_catalogue = "data/extraction/getsf/triple/results/G316.sw.sources.ok.cat"
+intercore_background = "data/extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
+# getsf 12m+7m source model (MJy/sr, sky x gain); subtracted, divided by the
+# gain, from the combined continuum to give the 12m+7m+TP background.
+source_model = "data/extraction/getsf/triple/results/+components/G316.sw.1302.obs.sources.fits"
+# J-comb 12m+7m + dust + free-free TP (combine_continuum, true sky, Jy/beam).
+combined_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.fits"
+# MIRIAD mosaic gain; 12m+7m getsf fluxes and Ibkg1 are divided by it where < 1.
+gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits"
 temperature = "results/column_density/prepared/temperature_allscale.fits"
 young_region = "region/trichotomy/trichotomy_young_shrink.reg"
 intermediate_region = "region/trichotomy/trichotomy_intermediate_shrink.reg"

@@ -5,9 +5,9 @@ name = "core_formation"
 physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
 temperature_sampling_summary = "results/paper_ii_referee_response/diagnostics/R8d/2026-11-01/temperature_sampling/regional_sampling_summary.ecsv"
 source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
-fragment_ellipse_catalogue = "extraction/astrodendro/my_dendrogram.dat"
-fragment_mass_catalogue = "extraction/astrodendro/my_catalog.dat"
-fragment_label_mask = "extraction/astrodendro/my_mask_idx.fits"
+fragment_ellipse_catalogue = "data/extraction/astrodendro/my_dendrogram.dat"
+fragment_mass_catalogue = "data/extraction/astrodendro/my_catalog.dat"
+fragment_label_mask = "data/extraction/astrodendro/my_mask_idx.fits"
 selection_gain = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
 # Overlay figure backgrounds, converted to MJy/sr in the task. The 12m+7m map is the MIRIAD
 # flat-noise image (sky x pb), replacing the former CASA-pb "pbant" product.

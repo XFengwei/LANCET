@@ -200,3 +200,40 @@ def rectangle_membership(
     else:
         membership = rectangle.contains(coordinates, wcs=wcs)
     return np.asarray(membership, dtype=bool)
+
+
+def gain_correct(values: np.ndarray, gain: np.ndarray) -> np.ndarray:
+    """Divide values measured on a sky x gain image by the gain where gain < 1.
+
+    Values where the gain is 1 or above are returned unchanged; a NaN gain
+    gives NaN. A gain <= 0 is refused.
+    """
+    data = np.asarray(values, dtype=float)
+    response = np.asarray(gain, dtype=float)
+    if np.any(response <= 0):
+        raise ValueError("gain must be positive where it is defined")
+    divisor = np.where(np.isnan(response), np.nan, np.minimum(response, 1.0))
+    return data / divisor
+
+
+def remove_source_model(
+    image: np.ndarray,
+    source_model: np.ndarray,
+    gain: np.ndarray,
+) -> np.ndarray:
+    """Subtract a getsf source model made on a sky x gain image from a
+    true-sky image: ``image - source_model / gain``.
+
+    Pixels without sources (model 0) keep the image value; a source pixel
+    without a positive gain becomes NaN.
+    """
+    data = np.asarray(image, dtype=float)
+    sources = np.nan_to_num(np.asarray(source_model, dtype=float), nan=0.0)
+    response = np.asarray(gain, dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        true_sky = np.where(
+            sources == 0.0,
+            0.0,
+            np.where(response > 0, sources / response, np.nan),
+        )
+    return data - true_sky

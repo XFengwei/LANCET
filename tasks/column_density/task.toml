@@ -12,7 +12,7 @@ grid_reference = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.con
 # the 18"+36" SED maps (synthesize_continuum fill), so it covers the whole
 # 12m+7m grid. Jy/beam, converted to MJy/sr here.
 dust_continuum_allscale = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits"
-intercore_background = "extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
+intercore_background = "data/extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits"
 # TP dust model on the low-resolution grid, for the consistency stage: the
 # filled model that the extended36 product contains.
 tp_dust_model = "results/synthesize_continuum/model/dust_224GHz_fill36.fits"

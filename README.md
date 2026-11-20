@@ -40,8 +40,7 @@ Observational data, external extraction products, manuscripts, presentations,
 references, and generated results are intentionally not distributed in this
 repository. The root `.gitignore` excludes:
 
-- `data/`
-- `extraction/`
+- `data/` (including `data/extraction/`, the source-extraction products)
 - `papers/`
 - `presentation/`
 - `references/`
@@ -224,8 +223,8 @@ the safe execution order, and the full-resolution switch are documented in
 Build the source catalogue and its dependent physical-property table with:
 
 ```bash
-conda run -n py312 python scripts/source_catalogue.py --stage inspect
-conda run -n py312 python scripts/source_catalogue.py --stage all
+conda run -n py312 python tasks/source_catalogue/run.py --stage inspect
+conda run -n py312 python tasks/source_catalogue/run.py --stage all
 conda run -n py312 python scripts/physical_properties.py --stage inspect
 conda run -n py312 python scripts/physical_properties.py --stage build
 ```

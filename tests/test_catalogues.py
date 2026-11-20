@@ -11,9 +11,11 @@ import pytest
 
 from lancet.catalogues import (
     effective_source_sizes,
+    gain_correct,
     getsf_peak_indices,
     peak_to_total_flux_ratio,
     relative_flux_difference,
+    remove_source_model,
     select_science_sources,
     uniform_brightness_flux_ratio,
 )
@@ -103,11 +105,49 @@ def test_uniform_brightness_ratio_is_one_at_beam_scale() -> None:
     np.testing.assert_allclose(ratio, [1.0, 0.25])
 
 
+def test_gain_correct_divides_only_below_unit_gain() -> None:
+    values = np.array([2.0, 2.0, 2.0, 2.0, 2.0])
+    gain = np.array([1.0, 0.5, 0.8, 1.0000001, np.nan])
+
+    corrected = gain_correct(values, gain)
+
+    np.testing.assert_allclose(corrected[:4], [2.0, 4.0, 2.5, 2.0])
+    assert np.isnan(corrected[4])
+
+
+def test_gain_correct_rejects_nonpositive_gain() -> None:
+    with pytest.raises(ValueError, match="gain"):
+        gain_correct(np.array([1.0]), np.array([0.0]))
+
+
+def test_remove_source_model_uses_true_sky_source_model() -> None:
+    image = np.array([[10.0, 10.0], [10.0, np.nan]])
+    sources = np.array([[2.0, 0.0], [1.0, 0.0]])
+    gain = np.array([[1.0, 0.5], [0.5, np.nan]])
+
+    background = remove_source_model(image, sources, gain)
+
+    np.testing.assert_allclose(background[0], [8.0, 10.0])
+    assert background[1, 0] == pytest.approx(8.0)
+    assert np.isnan(background[1, 1])
+
+
+def test_remove_source_model_needs_gain_where_sources_exist() -> None:
+    background = remove_source_model(
+        np.array([5.0, 5.0]),
+        np.array([1.0, 0.0]),
+        np.array([np.nan, np.nan]),
+    )
+
+    assert np.isnan(background[0])
+    assert background[1] == 5.0
+
+
 def test_source_catalogue_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/source_catalogue.py",
+            "tasks/source_catalogue/run.py",
             "--stage",
             "inspect",
         ],
@@ -165,6 +205,7 @@ def test_generated_source_catalogue_schema_and_regression_values() -> None:
         "Ibkg1",
         "Ibkg2",
         "Tenv",
+        "Gain",
         "FWHM_OBS_str",
         "Deconv_maj",
         "Deconv_min",
@@ -175,8 +216,19 @@ def test_generated_source_catalogue_schema_and_regression_values() -> None:
         "FWHM_SRC_str",
         "FXP_WITH_ERROR",
         "FXT_WITH_ERROR",
+        "FXP_BST01_RAW",
+        "FXP_ERR01_RAW",
+        "FXT_BST01_RAW",
+        "FXT_ERR01_RAW",
+        "Ibkg1_RAW",
         "Subregion",
     ]
+    gain = np.asarray(actual["Gain"], dtype=float)
+    assert np.count_nonzero(gain < 1) == 19
+    np.testing.assert_allclose(
+        actual["FXT_BST01"],
+        actual["FXT_BST01_RAW"] / np.minimum(gain, 1.0),
+    )
     assert len(actual) == 231
     indices = [0, 115, 230]
     np.testing.assert_array_equal(actual["ID"][indices], [1, 116, 231])

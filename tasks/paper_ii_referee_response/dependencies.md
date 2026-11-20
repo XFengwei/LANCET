@@ -104,7 +104,7 @@ estimate. We should not answer the report strictly in numerical order.
   masks. Both versions are present. Their different purposes and relationship
   to the comparison footprint need checking; their existence alone does not
   establish an error.
-- `scripts/source_catalogue.py` selects and labels sources using those region
+- `tasks/source_catalogue/run.py` selects and labels sources using those region
   masks before writing the adopted table. It reads an existing getsf
   extraction. Rebuilding this table is not itself a new extraction or a
   completeness test.
