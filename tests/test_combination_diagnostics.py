@@ -449,3 +449,15 @@ def test_image_curves_follow_configured_set_and_labels():
     assert [t.get_text() for t in axis.get_legend().get_texts()] == ["12m+7m", "combine"]
     assert not any(np.allclose(line.get_ydata(), 3 * u) for line in axis.get_lines())
     plt.close(figure)
+
+
+def test_image_curve_settings_are_validated():
+    from lancet.combination_figure import check_image_curve_settings
+    have = {"interferometer", "jcomb"}
+    check_image_curve_settings(["interferometer", "jcomb"], {"jcomb": "combine"}, have)
+    with pytest.raises(ValueError, match="bogus"):
+        check_image_curve_settings(["bogus"], {}, have)
+    with pytest.raises(ValueError, match="feather"):
+        check_image_curve_settings(["feather"], {}, have)
+    with pytest.raises(ValueError, match="stray"):
+        check_image_curve_settings(["jcomb"], {"stray": "x"}, have)

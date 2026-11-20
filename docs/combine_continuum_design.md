@@ -34,8 +34,10 @@ Decisions taken with the author in the stage-by-stage review (2026-11-20):
   (`box_spectrum`) and Planck (`planck_calibration`). The power-spectrum
   matched value 1.4 (`psd_matched`) is removed from the configuration.
 - J-comb and feather settings are unchanged.
-- Paper II Fig. 2 (three panels) is kept; panel (c) gains 12m+7m, J-comb and
-  feather curves.
+- Paper II Fig. 2 (three panels) is kept; panel (c) gains image curves. Feather is
+  computed and recorded in `image_curves.csv` but not drawn; the drawn curves and
+  their labels come from `[figure2] image_curves_shown` / `image_curve_labels`
+  (now 12m+7m and J-comb, labelled "combine").
 - Dropped stages (results archived to the Trash after the new task is
   verified): four-panel `figure1`, `visibilities`, `pb-curve`,
   `tp-beam-test`, `pointing-profiles`, `pointing-range`, `total-power`,
@@ -275,7 +277,10 @@ manifest and source CSVs.
   - Kept: 7m, C2 and C5 RMS in matched uv and orientation cells (7m moved to
     the 12m PB through the 12m+7m sky model); TP through the 12m PB, with its
     beam and with its beam divided out.
-  - Added: 12m+7m (true-sky), J-comb and feather (dust + free-free).
+  - Added: 12m+7m (true-sky), J-comb and feather (dust + free-free), all
+    recorded in `image_curves.csv`. Feather is not drawn; `[figure2]
+    image_curves_shown` / `image_curve_labels` pick the drawn curves and their
+    labels (now 12m+7m and J-comb, labelled "combine").
 
 Image curves use the TP-curve method (`continuous_rms` in the
 `amplitude_alignment` stage, which already computes the TP curves):
@@ -303,7 +308,7 @@ footprint is a Gaussian of FWHM 4 ln2 / (π θ) for a PB of FWHM θ: with
 230.95 GHz, and the footprint FWHM is 6.74 and 7.19 kλ. Below about 5 kλ each
 sample therefore mixes in power from 6–10 kλ, so the 12m+7m curve does not fall
 away below about 7 kλ: it flattens at roughly half the TP level below about
-5 kλ. J-comb and feather follow the TP curve there and meet the 7m points
+5 kλ. J-comb and feather (feather is not drawn) follow the TP curve there and meet the 7m points
 across 5–9 kλ. The curves are kept from 1 kλ, and the manifests and the README
 state this smoothing.
 

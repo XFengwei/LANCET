@@ -98,6 +98,16 @@ def image_curve_styles(shown, labels):
     return {name: (labels.get(name, IMAGE_CURVES[name][0]), *IMAGE_CURVES[name][1:]) for name in shown}
 
 
+def check_image_curve_settings(shown, labels, available):
+    """Fail early on a curve or label the configuration names but the figure cannot use."""
+    unknown = [n for n in shown if n not in IMAGE_CURVES]
+    absent = [n for n in shown if n in IMAGE_CURVES and n not in available]
+    stray = [n for n in labels if n not in shown]
+    if unknown or absent or stray:
+        raise ValueError(f"[figure2] image curves: not in IMAGE_CURVES {unknown}; not in the alignment CSV {absent}; "
+                         f"image_curve_labels keys not in image_curves_shown {stray}")
+
+
 def _plot_image_curves(axis, curves, shown, labels):
     """Amplitudes of the shown image curves (beam and pixel binning divided out), with their legend."""
     handles = []
@@ -188,6 +198,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
 
         alignment_root = root/"amplitude_alignment"
         array_profiles, _, curves, alignment, image_curves = read_products(alignment_root)
+        check_image_curve_settings(shown_curves, curve_labels, image_curves)
         alignment_sources = [alignment_root/name for name in ALIGNMENT_OUTPUTS]
         tp_u, tp_amp, tp_fixed = (curves["uv_klambda"], curves["tp_raw_common_mjy"],
                                   curves["tp_corrected_common_mjy"])
@@ -245,7 +256,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     # (c) amplitudes and visibility counts
     short = {"aca_7m": "7 m", "configuration_c2": "C2", "configuration_c5": "C5"}
     values = list(tp_amp) + ([] if tp_fixed is None else list(tp_fixed))
-    values += [v for name in shown_curves if name in image_curves for v in image_curves[name][1]]
+    values += [v for name in shown_curves for v in image_curves[name][1]]
     for name, marker in [("aca_7m", "o"), ("configuration_c2", "s"), ("configuration_c5", "^")]:
         profile = [r for r in array_profiles if r["array"] == name]
         radius = np.array([r["uv_klambda"] for r in profile])
@@ -284,6 +295,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         c.scatter(density_centres[occupied], np.full(occupied.sum(), y),
                   s=4*counts[occupied]/maximum_count, color=COLORS[name], linewidths=0,
                   transform=c.get_xaxis_transform(), zorder=3)
+    # The stack must stay below the "Visibility counts" text at 0.30.
     # One column of labels, level with their tracks but kept a text height apart (bottom to top).
     label_gap, label_y = .085, {}
     for name in reversed(list(observation_sources)):
