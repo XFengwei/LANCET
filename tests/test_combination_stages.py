@@ -120,6 +120,29 @@ def test_prepare_stops_on_tp_without_freqghz(tmp_path):
     fits.PrimaryHDU(data, _header(61, 6.0, 18.1)).writeto(paths["tp_dust"], overwrite=True)
     with pytest.raises(ValueError, match="FREQGHZ"):
         stages.run_prepare(paths, _prepare_config())
+    prepared = paths["output_root"] / "prepared"
+    assert not prepared.exists() or not any(prepared.iterdir())    # no partial outputs block a rerun
+
+
+def test_tp_frequency_requires_the_same_freqghz_in_both_models(tmp_path):
+    paths = _inputs(tmp_path)
+    assert stages.tp_frequency_ghz(paths) == pytest.approx(223.8)
+    data, header = fits.getdata(paths["tp_dust"], header=True)
+    header["FREQGHZ"] = 250.0
+    fits.PrimaryHDU(data, header).writeto(paths["tp_dust"], overwrite=True)
+    with pytest.raises(ValueError, match="tp_dust .*tp_dust_ff"):
+        stages.tp_frequency_ghz(paths)
+
+
+def test_tp_factor_names_prepare_when_prepared_inputs_are_missing(tmp_path, monkeypatch):
+    paths = _inputs(tmp_path)
+    monkeypatch.setattr(stages, "read_plane", _forbid)
+    with pytest.raises(FileNotFoundError, match="Run stage 'prepare' first"):
+        stages.run_tp_factor(paths, _prepare_config())
+
+
+def _forbid(*_args, **_kwargs):
+    raise AssertionError("input read before the prepared outputs were checked")
 
 
 def test_prepare_fails_on_small_margin(tmp_path):

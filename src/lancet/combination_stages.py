@@ -154,6 +154,15 @@ def check_tp(tp, tp_wcs, gain, wcs, settings) -> dict:
     return {"margin_arcsec": margin, "regrid_power_deviation": deviation, "problems": problems}
 
 
+def tp_frequency_ghz(paths: Mapping[str, Path]) -> float:
+    """``FREQGHZ`` of the TP models; ValueError when a model lacks it or the models differ."""
+    frequencies = {f"tp_{flavour}": read_frequency_ghz(paths[f"tp_{flavour}"]) for flavour in TP_FLAVOURS}
+    if len(set(frequencies.values())) > 1:
+        raise ValueError("TP models differ in FREQGHZ: "
+                         + ", ".join(f"{name} {value} GHz" for name, value in frequencies.items()))
+    return next(iter(frequencies.values()))
+
+
 def prepared_paths(root: Path) -> dict[str, Path]:
     prepared = Path(root) / "prepared"
     out = {"interferometer": prepared / "interferometer_mjysr.fits", "gain": prepared / "gain.fits",
@@ -169,6 +178,7 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
     settings = config["prepare"]
     out = prepared_paths(paths["output_root"])
     guard_outputs(list(out.values()), overwrite)
+    frequency = tp_frequency_ghz(paths)                 # before anything is read or written
     truesky, header, wcs = read_plane(paths["interferometer"])
     delivered_gain = read_gain(paths["gain"], truesky.shape)
     high_beam = beam_parameters(header)
@@ -200,7 +210,7 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
         tapered = taper_edge(tp, np.isfinite(tp), settings["edge_taper_arcsec"], _pixel_arcsec(tp_wcs))
         grid = np.nan_to_num(regrid_to(tapered, tp_wcs, wcs, truesky.shape, order=settings["regrid_order"]))
         tp_hash = input_hashes(paths, [f"tp_{flavour}"])
-        meta = {"stage": "prepare", "tp_frequency_ghz": read_frequency_ghz(paths[f"tp_{flavour}"]),
+        meta = {"stage": "prepare", "tp_frequency_ghz": frequency,
                 "edge_taper_arcsec": settings["edge_taper_arcsec"]}
         write_product(out[f"tp_{flavour}"], jybeam_to_mjysr(grid, *tp_beam[:2]), header, meta, tp_hash,
                       bunit="MJy/sr", beam=tp_beam)
@@ -211,12 +221,16 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
     return out
 
 
+def require_prepared(paths: Mapping[str, Path]) -> dict[str, Path]:
+    """The prepared images; fails naming ``prepare`` when one is missing."""
+    prep = prepared_paths(paths["output_root"])
+    require_inputs([p for name, p in prep.items() if name != "report"], "prepare")
+    return prep
+
+
 def load_prepared(paths: Mapping[str, Path], flavour: str):
     """(tp MJy/sr, interferometer MJy/sr, gain, header, pixel", high beam, low beam)."""
-    prep = prepared_paths(paths["output_root"])
-    missing = [str(p) for name, p in prep.items() if name != "report" and not p.is_file()]
-    if missing:
-        raise FileNotFoundError("Run --stage prepare first; missing: " + ", ".join(missing))
+    prep = require_prepared(paths)
     high = fits.getdata(prep["interferometer"]).astype(np.float32)
     header = fits.getheader(prep["interferometer"])
     low = fits.getdata(prep[f"tp_{flavour}"]).astype(np.float32)
@@ -263,6 +277,7 @@ def run_tp_factor(paths: Mapping[str, Path], config: Mapping, overwrite: bool = 
     guard_outputs(list(out.values()), overwrite)
     if settings["determined_from"] not in TP_FLAVOURS:
         raise ValueError(f"determined_from must be one of {TP_FLAVOURS}")
+    require_prepared(paths)
     tp_fwhm = config["prepare"]["tp_fwhm_arcsec"]
     clean, header, wcs = read_plane(paths["interferometer"])
     high_beam, pix = beam_parameters(header), _pixel_arcsec(wcs)
@@ -435,7 +450,8 @@ def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrit
     (combined image at the TP beam against the TP), measurements and figures."""
     output_root = paths["output_root"]
     root, zero_root = output_root / "checks" / method, output_root / "checks" / "zero_spacing"
-    label = frequency_label(read_frequency_ghz(paths["tp_dust_ff"]))
+    frequency = tp_frequency_ghz(paths)
+    label = frequency_label(frequency)
     out = {"measurements": root / "measurements.json"}
     for flavour in TP_FLAVOURS:
         kind = FLAVOUR_KIND[flavour]
@@ -457,8 +473,8 @@ def run_method(method: str, paths: Mapping[str, Path], config: Mapping, overwrit
         product = combine_prepared(ctx["low"], ctx["high"], ctx["pix"], ctx["high_beam"], ctx["low_beam"], method,
                                    settings, blank=ctx["blank"])
         write_product(out[f"image_{flavour}"], product, ctx["header"],
-                      product_metadata(config, method, flavour, settings,
-                                       read_frequency_ghz(paths[f"tp_{flavour}"])), hashes, beam=ctx["high_beam"])
+                      product_metadata(config, method, flavour, settings, frequency), hashes,
+                      beam=ctx["high_beam"])
         m = measure_product(product, ctx, config, factor)
         check, at_tp_beam, ratio, mosaic, tp_only = zero_spacing(product, ctx, config, factor)
         m["zero_spacing"] = check

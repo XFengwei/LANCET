@@ -39,6 +39,9 @@ DELIVERED_INPUTS = ("interferometer", "gain", "psf", "psf_imfit_log", "aca_pbcor
 # TP models are the products of the synthesize_continuum task.
 SYNTHESIS_INPUTS = ("tp_dust", "tp_dust_ff")
 SYNTHESIS_RESULTS = Path("results/synthesize_continuum")
+# Inputs that are products of another task, with that task's results folder.
+TASK_PRODUCT_INPUTS = {**{name: SYNTHESIS_RESULTS for name in SYNTHESIS_INPUTS},
+                       "core_catalogue": Path("results/source_catalogue")}
 # box_spectrum reads the J-comb product as its mock truth image, so it runs after jcomb.
 COMBINE_STAGES = ("inspect", "prepare", "tp_factor", "jcomb", "feather", "box_spectrum",
                   "planck_calibration")
@@ -77,10 +80,9 @@ def resolve_task_paths(project: ProjectPaths, config: Mapping) -> dict:
     for name in DELIVERED_INPUTS:
         if not inputs[name].is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be a delivered input: {inputs[name]}")
-    synthesis = (project.root / SYNTHESIS_RESULTS).resolve()
-    for name in SYNTHESIS_INPUTS:
-        if not inputs[name].is_relative_to(synthesis):
-            raise ValueError(f"{name} must be a synthesize_continuum product: {inputs[name]}")
+    for name, results in TASK_PRODUCT_INPUTS.items():
+        if not inputs[name].is_relative_to((project.root / results).resolve()):
+            raise ValueError(f"{name} must be a {results.name} product: {inputs[name]}")
     for name, path in inputs.items():
         if not path.is_file():
             raise FileNotFoundError(f"{name} not found: {path}")
@@ -92,8 +94,7 @@ def resolve_task_paths(project: ProjectPaths, config: Mapping) -> dict:
             raise FileNotFoundError(f"measurement set {name} not found: {path}")
     regions = {name: _project_path(project, value) for name, value in config["regions"].items()}
     output_root = project.validate_output(str(config["outputs"]["root"]))
-    label = (frequency_label(read_frequency_ghz(inputs["tp_dust_ff"])) if inputs["tp_dust_ff"].is_file()
-             else DEFAULT_LABEL)
+    label = frequency_label(combination_stages.tp_frequency_ghz(inputs))   # both TP models, same FREQGHZ
     return {**inputs, "inputs": dict(inputs), "measurement_sets": sets, "regions": regions,
             "output_root": output_root, "diagnostics_root": output_root / "diagnostics",
             "products": product_paths(output_root, label)}

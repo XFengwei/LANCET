@@ -46,6 +46,26 @@ def test_tp_inputs_must_come_from_synthesize_continuum():
         _resolve(config)
 
 
+def test_core_catalogue_must_come_from_source_catalogue():
+    config = _config({("inputs", "core_catalogue"): "results/synthesize_continuum/model/dust_224GHz.fits"})
+    with pytest.raises(ValueError, match="core_catalogue"):
+        _resolve(config)
+
+
+def test_every_input_has_a_source_rule():
+    names = set(TASK.load_task_config(CONFIG)["inputs"])
+    assert names == set(TASK.DELIVERED_INPUTS) | set(TASK.TASK_PRODUCT_INPUTS)
+
+
+def test_tp_models_must_share_freqghz(monkeypatch):
+    from lancet import combination_stages
+    real = combination_stages.read_frequency_ghz
+    monkeypatch.setattr(combination_stages, "read_frequency_ghz",
+                        lambda path: 250.0 if Path(path).name.startswith("dust_") else real(path))
+    with pytest.raises(ValueError, match="tp_dust .*tp_dust_ff"):
+        _resolve(TASK.load_task_config(CONFIG))
+
+
 def test_measurement_sets_must_be_reduction_inputs():
     config = _config({("measurement_sets", "aca_7m"): "data/delivered/alma/continuum"})
     with pytest.raises(ValueError):
