@@ -266,8 +266,15 @@ Image curves use the TP-curve method (`continuous_rms` in the
   (0.02), about 26 kλ at 0.5″. In practice this limit applies, so the image
   curves cover 1–26 kλ.
 
-Expected: 12m+7m falls away below about 7 kλ; J-comb and feather follow the
-TP there and meet the 7m points across 5–9 kλ.
+Expected: each image sample is the image multiplied by the 12m PB, whose uv
+footprint is a Gaussian of FWHM 4 ln2 / (π θ) for a PB of FWHM θ: with
+`pb_12m_fwhm_arcsec = 26.0` at 225 GHz, θ = 26.99″ and 25.33″ at 216.74 and
+230.95 GHz, and the footprint FWHM is 6.74 and 7.19 kλ. Below about 5 kλ each
+sample therefore mixes in power from 6–10 kλ, so the 12m+7m curve does not fall
+away below about 7 kλ: it flattens at roughly half the TP level below about
+5 kλ. J-comb and feather follow the TP curve there and meet the 7m points
+across 5–9 kλ. The curves are kept from 1 kλ, and the manifests and the README
+state this smoothing.
 
 `tp_display_scale` is removed (it is 1.0). The `aca_forward_test` sky models
 become 12m+7m true-sky, J-comb, feather and TP; the v3 and CASA-feather

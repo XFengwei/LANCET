@@ -75,6 +75,25 @@ def image_curve_limit(beam_fwhm_arcsec, minimum_response, model_pixel_arcsec, ma
                interpolation_limit(model_pixel_arcsec, maximum_interpolation_loss))
 
 
+def pb_uv_fwhm_klambda(fwhm_arcsec):
+    """FWHM (kλ) of the uv-plane footprint of a Gaussian PB of FWHM θ: 4 ln2 / (π θ)."""
+    return float(4*np.log(2)/(np.pi*fwhm_arcsec*np.pi/648000)/1000)
+
+
+def pb_smoothing_note(settings):
+    """How the 12 m PB smooths the image curves in the uv plane, with its footprint at both basebands."""
+    widths = [float(settings["pb_12m_fwhm_arcsec"])*float(settings["pb_reference_frequency_ghz"])/f
+              for _, f in SIDEBANDS_GHZ]
+    join = lambda values, unit: " and ".join(f"{v:.2f}" for v in values) + f" {unit}"
+    return ("Each sample is the image multiplied by the 12 m PB (FWHM theta = "
+            f"{join(widths, 'arcsec')} at {' and '.join(f'{f:g}' for _, f in SIDEBANDS_GHZ)} GHz), so the curve "
+            "samples the image visibilities convolved with the PB uv footprint, a Gaussian of FWHM "
+            "4 ln2 / (pi theta) = "
+            f"{join([pb_uv_fwhm_klambda(w) for w in widths], 'klambda')}. Below about 5 klambda each sample "
+            "therefore mixes in power from 6-10 klambda: an image without short spacings (12m+7m) flattens there "
+            "instead of falling away, and neighbouring samples are not independent.")
+
+
 def image_curve_method(task, settings):
     """Description of the image curves for the manifests."""
     bands = " and ".join(f"{f:g}" for _, f in SIDEBANDS_GHZ)
@@ -87,7 +106,8 @@ def image_curve_method(task, settings):
             "0.5% at 26 klambda. The curve stops at the lowest of: the beam response falling to "
             f"{task['tp_minimum_response']}; half the model-grid Nyquist limit; and the uv distance where linear "
             "interpolation of the sampling patch from the binned grid, at worst half a pixel off, loses "
-            f"{task['image_curve_max_interpolation_loss']:.0%} (|cos(pi u p)|; about 26 klambda at 0.5 arcsec).")
+            f"{task['image_curve_max_interpolation_loss']:.0%} (|cos(pi u p)|; about 26 klambda at 0.5 arcsec). "
+            + pb_smoothing_note(settings))
 
 
 def _image_curve(path, centres, keys, n_bins, sectors, settings, task):

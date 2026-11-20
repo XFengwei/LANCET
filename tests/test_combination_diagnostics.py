@@ -415,3 +415,21 @@ def test_diagnostic_manifests_carry_no_fixed_date():
     from lancet import aca_forward_test, amplitude_alignment, combination_figure
     for module in (aca_forward_test, amplitude_alignment, combination_figure):
         assert not re.search(r'"date":\s*"\d{4}-', inspect.getsource(module)), module.__name__
+
+
+def test_pb_uv_footprint_fwhm():
+    from lancet.amplitude_alignment import pb_uv_fwhm_klambda, response_limit
+    # Gaussian PB of FWHM theta: uv-plane Gaussian of FWHM 4 ln2 / (pi theta).
+    for theta in (26.0 * 225.0 / 216.74, 26.0 * 225.0 / 230.95):
+        assert np.isclose(pb_uv_fwhm_klambda(theta), 2 * response_limit(theta, 0.5))
+    assert abs(pb_uv_fwhm_klambda(26.0 * 225.0 / 216.74) - 6.744) < 1e-3
+    assert abs(pb_uv_fwhm_klambda(26.0 * 225.0 / 230.95) - 7.187) < 1e-3
+
+
+def test_image_curve_method_states_the_pb_smoothing():
+    from lancet.amplitude_alignment import image_curve_method, pb_smoothing_note
+    config = _config()
+    note = pb_smoothing_note(config["overlap_tests"])
+    for value in ("26.99", "25.33", "6.74", "7.19", "4 ln2 / (pi theta)"):
+        assert value in note, value
+    assert note in image_curve_method(config["amplitude_alignment"], config["overlap_tests"])

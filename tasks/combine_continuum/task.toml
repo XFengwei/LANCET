@@ -102,7 +102,7 @@ high_k_join_tolerance = 0.02
 core_annulus_arcsec = [3.0, 6.0]
 core_contrast_tolerance = 0.10
 negative_sigma = -3.0
-# 10" box at gain ~0.8 with no source above 5 sigma (MAD rms 9.1e-5 Jy/beam in the 12m+7m image).
+# 10" box at delivered gain 1.0 with no source above 5 sigma (MAD rms 9.1e-5 Jy/beam in the 12m+7m image).
 noise_box_pix = [6350, 3750, 6450, 3850]
 profile_edges_klambda = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 15.0, 20.0, 30.0, 50.0, 100.0, 200.0, 400.0]
 

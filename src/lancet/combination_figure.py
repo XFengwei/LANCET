@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .amplitude_alignment import ALIGNMENT_OUTPUTS
+from .amplitude_alignment import ALIGNMENT_OUTPUTS, pb_smoothing_note
 from .combination_tests import require_products, sample_image_visibilities
 from .full_sampling import FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, require_stage_outputs
 from .visibility_diagnostics import C_METRES_PER_SECOND
@@ -191,6 +191,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         image_table = root/"figures"/f"{stem}_image_curves.csv"
         shutil.copyfile(alignment_root/"image_curves.csv", image_table)
         image_meta = {**alignment["image_curves"], "source_csv": str(image_table),
+                      "low_uv_pb_smoothing": pb_smoothing_note(config["overlap_tests"]),
                       "styles": {name: {"label": label, "linestyle": style, "color": color}
                                  for name, (label, style, color) in IMAGE_CURVES.items()}}
     tp_table = root/"figures"/f"{stem}_tp_reference.csv"

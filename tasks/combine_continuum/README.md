@@ -36,8 +36,8 @@ product for its mock correction and stops if it is missing.
 
 | Stage | Does | Writes (under `results/combine_continuum/`) |
 |---|---|---|
-| `inspect` | inputs, grids, beams, units, frequencies, provenance, footprint margin | nothing |
-| `prepare` | 12m+7m true sky in MJy/sr with its mask; both TP models regridded to its grid with the edge taper | `prepared/` |
+| `inspect` | inputs, grids, beams, units, frequencies, provenance | nothing |
+| `prepare` | 12m+7m true sky in MJy/sr with its mask; both TP models regridded to its grid with the edge taper; checks the TP footprint margin and the regridding power change | `prepared/` |
 | `tp_factor` | global overlap factor on the prepared inputs (documented, not applied) | `checks/tp_factor/` |
 | `jcomb` | J-comb with dust + free-free and with dust only, and its measurements | `products/`, `checks/jcomb/`, `checks/zero_spacing/` |
 | `feather` | feather, same inputs and measurements | `products/`, `checks/feather/`, `checks/zero_spacing/` |
@@ -83,11 +83,16 @@ All inputs are declared in `task.toml`; the code checks each key's source.
 | `core_catalogue` | `results/source_catalogue/tables/source_catalogue.ecsv` | task product | compact-source check |
 | `[measurement_sets]` | the four measurement sets in `data/reduction/alma/7MTM2TM1/cont/ms/` (12m combined, C5, C2, 7m) | declared read-only intermediate | uv, overlap, full_sampling, amplitude_alignment, aca_forward_test, pointing_coverage |
 
-- Every image is read with `read_mjysr`: Jy/beam is converted with the image's
-  own beam, MJy/sr is passed through, anything else is refused.
-- The TP frequency is read from the `FREQGHZ` card of the TP model (223.8 GHz;
-  the "230 GHz" in the published model name is a label). The primary-beam
-  frequency of `pointing_coverage` is the same value.
+- Phase 1 reads the 12m+7m image and the TP models with `read_plane`, which
+  accepts only Jy/beam with a beam; `prepare` converts them to MJy/sr with each
+  image's own beam. The gain is read with `read_gain` (no unit or beam
+  expected). Phase 2 reads images with `read_mjysr` or, for the sampled sky
+  models, its own reader: Jy/beam is converted with the image's own beam,
+  MJy/sr is passed through, anything else is refused.
+- The TP frequency is read from the `FREQGHZ` card of the TP models (223.8 GHz;
+  the "230 GHz" in the published model name is a label). Both models must carry
+  the same value; it sets the product file label. The primary-beam frequency of
+  `pointing_coverage` is the same value.
 - MIRIAD products: `truesky` is clean / gain, gain = min(1, pb / 0.508), and
   the `pb0.2` image is blank below pb 0.2.
 
@@ -216,6 +221,21 @@ method:
   model-grid Nyquist limit (about 103 kλ), and the half-pixel bilinear
   interpolation limit (2 % loss, about 26 kλ). The last applies in practice, so
   the curves cover 1 to 26 kλ.
+- Below about 7 kλ the curves are smoothed by the 12m primary beam. Each sample
+  is the image multiplied by that beam, so it samples the image visibilities
+  convolved with the beam's uv footprint. For a Gaussian beam of FWHM θ the
+  footprint is a Gaussian of FWHM 4 ln2 / (π θ): with `pb_12m_fwhm_arcsec =
+  26.0` at `pb_reference_frequency_ghz = 225.0`, θ = 26.99″ and 25.33″ at
+  216.74 and 230.95 GHz, and the footprint FWHM is 6.74 and 7.19 kλ. Below
+  about 5 kλ each sample therefore mixes in power from 6 to 10 kλ. The curves
+  are kept from 1 kλ, but the 12m+7m curve does not fall away there: in the
+  first full run it flattens at roughly half the beam-corrected TP curve
+  (ratio 0.49 to 0.56 over 1 to 4 kλ, 0.63 at 5 kλ), while J-comb and feather
+  stay at 0.83 to 0.94 of it over 1 to 5 kλ
+  (`diagnostics/amplitude_alignment/image_curves.csv` against
+  `tp_corrected_common_mjy` in `tp_continuous.csv`). The image-curve
+  description in the `amplitude_alignment` and Fig. 2 manifests states the
+  same smoothing.
 
 ### ACA forward test
 
@@ -237,6 +257,12 @@ because the forward-test code cannot take one.
   6.6 kλ.
 - CASA 6.7.2 `feather` was tested and not used: on these images it returns the
   sum of its inputs. The feather here is the task's own implementation.
+- The feather `high_k_join` check is flagged by construction: feather weights
+  the 12m+7m image by 1 − G_low, which is 0.89 at k2 = 9 kλ and 0.98 at 12 kλ,
+  so combined / 12m+7m from k2 to 20 kλ falls short of 1 by more than the 2 %
+  tolerance (0.975 for both TP models in the first full run,
+  `checks/feather/measurements.json`). It is a property of the method, not a
+  failure of the product.
 - `[absolute_scale]` is pending: the products are on the scale set by the 12m+7m
   calibration and `f`. The `planck_calibration` stage gives the comparison the
   decision rests on.
