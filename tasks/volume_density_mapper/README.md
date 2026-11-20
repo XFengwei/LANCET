@@ -47,10 +47,25 @@ Measured runtimes, numerical checks, pilot-to-full differences, and the
 interpretation boundary are recorded in
 [`docs/volume_density_mapper_audit.md`](../../docs/volume_density_mapper_audit.md).
 
-## Status (2026-11-20)
+## Rerun (2026-11-21)
 
-The primary beam for the `mask` stage is now the MIRIAD `cont.pb` (the CASA
-beam was removed). The products in `results/volume_density_mapper/` were made
-from the Paper II all-scale map and are stale: `column_density` now uses the
-new J-comb combination (about 3 × lower Σ in diffuse gas). The task has not
-been rerun because `volume-density-mapper` is not installed in `py312`.
+`volume-density-mapper` 0.1.4 (with `constrained-diffusion` 1.2.5, the
+versions in the audit) was installed in `py312` (author) and the `pilot`,
+`full` and `mask` stages were rerun.
+
+- Code check: the pilot on the Paper II Σ map reproduces the stored pilot
+  where the resolution assignment is unchanged (99.6 % of pixels; number
+  density within float32 rounding). The other 0.4 % differ because the
+  footprint is now the MIRIAD pb ≥ 0.2 cut instead of the CASA cut.
+- Input: the reviewed `column_density` all-scale Σ (new J-comb, TP factor
+  1.0). Inside the mosaic its median is 0.41 g cm⁻² (Paper II map 1.27);
+  147 000 pixels with negative intensity are NaN and, as before for
+  non-positive values, enter the mapper as 0 (white holes in the cavity).
+- Result (`full_pbmasked`, ALMA-resolution pixels): median n(H2)
+  1.77e5 → 2.95e5 cm⁻³ (new/old median 1.6, 16–84 % 0.78–3.0); pilot
+  3.95e5 → 4.92e5. The median effective width falls from 0.52 to
+  0.063 pc: without the 3 × TP plateau of the v3 map the decomposition
+  assigns most emission to small scales, so n = Σ/(μ m_H w) rises although
+  Σ is lower. The volume densities therefore depend strongly on the
+  large-scale (TP) level of the input map.
+- PB mask: 4 509 610 retained pixels (CASA cut: 4 546 473).
