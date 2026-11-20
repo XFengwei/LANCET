@@ -11,7 +11,8 @@ grid and the Paper I column densities as surface densities.
 |---|---|---|
 | `grid_reference` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.fits` | 12m+7m MIRIAD image; only its 2-D grid is used |
 | `dust_continuum_allscale` | `data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits` | delivered J-comb 12m+7m + dust-only TP (TP factor 1.0), Jy/beam, converted to MJy/sr here. Beyond the mosaic it is the TP alone, continued past the Paper I dust model with the 18″+36″ SED maps (`synthesize_continuum` `fill`), so it covers the whole 12m+7m grid. Only a delivered file or a `combine_continuum` product is accepted |
-| `intercore_background` | `extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits` | getsf background of the 12m+7m image, MJy/sr; getsf is not rerun (D7) |
+| `intercore_background` | `data/extraction/getsf/triple/results/+components/G316.sw.1302.obs.sbackground.fits` | getsf background of the 12m+7m image, MJy/sr; getsf is not rerun (D7). getsf ran on the MIRIAD clean image (sky × gain), so it is divided by `gain` where gain < 1 |
+| `gain` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits` | MIRIAD mosaic gain; pixels without a positive gain are NaN in the intercore maps |
 | `temperature_lowres`, `column_density_lowres`, `column_density_multiscale` | `data/delivered/sedfitter/combine/` | Paper I SED products (unscaled originals) |
 | `tp_dust_model` | `results/synthesize_continuum/model/dust_224GHz_fill36.fits` | the filled TP dust model contained in the extended36 product, on the low-resolution grid; `consistency` stage only |
 | `freefree_smoothed` | `results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec.fits` | contours on the overlay figure |
@@ -85,12 +86,15 @@ The figure colour scale follows the lower values: grey 0–1 g cm⁻² (linear),
 colour 1–5 g cm⁻² (square root; author), against 0–2 and 2–10 in Paper II
 (`[plot_style]`, author 2026-11-20).
 
-The temperature and the intercore maps are byte-identical to the Paper II
-versions. `diagnostics/2026-11-13/` records the ×2.8 normalisation variants of
+The temperature map is byte-identical to the Paper II version. The intercore
+maps are identical where gain = 1; where gain < 1 they are now gain-corrected
+(author, 2026-11-20; new/old median 1.45, up to 2.87), and they are NaN
+where the gain is not positive (zero before, never a valid value). `diagnostics/2026-11-13/` records the ×2.8 normalisation variants of
 the Paper I column-density maps; they are not task inputs.
 
 ## Known limitations
 
 - Outside the Paper I dust model the all-scale map is the 36″ SED fill
   (`synthesize_continuum` `fill`), not new information at 18″.
-- The intercore background comes from the old (CASA) 12m+7m image used by getsf.
+- The intercore background is the getsf decomposition of the 12m+7m image;
+  getsf is not rerun (D7).

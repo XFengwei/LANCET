@@ -20,6 +20,7 @@ from lancet.column_density import (
     column_density_to_surface_density,
     dense_mass_msun,
 )
+from lancet.catalogues import gain_correct
 from lancet.continuum_plotting import create_dual_colour_figure
 from lancet.imaging import read_mjysr
 
@@ -64,6 +65,7 @@ def resolve_task_paths(
         "column_density_lowres",
         "column_density_multiscale",
         "grid_reference",
+        "gain",
     ):
         if not paths[name].is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be delivered: {paths[name]}")
@@ -126,6 +128,7 @@ def inspect_inputs(
         "column_density_lowres",
         "column_density_multiscale",
         "grid_reference",
+        "gain",
         "dust_continuum_allscale",
         "intercore_background",
         "freefree_smoothed",
@@ -276,6 +279,17 @@ def prepare_products(
     return products
 
 
+def gain_corrected_intensity(
+    intensity: np.ndarray,
+    gain: np.ndarray,
+) -> np.ndarray:
+    """Divide an intensity measured on a sky x gain image by the gain where
+    it is below 1; pixels without a positive gain become NaN."""
+    response = np.asarray(gain, dtype=float)
+    response = np.where(response > 0, response, np.nan)
+    return gain_correct(intensity, response)
+
+
 def build_maps(
     paths: Mapping[str, Path],
     config: Mapping[str, object],
@@ -308,6 +322,14 @@ def build_maps(
             ),
         ):
             intensity, header = read_mjysr(paths[input_name])
+            if input_name == "intercore_background":
+                gain = np.squeeze(fits.getdata(paths["gain"]))
+                if gain.shape != intensity.shape:
+                    raise ValueError(
+                        f"gain shape {gain.shape} does not match "
+                        f"intercore shape {intensity.shape}"
+                    )
+                intensity = gain_corrected_intensity(intensity, gain)
             if intensity.shape != temperature.shape:
                 raise ValueError(
                     f"{input_name} shape {intensity.shape} does not match "

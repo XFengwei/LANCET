@@ -276,8 +276,8 @@ Measure the temperature, C18O velocity-dispersion, total surface-density, and
 intercore surface-density environment around every core with:
 
 ```bash
-conda run -n py312 python scripts/environment_measurements.py --stage inspect
-conda run -n py312 python scripts/environment_measurements.py --stage build
+conda run -n py312 python tasks/environment_measurements/run.py --stage inspect
+conda run -n py312 python tasks/environment_measurements/run.py --stage build
 ```
 
 The task uses 15-arcsec apertures and writes the augmented catalogue under

@@ -84,7 +84,7 @@ def test_environment_inspection_reports_current_dependencies() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/environment_measurements.py",
+            "tasks/environment_measurements/run.py",
             "--stage",
             "inspect",
         ],

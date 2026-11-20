@@ -87,9 +87,12 @@ def _write_map_inputs(root: Path, allscale_unit: str) -> dict[str, Path]:
     intercore_header["BUNIT"] = "MJy/sr"
     intercore_path = root / "intercore.fits"
     fits.writeto(intercore_path, mjysr / 2, intercore_header)
+    gain_path = root / "gain.fits"
+    fits.writeto(gain_path, np.ones((1, 1, 3, 4), np.float32), header)
     return {
         "dust_continuum_allscale": allscale_path,
         "intercore_background": intercore_path,
+        "gain": gain_path,
         "output_root": root / "out",
     }
 
@@ -143,6 +146,32 @@ def test_allscale_from_another_task_is_rejected(tmp_path: Path) -> None:
         TASK.resolve_task_paths(project, config)
 
 
+def test_intercore_background_is_gain_corrected(tmp_path: Path) -> None:
+    config = TASK.load_task_config(CONFIG)
+    paths = _write_map_inputs(tmp_path, "MJy/sr")
+    intercore = fits.getdata(paths["intercore_background"]).copy()
+    with fits.open(paths["gain"], mode="update") as hdul:
+        hdul[0].data[0, 0, 0, 0] = 0.5
+        hdul[0].data[0, 0, 0, 1] = 0.0
+
+    products = TASK.build_maps(paths, config)
+
+    reference = tmp_path / "reference"
+    reference.mkdir()
+    expected_paths = _write_map_inputs(reference, "MJy/sr")
+    with fits.open(expected_paths["intercore_background"], mode="update") as hdul:
+        hdul[0].data[0, 0] = 2 * intercore[0, 0]
+    expected = fits.getdata(
+        TASK.build_maps(expected_paths, config)["surface_density_intercore"]
+    )
+    surface = fits.getdata(products["surface_density_intercore"])
+    allscale = fits.getdata(products["surface_density_allscale"])
+    assert surface[0, 0] == pytest.approx(expected[0, 0], rel=1e-6)
+    assert np.isnan(surface[0, 1])
+    np.testing.assert_array_equal(surface.ravel()[2:], expected.ravel()[2:])
+    assert np.isfinite(allscale[0, 1])
+
+
 def test_task_reads_new_combination_and_miriad_products() -> None:
     config = TASK.load_task_config(CONFIG)
     inputs = config["inputs"]
@@ -158,6 +187,10 @@ def test_task_reads_new_combination_and_miriad_products() -> None:
     assert inputs["primary_beam"] == (
         "data/delivered/alma/continuum/"
         "IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
+    )
+    assert inputs["gain"] == (
+        "data/delivered/alma/continuum/"
+        "IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits"
     )
     assert {"pdf", "png"} <= set(config["figures"]["formats"])
 

@@ -169,7 +169,7 @@ topic = "Environmental estimators, covariance and velocity components"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["environment_measurements", "correlation", "c18o_moments"]
-scripts = ["scripts/environment_measurements.py", "scripts/correlation.py", "scripts/c18o_moments.py"]
+scripts = ["tasks/environment_measurements/run.py", "scripts/correlation.py", "scripts/c18o_moments.py"]
 evidence = "Author-approved clarification of peak and aperture-median measurements and the coherent spine velocity component, with manuscript, captions and response updated. Closed at the author's request."
 
 [[subtasks]]
