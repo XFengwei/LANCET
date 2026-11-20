@@ -126,6 +126,14 @@ def tp_footprint_on_grid(tp, tp_wcs, target_wcs, shape) -> np.ndarray:
     return np.isfinite(regrid_to(marker, tp_wcs, target_wcs, shape, order=0))
 
 
+def read_gain(path: Path, shape: tuple[int, ...]) -> np.ndarray:
+    """Read the delivered gain map as a float32 2-D plane of ``shape``; no unit or beam is expected."""
+    data = np.squeeze(np.asarray(fits.getdata(path)))
+    if data.shape != tuple(shape):
+        raise ValueError(f"{path}: gain shape {data.shape} differs from the interferometer's {tuple(shape)}")
+    return data.astype(np.float32)
+
+
 def mosaic_gain(gain: np.ndarray, interferometer: np.ndarray) -> np.ndarray:
     """The delivered gain where the interferometer image is finite, 0 elsewhere (float32)."""
     return np.where(np.isfinite(interferometer), gain, 0.0).astype(np.float32)
@@ -162,7 +170,7 @@ def run_prepare(paths: Mapping[str, Path], config: Mapping, overwrite: bool = Fa
     out = prepared_paths(paths["output_root"])
     guard_outputs(list(out.values()), overwrite)
     truesky, header, wcs = read_plane(paths["interferometer"])
-    delivered_gain, _, _ = read_plane(paths["gain"])
+    delivered_gain = read_gain(paths["gain"], truesky.shape)
     high_beam = beam_parameters(header)
     gain = mosaic_gain(delivered_gain, truesky)
     del delivered_gain

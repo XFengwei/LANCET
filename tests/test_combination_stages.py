@@ -49,6 +49,15 @@ def _truesky_header(n, pixel_arcsec, beam_arcsec):
     return h
 
 
+def _gain_header(n):
+    """Header of the delivered gain map: 4-D, BUNIT 'GAIN', no beam."""
+    h = _truesky_header(n, 0.5, 1.0)
+    h["BUNIT"] = "GAIN"
+    for key in ("BMAJ", "BMIN", "BPA"):
+        del h[key]
+    return h
+
+
 def _smooth_field(n=61, border=5, seed=3):
     """Positive field smoothed to about the TP beam, NaN in a border (as outside a real TP footprint)."""
     field = ndimage.gaussian_filter(np.random.default_rng(seed).normal(size=(n, n)), 1.3, mode="wrap")
@@ -69,8 +78,7 @@ def _inputs(tmp_path, tp_frequency=223.8, truesky_edge=100):
     truesky[truesky_edge:n - truesky_edge, truesky_edge:n - truesky_edge] = 1.0
     paths = {"interferometer": tmp_path / "interferometer.fits", "gain": tmp_path / "gain.fits"}
     fits.PrimaryHDU(truesky[None, None], _truesky_header(n, 0.5, 1.0)).writeto(paths["interferometer"])
-    fits.PrimaryHDU(np.full((n, n), 0.9, dtype=np.float32)[None, None],
-                    _truesky_header(n, 0.5, 1.0)).writeto(paths["gain"])
+    fits.PrimaryHDU(np.full((n, n), 0.9, dtype=np.float32)[None, None], _gain_header(n)).writeto(paths["gain"])
     tp = _smooth_field(61)
     for name in ("tp_dust", "tp_dust_ff"):
         header = _header(61, 6.0, 18.1)
@@ -211,3 +219,11 @@ def test_method_output_layout(tmp_path, monkeypatch):
     with pytest.raises(FileExistsError):
         stages.run_method("jcomb", paths, config)
     assert len(calls) == done
+
+
+def test_prepare_rejects_gain_of_another_shape(tmp_path):
+    paths = _inputs(tmp_path)
+    fits.PrimaryHDU(np.full((300, 300), 0.9, dtype=np.float32)[None, None], _gain_header(300)).writeto(
+        paths["gain"], overwrite=True)
+    with pytest.raises(ValueError, match="shape"):
+        stages.run_prepare(paths, _prepare_config())
