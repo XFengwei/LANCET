@@ -17,7 +17,7 @@ from astropy.wcs import WCS
 from reproject import reproject_interp
 from scipy.ndimage import maximum_filter
 
-root = Path.cwd()
+root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--overwrite", action="store_true", help="Replace this task's existing outputs")
 args = parser.parse_args()

@@ -69,7 +69,10 @@ from lancet.combination_validation import (
 )
 
 DEFAULT_CONFIG = Path("tasks/linear_combine_continuum/task.toml")
-DELIVERED_INPUTS = ("interferometer", "interferometer_attenuated", "tp_dust", "tp_dust_ff")
+DELIVERED_INPUTS = ("interferometer", "interferometer_attenuated")
+# TP models are the products of the synthesize_continuum task.
+SYNTHESIS_INPUTS = ("tp_dust", "tp_dust_ff")
+SYNTHESIS_RESULTS = Path("results/synthesize_continuum")
 TP_FLAVOURS = ("dust", "dust_ff")
 TP_LABELS = {"dust": "TP dust", "dust_ff": "TP dust+free-free"}
 METHOD_LABELS = {"jcomb": "J-comb", "feather": "Feather"}
@@ -91,11 +94,15 @@ def _project_path(project: ProjectPaths, value: object) -> Path:
 
 
 def resolve_task_paths(project: ProjectPaths, config: Mapping) -> dict[str, Path]:
-    """Resolve inputs (delivered where required) and the policy-safe output root."""
+    """Resolve inputs (delivered or synthesize_continuum products) and the output root."""
     paths = {name: _project_path(project, value) for name, value in config["inputs"].items()}
     for name in DELIVERED_INPUTS:
         if not paths[name].is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be a delivered input: {paths[name]}")
+    synthesis = (project.root / SYNTHESIS_RESULTS).resolve()
+    for name in SYNTHESIS_INPUTS:
+        if not paths[name].is_relative_to(synthesis):
+            raise ValueError(f"{name} must be a synthesize_continuum product: {paths[name]}")
     paths["output_root"] = project.validate_output(str(config["outputs"]["root"]))
     for name, path in paths.items():
         if name != "output_root" and not path.is_file():

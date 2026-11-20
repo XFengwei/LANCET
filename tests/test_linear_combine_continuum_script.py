@@ -33,10 +33,16 @@ def test_output_root_inside_data_rejected():
         TASK.resolve_task_paths(ProjectPaths.discover(PROJECT_ROOT), config)
 
 
-def test_tp_inputs_must_be_delivered():
-    config = _config({("inputs", "tp_dust"): "results/synthesize_continuum/model/dust_230GHz.fits"})
+def test_tp_inputs_must_come_from_synthesize_continuum():
+    config = _config({("inputs", "tp_dust"): "data/delivered/sedfitter/Dustmodel_223.8GHz.fits"})
     with pytest.raises(ValueError, match="tp_dust"):
         TASK.resolve_task_paths(ProjectPaths.discover(PROJECT_ROOT), config)
+
+
+def test_task_reads_tp_models_from_synthesize_continuum():
+    config = TASK.load_task_config(CONFIG)
+    assert config["inputs"]["tp_dust"] == "results/synthesize_continuum/model/dust_224GHz.fits"
+    assert config["inputs"]["tp_dust_ff"] == "results/synthesize_continuum/model/continuum_224GHz.fits"
 
 
 def test_guard_outputs_refuses_existing(tmp_path):

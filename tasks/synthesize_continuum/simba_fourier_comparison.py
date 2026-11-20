@@ -23,7 +23,7 @@ from scipy.signal.windows import tukey
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--overwrite", action="store_true")
 args = parser.parse_args()
-root = Path.cwd()
+root = Path(__file__).resolve().parents[2]
 cfg = tomllib.loads((root / "tasks/synthesize_continuum/task.toml").read_text())
 out = root / cfg["outputs"]["root"]
 figdir, valdir = out / "figures", out / "validation"

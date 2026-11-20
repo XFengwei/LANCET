@@ -46,8 +46,8 @@ Until 2026-11-20 the map was evaluated at a hard-coded 230 GHz
 223.8 GHz. The fitted emission measures are unchanged (byte-identical rerun);
 the free-free flux density is higher by exactly (223.8/230)^-0.1 = 1.002736
 in every pixel of the native, smoothed and dust-grid maps. The old
-`Te_8000K/ff230_map*.fits` files are kept only until `synthesize_continuum` and
-`column_density`, which still read them, are reviewed.
+`ff230_map*.fits` files were removed on 2026-11-20 after `synthesize_continuum`
+and `column_density` were repointed to `ff224_map*`.
 
 ## Paper II fitting profile
 

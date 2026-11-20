@@ -4,7 +4,7 @@ name = "plot_allscale_continuum"
 [inputs]
 combined_continuum = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.fits"
 dust_continuum = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust.MJysr.fits"
-synthetic_continuum = "results/synthesize_continuum/model/continuum_230GHz.fits"
+synthetic_continuum = "results/synthesize_continuum/model/continuum_224GHz.fits"
 primary_beam = "data/delivered/alma/7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits"
 
 [primary_beam]

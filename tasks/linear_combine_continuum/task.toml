@@ -5,10 +5,10 @@ name = "linear_combine_continuum"
 # MIRIAD 12m+7m joint mosaic (PB-corrected) and the same image times the mosaic gain.
 interferometer = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.fits"
 interferometer_attenuated = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.pbant.fits"
-# SED-based TP models; named 230 GHz but evaluated at ~224.4 GHz (dust), the ALMA continuum frequency.
-# Dustmodel_230GHz.fits is byte-identical to the Paper I model paper1/TP_SEDsynthetic230GHz_cont.fits.
-tp_dust = "data/delivered/sedfitter/Dustmodel_230GHz.fits"
-tp_dust_ff = "data/delivered/sedfitter/SEDsynthetic_Dust_FF_230GHz.fits"
+# TP models at 223.8 GHz from synthesize_continuum: the Paper I dust model
+# (data/delivered/sedfitter/Dustmodel_223.8GHz.fits, unchanged) and dust plus free-free.
+tp_dust = "results/synthesize_continuum/model/dust_224GHz.fits"
+tp_dust_ff = "results/synthesize_continuum/model/continuum_224GHz.fits"
 # Planck PR3 HFI 217 GHz map and PR2 Type-1 CO map (pixels within 1 deg of the field, HEALPix
 # Nside 2048 NESTED), the HFI RIMO (bandpass, beam) and the fetch record with the CO factors.
 planck_217 = "results/paper_ii_referee_response/diagnostics/R4c/2026-11-15/planck/freq217.npz"

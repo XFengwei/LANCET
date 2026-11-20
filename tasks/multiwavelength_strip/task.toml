@@ -98,7 +98,7 @@ input = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.
 # (dust + free-free) model, converted to MJy/sr and flux-aligned by a linear
 # fit (all-scale smoothed to 18.1" = a * model + b) in a band 18-60" inside
 # the coverage edge. The fit residual fades over fill_blend_arcsec outside.
-fill_input = "results/synthesize_continuum/model/continuum_230GHz.fits"
+fill_input = "results/synthesize_continuum/model/continuum_224GHz.fits"
 fill_fit_band_arcsec = [18.0, 60.0]
 fill_blend_arcsec = 60.0
 # Drop this many arcsec of the mosaic edge (edge artefacts) before filling.

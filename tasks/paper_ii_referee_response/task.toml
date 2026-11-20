@@ -70,7 +70,7 @@ topic = "ACA versus reconstructed TP contributions"
 mode = "maintained_update"
 status = "complete"
 owners = ["source_catalogue", "synthesize_continuum", "column_density"]
-scripts = ["scripts/source_catalogue.py", "scripts/synthesize_continuum.py", "scripts/column_density.py"]
+scripts = ["scripts/source_catalogue.py", "tasks/synthesize_continuum/run.py", "scripts/column_density.py"]
 evidence = "Quantitative source/background comparison with explicit input and denominator provenance."
 
 [[subtasks]]
@@ -114,7 +114,7 @@ topic = "J-comb versus feathering and compact/extended flux changes"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["combination_diagnostic", "source_catalogue", "synthesize_continuum"]
-scripts = ["scripts/combination_diagnostic.py", "scripts/source_catalogue.py", "scripts/synthesize_continuum.py"]
+scripts = ["scripts/combination_diagnostic.py", "scripts/source_catalogue.py", "tasks/synthesize_continuum/run.py"]
 evidence = "Author-approved count and flux discussion, and comparison of method principles with Jiao et al. (2022); original J-comb inputs and settings remain unavailable."
 
 [[subtasks]]
@@ -146,7 +146,7 @@ topic = "Compact free-free emission and mass sensitivity"
 mode = "diagnostic_then_update"
 status = "complete"
 owners = ["construct_freefree_model", "freefree_core_contamination", "synthesize_continuum", "physical_properties", "core_formation"]
-scripts = ["tasks/freefree_core_contamination/freefree_mass_efficiency_bias.py", "tasks/freefree_core_contamination/core_freefree_contamination.py", "tasks/construct_freefree_model/run.py", "scripts/synthesize_continuum.py", "scripts/physical_properties.py", "scripts/core_formation.py"]
+scripts = ["tasks/freefree_core_contamination/freefree_mass_efficiency_bias.py", "tasks/freefree_core_contamination/core_freefree_contamination.py", "tasks/construct_freefree_model/run.py", "tasks/synthesize_continuum/run.py", "scripts/physical_properties.py", "scripts/core_formation.py"]
 evidence = "Author-approved CORNISH-South sensitivity test, nondetection limits and both-reservoir mass-fraction estimates; manuscript and concise response updated. Closed at the author's request."
 
 [[subtasks]]
@@ -177,7 +177,7 @@ topic = "Quantitative SIMBA benchmark and bandpass figure"
 mode = "maintained_update"
 status = "complete"
 owners = ["synthesize_continuum"]
-scripts = ["scripts/synthesize_continuum.py", "scripts/simba_pixel_comparison.py"]
+scripts = ["tasks/synthesize_continuum/run.py", "tasks/synthesize_continuum/simba_pixel_comparison.py"]
 evidence = "Bandpass panel removed because its original data are unavailable; author-confirmed SIMBA calibration and beam-matched pixel comparison included in Figure C1."
 
 [[subtasks]]

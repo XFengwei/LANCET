@@ -12,7 +12,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from reproject import reproject_interp
 
-root = Path(__file__).resolve().parent.parent
+root = Path(__file__).resolve().parents[2]
 cfg = tomllib.loads((root / "tasks/synthesize_continuum/task.toml").read_text())
 out = root / cfg["outputs"]["root"]
 simba, sh = fits.getdata(out / "validation/simba_250GHz_on_model_grid.fits", header=True)

@@ -23,6 +23,18 @@ from lancet.continuum import (
 DEFAULT_CONFIG = Path("tasks/synthesize_continuum/task.toml")
 
 
+def frequency_label(frequency_ghz: float) -> str:
+    """File-name label of a model frequency, e.g. ``224GHz``."""
+    return f"{round(float(frequency_ghz)):d}GHz"
+
+
+def _model_label(config: Mapping[str, object]) -> str:
+    model = config["model"]
+    if not isinstance(model, Mapping):
+        raise TypeError("Model settings must be a TOML table")
+    return frequency_label(float(model["reference_frequency_ghz"]))
+
+
 def load_task_config(path: Path) -> dict[str, object]:
     """Load task settings from TOML."""
     if not path.is_file():
@@ -56,7 +68,7 @@ def resolve_task_paths(
         for name, value in inputs.items()
     }
     if freefree_override is not None:
-        paths["freefree_230ghz"] = _project_path(
+        paths["freefree"] = _project_path(
             project,
             freefree_override,
         )
@@ -65,7 +77,7 @@ def resolve_task_paths(
     )
     paths["output_root"] = project.validate_output(str(output_value))
 
-    for name in ("dust_230ghz", "simba_250ghz"):
+    for name in ("dust", "simba_250ghz"):
         path = paths[name]
         if not path.is_relative_to(project.delivered.resolve()):
             raise ValueError(f"{name} must be a delivered input: {path}")
@@ -96,7 +108,7 @@ def inspect_inputs(
 ) -> None:
     """Print input readiness and configured model assumptions."""
     print("Continuum synthesis inputs:")
-    for name in ("dust_230ghz", "freefree_230ghz", "simba_250ghz"):
+    for name in ("dust", "freefree", "simba_250ghz"):
         print(f"  {name}: {paths[name]}")
         print(f"    {_describe(paths[name])}")
 
@@ -114,7 +126,7 @@ def inspect_inputs(
     )
     status = (
         "ready"
-        if paths["freefree_230ghz"].is_file()
+        if paths["freefree"].is_file()
         else "blocked until the free-free postprocess stage is complete"
     )
     print(f"Model readiness: {status}")
@@ -171,18 +183,18 @@ def build_models(
     overwrite: bool = False,
 ) -> dict[float, dict[str, Path]]:
     """Build component and combined continuum FITS maps."""
-    if not paths["freefree_230ghz"].is_file():
+    if not paths["freefree"].is_file():
         raise FileNotFoundError(
-            f"Free-free input not found: {paths['freefree_230ghz']}; "
+            f"Free-free input not found: {paths['freefree']}; "
             "run the free-free fit and postprocess stages first"
         )
 
     dust, dust_header = fits.getdata(
-        paths["dust_230ghz"],
+        paths["dust"],
         header=True,
     )
     freefree, freefree_header = fits.getdata(
-        paths["freefree_230ghz"],
+        paths["freefree"],
         header=True,
     )
     dust = np.squeeze(np.asarray(dust))
@@ -219,14 +231,14 @@ def build_models(
                 model["missing_freefree_value_jy_per_beam"]
             ),
         )
-        frequency_label = f"{target:g}GHz"
+        label = frequency_label(target)
         products = {
-            "dust": model_directory / f"dust_{frequency_label}.fits",
+            "dust": model_directory / f"dust_{label}.fits",
             "freefree": (
-                model_directory / f"freefree_{frequency_label}.fits"
+                model_directory / f"freefree_{label}.fits"
             ),
             "continuum": (
-                model_directory / f"continuum_{frequency_label}.fits"
+                model_directory / f"continuum_{label}.fits"
             ),
         }
         for output in products.values():
@@ -383,7 +395,7 @@ def _plot_settings(
     plot = config["plot"]
     if not isinstance(plot, Mapping):
         raise TypeError("Plot settings must be a TOML table")
-    component = plot["component_230ghz"]
+    component = plot["components"]
     simba = plot["simba_250ghz"]
     if not isinstance(component, Mapping) or not isinstance(simba, Mapping):
         raise TypeError("Plot panel settings must be TOML tables")
@@ -551,7 +563,7 @@ def plot_continuum_components(
     *,
     overwrite: bool = False,
 ) -> list[Path]:
-    """Plot the 230 GHz dust, free-free, and combined continuum maps."""
+    """Plot the dust, free-free, and combined maps at the model frequency."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -568,17 +580,18 @@ def plot_continuum_components(
         vmax=float(component["vmax_jy_per_beam"]),
     )
     model_directory = paths["output_root"] / "model"
+    label = _model_label(config)
     panels = (
         (
-            model_directory / "dust_230GHz.fits",
+            model_directory / f"dust_{label}.fits",
             "Dust thermal emission",
         ),
         (
-            model_directory / "freefree_230GHz.fits",
+            model_directory / f"freefree_{label}.fits",
             "Free-free emission",
         ),
         (
-            model_directory / "continuum_230GHz.fits",
+            model_directory / f"continuum_{label}.fits",
             "1.3 mm emission (Dust + Free-free)",
         ),
     )
@@ -648,7 +661,7 @@ def plot_continuum_components(
 
     outputs = _save_figure(
         figure,
-        paths["output_root"] / "figures" / "continuum_components_230GHz",
+        paths["output_root"] / "figures" / f"continuum_components_{label}",
         output_formats=plot["output_formats"],
         dpi=int(plot["dpi"]),
         overwrite=overwrite,
@@ -957,7 +970,7 @@ def plot_sed_demonstration(
     axis.text(
         prediction_frequency,
         prediction_flux * 1.6,
-        "1.3 mm\n230 GHz",
+        f"1.3 mm\n{prediction_frequency:g} GHz",
         color="white",
         ha="center",
         va="bottom",
@@ -1041,7 +1054,7 @@ def plot_sed_demonstration(
 
     outputs = _save_figure(
         figure,
-        paths["output_root"] / "figures" / "sed_demonstration_230GHz",
+        paths["output_root"] / "figures" / f"sed_demonstration_{_model_label(config)}",
         output_formats=plot["output_formats"],
         dpi=int(plot["dpi"]),
         overwrite=overwrite,
@@ -1091,7 +1104,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--freefree",
         type=Path,
-        help="Override the configured 230 GHz free-free input",
+        help="Override the configured free-free input",
     )
     parser.add_argument(
         "--output-dir",

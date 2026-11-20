@@ -113,13 +113,13 @@ The FITS provenance audit is in
 [`docs/construct_freefree_model_audit.md`](docs/construct_freefree_model_audit.md).
 
 After fitting, create the 18-arcsec free-free map on the dust grid and
-synthesize the 230 and 250 GHz continuum products with:
+synthesize the 223.8 and 250 GHz continuum products with:
 
 ```bash
 conda run -n py312 python tasks/construct_freefree_model/run.py --stage postprocess
 conda run -n py312 python tasks/construct_freefree_model/run.py --stage plot
-conda run -n py312 python scripts/synthesize_continuum.py --stage inspect
-conda run -n py312 python scripts/synthesize_continuum.py --stage all
+conda run -n py312 python tasks/synthesize_continuum/run.py --stage inspect
+conda run -n py312 python tasks/synthesize_continuum/run.py --stage all
 ```
 
 The continuum model configuration, component inputs, frequency scaling, and
@@ -130,7 +130,7 @@ All generated maps and publication figures are written under
 task products, run:
 
 ```bash
-conda run -n py312 python scripts/synthesize_continuum.py \
+conda run -n py312 python tasks/synthesize_continuum/run.py \
   --stage plot \
   --overwrite
 ```
@@ -191,7 +191,7 @@ conda run -n py312 python scripts/plot_allscale_continuum.py --stage all
 ```
 
 This task reads the delivered dust and dust-plus-free-free all-scale maps and
-the current synthesized 230 GHz continuum result. It creates annotated
+the current synthesized 223.8 GHz continuum result. It creates annotated
 publication PDFs and clean PNGs under
 `results/plot_allscale_continuum/figures/` without writing any FITS products.
 Its input paths, view, transition values, and output formats are declared in

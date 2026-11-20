@@ -5,7 +5,7 @@ name = "construct_freefree_model"
 meerkat_cube = "data/delivered/archive/radio/MeerKAT_subcube_reprojected.fits"
 meerkat_reference = "data/delivered/archive/radio/MeerKAT_subimage_1.38GHz_reprojected.fits"
 cornish_map = "data/delivered/archive/radio/CORNISH_5p5GHz.fits"
-dust_reference = "data/delivered/sedfitter/Dustmodel_230GHz.fits"
+dust_reference = "data/delivered/sedfitter/Dustmodel_223.8GHz.fits"
 
 [outputs]
 root = "results/construct_freefree_model"
