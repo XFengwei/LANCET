@@ -1,0 +1,87 @@
+{
+  "inputs": [
+    {
+      "key": "tp",
+      "label": "Total-power",
+      "source": "results/synthesize_continuum/model/continuum_224GHz_fill36.fits",
+      "beam_arcsec": [
+        18.1,
+        18.1
+      ],
+      "finite_fraction": 1.0,
+      "display_zero_replacements": 0,
+      "clipped_low_fraction": 0.0,
+      "clipped_high_fraction": 0.0
+    },
+    {
+      "key": "12m7m",
+      "label": "ALMA Interferometry",
+      "source": "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits",
+      "beam_arcsec": [
+        0.7122889452132,
+        0.6062558270076001
+      ],
+      "finite_fraction": 0.07029878729854795,
+      "display_zero_replacements": 6432387,
+      "clipped_low_fraction": 0.18921174963660176,
+      "clipped_high_fraction": 0.00023849615836144916
+    },
+    {
+      "key": "12m7mtp",
+      "label": "Total-power + Interferometry",
+      "source": "design/multiwavelength_cards/grid/mm_i.fits",
+      "finite_fraction": 1.0,
+      "display_zero_replacements": 0,
+      "clipped_low_fraction": 7.501335497880547e-05,
+      "clipped_high_fraction": 1.9367609955992164e-05
+    }
+  ],
+  "frame_reference": "design/multiwavelength_cards/grid/mm_i.fits",
+  "shape": [
+    2089,
+    3312
+  ],
+  "tp_display_factor": 1.0,
+  "field": {
+    "center_ra_deg": 221.23456087855976,
+    "center_dec_deg": -59.79296117478039,
+    "long_axis_pa_deg": 270.0,
+    "width_arcmin": 16.56,
+    "height_arcmin": 10.444999999999999,
+    "pixel_scale_arcsec": 0.3
+  },
+  "scale": {
+    "cmap": "inferno",
+    "stretch": "sqrt",
+    "vmin_mjysr": 0.0,
+    "vmax_mjysr": 1200.0
+  },
+  "colorbars_shown": false,
+  "nan_display_value": 0.0,
+  "image_mm": [
+    85.6,
+    54.0
+  ],
+  "border_mm": 5.0,
+  "border_colour": "black",
+  "card_panels": [
+    {
+      "key": "tp",
+      "label": "Total-power",
+      "compass": true,
+      "scalebar": false
+    },
+    {
+      "key": "12m7m",
+      "label": "ALMA Interferometry",
+      "compass": false,
+      "scalebar": false
+    },
+    {
+      "key": "12m7mtp",
+      "label": "Total-power + Interferometry",
+      "compass": false,
+      "scalebar": true
+    }
+  ]
+}

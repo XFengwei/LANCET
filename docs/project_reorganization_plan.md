@@ -95,7 +95,7 @@ prunes useless and intermediate getsf files; before and after, the files needed 
 Paper II results are checked to exist (list in `docs/reorganization_baseline/`).
 
 **D5. Results with no task.** As proposed: `moment_maps` → `c18o_moments`; `starcluster` →
-`star_cluster`; `multiwavelength_cards` moved to `design/multiwavelength_cards/` (artwork, not a task; author, 2026-11-21); `continuum_comparison_cards` becomes a task; `diagnostics`
+`star_cluster`; `multiwavelength_cards` moved to `design/multiwavelength_cards/` (artwork, not a task; author, 2026-11-21); `continuum_comparison_cards` redrawn from the new combination and moved to `design/continuum_comparison_cards/` (author, 2026-11-21); the empty `results/diagnostics/` and `data/delivered/starcluster/` removed; `diagnostics`
 is sorted into the owning tasks; the `compare_interferometer_arrays` symlink is deleted (done 2026-11-19).
 
 **D6. Reduction scripts stay in `data/reduction/`** (author, 2026-11-18). The reduction tree is a

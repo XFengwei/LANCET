@@ -14,6 +14,11 @@
 /design/multiwavelength_cards/**/*.npy
 /design/multiwavelength_cards/**/*.log
 /design/multiwavelength_cards/grid/
+/design/continuum_comparison_cards/**/*.pdf
+/design/continuum_comparison_cards/**/*.png
+/design/continuum_comparison_cards/**/*.tiff
+/design/continuum_comparison_cards/**/*.zip
+/design/continuum_comparison_cards/grid/
 
 # Referee-response coordination: kept locally, not published
 /tasks/paper_ii_referee_response/

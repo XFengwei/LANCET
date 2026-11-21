@@ -1,0 +1,41 @@
+{
+  "all_passed": true,
+  "cards": {
+    "tp": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "finite_fraction": 1.0,
+      "colorbars_shown": false
+    },
+    "12m7m": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "finite_fraction": 0.07029878729854795,
+      "colorbars_shown": false
+    },
+    "12m7mtp": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "finite_fraction": 1.0,
+      "colorbars_shown": false
+    }
+  }
+}
