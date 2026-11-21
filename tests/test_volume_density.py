@@ -39,3 +39,17 @@ def test_number_density_and_cube_estimate() -> None:
     np.testing.assert_allclose(number, [1.0], rtol=1.0e-8)
     assert cube_storage_bytes((1500, 1500)) == 13_500_000_000
 
+
+
+def test_runner_takes_the_stage_as_an_option() -> None:
+    from importlib.util import module_from_spec, spec_from_file_location
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "tasks" / "volume_density_mapper" / "run.py"
+    spec = spec_from_file_location("volume_density_mapper_script", path)
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    arguments = module.parse_args(["--stage", "pilot", "--overwrite"])
+
+    assert arguments.stage == "pilot" and arguments.overwrite

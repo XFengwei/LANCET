@@ -159,10 +159,10 @@ build the resolution-aware full-map width and mean-density products with:
 
 ```bash
 python -m pip install -e ".[volume-density]"
-conda run -n py312 python tasks/volume_density_mapper/run.py inspect
-conda run -n py312 python tasks/volume_density_mapper/run.py pilot
-conda run -n py312 python tasks/volume_density_mapper/run.py full
-conda run -n py312 python tasks/volume_density_mapper/run.py mask
+conda run -n py312 python tasks/volume_density_mapper/run.py --stage inspect
+conda run -n py312 python tasks/volume_density_mapper/run.py --stage pilot
+conda run -n py312 python tasks/volume_density_mapper/run.py --stage full
+conda run -n py312 python tasks/volume_density_mapper/run.py --stage mask
 ```
 
 The task uses the finite ALMA footprint to distinguish the 0.65-arcsec inner

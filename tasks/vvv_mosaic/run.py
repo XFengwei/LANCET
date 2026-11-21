@@ -15,6 +15,7 @@ import numpy as np
 from reproject.mosaicking import find_optimal_celestial_wcs
 
 from lancet import ProjectPaths
+from lancet.paths import guard_outputs
 from lancet.infrared_mosaic import (
     boost_saturation,
     coadd_tiles,
@@ -162,6 +163,17 @@ def run_rgb(project: ProjectPaths, config: Mapping[str, object]) -> None:
     print(f"Wrote {preview_path} size={preview.size}")
 
 
+def existing_outputs(
+    output_root: Path, config: Mapping[str, object], stage: str
+) -> list[Path]:
+    """Outputs of one stage that are already on disk."""
+    if stage == "mosaic":
+        return sorted(output_root.glob("vvv_*_mosaic.fits"))
+    output = output_root / str(config["figures"]["png"])
+    preview = output.with_name(output.stem + "_preview.png")
+    return [path for path in (output, preview) if path.exists()]
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -171,6 +183,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default="all",
         help="mosaic: coadd FITS per band; rgb: render the colour PNG",
     )
+    parser.add_argument("--overwrite", action="store_true", help="replace existing outputs")
     return parser.parse_args(argv)
 
 
@@ -179,6 +192,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     project = ProjectPaths.discover()
     config_path = args.config if args.config.is_absolute() else project.root / args.config
     config = load_task_config(config_path)
+    output_root = project.validate_output(str(config["outputs"]["root"]))
+    stages = [stage for stage in ("mosaic", "rgb") if args.stage in (stage, "all")]
+    for stage in stages:
+        guard_outputs(existing_outputs(output_root, config, stage), args.overwrite)
     if args.stage in ("mosaic", "all"):
         run_mosaic(project, config)
     if args.stage in ("rgb", "all"):

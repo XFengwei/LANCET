@@ -58,3 +58,15 @@ def test_result_path_has_no_target_layer() -> None:
     assert project.result("tables", "catalog.csv") == (
         project.root / "results" / "tables" / "catalog.csv"
     )
+
+
+def test_guard_outputs_refuses_existing_files_without_overwrite(tmp_path: Path) -> None:
+    from lancet.paths import guard_outputs
+
+    existing = tmp_path / "old.fits"
+    existing.write_bytes(b"")
+
+    guard_outputs([tmp_path / "new.fits"], overwrite=False)
+    guard_outputs([existing], overwrite=True)
+    with pytest.raises(FileExistsError, match="--overwrite"):
+        guard_outputs([existing, tmp_path / "new.fits"], overwrite=False)

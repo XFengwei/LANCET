@@ -26,14 +26,14 @@ All settings are in `task.toml`.
 ## Stages
 
 - `mosaic`: `results/vvv_mosaic/vvv_{j,h,ks}_mosaic.fits`.
-- `rgb`: `g316.8_vvv_jhks_full.png` and a preview.
+- `rgb`: `vvv_jhks_full.png` and a preview.
 - `all` (default): both.
 
 ```bash
-PYTHONPATH=src conda run -n py312 python tasks/vvv_mosaic/run.py --stage all
+PYTHONPATH=src conda run -n py312 python tasks/vvv_mosaic/run.py --stage all --overwrite
 ```
 
-Products are rewritten on every run (no `--overwrite` guard).
+Existing products are kept unless `--overwrite` is given.
 
 ## Review (2026-11-21)
 

@@ -168,12 +168,28 @@ stays. Instead:
   tested and importable).
 - Tests added for `infrared_mosaic`, the shared module that had none.
 
-### Phase 3. Results match tasks
+### Phase 3. Results match tasks (done 2026-11-21)
 
-- Rename and sort the six unmatched result folders (D5).
-- Every `task.toml` writes only to `results/<its own name>/`; add a test that checks this for all tasks.
-- Replace reads from `results/paper_ii_referee_response/` by proper inputs. The Planck extracts used by `linear_combine_continuum` are promoted to `data/delivered/archive/planck/`.
-- Write `tasks/README.md`: the list of tasks, which results each one needs, and the order to run them. The order follows from the `task.toml` inputs (for example `construct_freefree_model` → `column_density` → `source_catalogue` → `core_physical_properties` → `environ_measure` → `bonnor_ebert`).
+- Result folders: `results/` now holds exactly one folder per task (the six
+  unmatched folders of D5 were renamed or removed during the task reviews).
+- `tests/test_task_layout.py` checks every task: `task.toml`, `run.py` and
+  `README.md` exist; `run.py` exposes `--config`, `--stage` and `--overwrite`;
+  `[task] name` equals the folder; `[outputs]` stays under `results/<task>/`;
+  every `results/<other>/` path read belongs to an existing task; the
+  dependencies have no cycle; and `tasks/README.md` lists each task once with
+  the right "Needs" and level.
+- Runner fixes found by the test: `multiwavelength_strip` and `vvv_mosaic`
+  now refuse to replace outputs without `--overwrite` (shared
+  `lancet.paths.guard_outputs`, moved from `lancet.combination.stages`);
+  `volume_density_mapper` takes `--stage` instead of a positional stage.
+- `vvv_mosaic` PNG renamed `g316.8_vvv_jhks_full.png` → `vvv_jhks_full.png`
+  (no G316 in output names); the existing result files were renamed.
+- No analysis task reads `results/paper_ii_referee_response/`. The Planck HFI
+  cut-outs were promoted to `data/delivered/archive/planck/hfi_cutouts/` on
+  2026-11-20 (byte-identical, SHA-256 in its README).
+- `tasks/README.md` gives the run order by level (0–7), derived from the
+  `task.toml` inputs, and notes that the combined continuum is read from
+  `data/delivered/`, not from `results/combine_continuum/`.
 
 ### Phase 4. Data
 

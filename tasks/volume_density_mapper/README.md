@@ -19,10 +19,10 @@ Install the mapper in the active environment or pass a source checkout:
 
 ```bash
 python -m pip install volume-density-mapper
-PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py inspect
-PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py pilot
-PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py full
-PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py mask
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py --stage pilot
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py --stage full
+PYTHONPATH=src conda run -n py312 python tasks/volume_density_mapper/run.py --stage mask
 ```
 
 For a checkout that has not been installed, append

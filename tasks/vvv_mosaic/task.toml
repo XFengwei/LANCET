@@ -10,7 +10,7 @@ bands = ["j", "h", "ks"]
 root = "results/vvv_mosaic"
 
 [grid]
-# North-up equatorial TAN grid matching presentation/g316.8_vvv_jhks_full.png.
+# North-up equatorial TAN grid matching the VVV figure in presentation/.
 frame = "icrs"
 pixel_scale_arcsec = 0.34
 center_ra_deg = 221.227
@@ -50,5 +50,5 @@ weights = [1.0, 0.92, 1.0]
 saturation = 1.2
 
 [figures]
-png = "g316.8_vvv_jhks_full.png"
+png = "vvv_jhks_full.png"
 preview_max_pixels = 2000

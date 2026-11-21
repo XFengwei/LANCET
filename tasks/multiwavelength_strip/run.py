@@ -17,6 +17,7 @@ from reproject import reproject_adaptive
 from scipy import ndimage
 
 from lancet import ProjectPaths
+from lancet.paths import guard_outputs
 from lancet.continuum_plotting import truncated_mako_colormap
 from lancet.imaging import read_mjysr
 from lancet.infrared_mosaic import (
@@ -515,6 +516,19 @@ def run_plot(project: ProjectPaths, config: Mapping[str, object]) -> None:
     plt.close(fig)
 
 
+def existing_outputs(
+    output_root: Path, config: Mapping[str, object], stage: str
+) -> list[Path]:
+    """Outputs of one stage that are already on disk."""
+    if stage == "reproject":
+        return sorted((output_root / "grid").glob("*.fits"))
+    figures = [
+        output_root / f"lancet_multiwavelength_strip.{fmt}"
+        for fmt in config["figure"]["formats"]
+    ]
+    return [path for path in figures if path.exists()]
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -524,6 +538,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default="all",
         help="reproject: cache inputs on the strip grid; plot: render the figure",
     )
+    parser.add_argument("--overwrite", action="store_true", help="replace existing outputs")
     return parser.parse_args(argv)
 
 
@@ -532,6 +547,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     project = ProjectPaths.discover()
     config_path = args.config if args.config.is_absolute() else project.root / args.config
     config = load_toml(config_path)
+    output_root = project.validate_output(str(config["outputs"]["root"]))
+    stages = [stage for stage in ("reproject", "plot") if args.stage in (stage, "all")]
+    for stage in stages:
+        guard_outputs(existing_outputs(output_root, config, stage), args.overwrite)
     if args.stage in ("reproject", "all"):
         run_reproject(project, config)
     if args.stage in ("plot", "all"):

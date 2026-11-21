@@ -29,11 +29,10 @@ the inferno view of Fig. 3 (`plot_allscale_continuum`, `[styles.sqrt]`).
 - `all` (default): both.
 
 ```bash
-PYTHONPATH=src conda run -n py312 python tasks/multiwavelength_strip/run.py --stage all
+PYTHONPATH=src conda run -n py312 python tasks/multiwavelength_strip/run.py --stage all --overwrite
 ```
 
-The stages rewrite their products on every run (there is no `--overwrite`
-guard).
+Existing products are kept unless `--overwrite` is given.
 
 ## Change from Paper II (2026-11-21)
 

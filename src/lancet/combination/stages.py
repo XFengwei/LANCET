@@ -27,6 +27,7 @@ from lancet.combination.figures import (
 )
 from lancet.combination.overlap_tests import require_inputs
 from lancet.imaging import frequency_label, read_frequency_ghz
+from lancet.paths import guard_outputs
 from lancet.combination.prep import (
     azimuthal_power,
     beam_parameters,
@@ -63,12 +64,6 @@ TP_LABELS = {"dust": "TP dust", "dust_ff": "TP dust+free-free"}
 METHOD_LABELS = {"jcomb": "J-comb", "feather": "Feather"}
 FLAVOUR_KIND = {"dust_ff": "continuum", "dust": "dust"}
 PADDING_MODE = "TP: mirror reflection with a cosine roll-off; 12m+7m: zeros"
-
-
-def guard_outputs(paths: Sequence[Path], overwrite: bool) -> None:
-    existing = [str(p) for p in paths if Path(p).exists()]
-    if existing and not overwrite:
-        raise FileExistsError("Outputs exist (pass --overwrite to replace): " + ", ".join(existing))
 
 
 def sha256(path: Path) -> str:

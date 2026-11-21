@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 import tomllib
@@ -13,6 +14,15 @@ class ProjectRootNotFound(FileNotFoundError):
 
 class DataOutputError(ValueError):
     """Raised when an output path points inside the input-only data tree."""
+
+
+def guard_outputs(paths: Iterable[str | Path], overwrite: bool) -> None:
+    """Refuse to replace existing outputs unless ``overwrite`` is set."""
+    existing = [str(path) for path in paths if Path(path).exists()]
+    if existing and not overwrite:
+        raise FileExistsError(
+            "Outputs exist (pass --overwrite to replace): " + ", ".join(existing)
+        )
 
 
 def _is_lancet_project(directory: Path) -> bool:

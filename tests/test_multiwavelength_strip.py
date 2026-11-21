@@ -117,3 +117,16 @@ def test_mm_panel_uses_the_fig3_inferno_view() -> None:
     assert panel["style"] == "sqrt"
     assert panel["cmap"] == "inferno"
     assert (panel["vmin"], panel["vmax"]) == (0.0, 1200.0)
+
+
+def test_existing_outputs_are_listed_per_stage(tmp_path: Path) -> None:
+    config = TASK.load_toml(CONFIG)
+    (tmp_path / "grid").mkdir()
+    cached = tmp_path / "grid" / "mm_i.fits"
+    cached.write_bytes(b"")
+    figure = tmp_path / f"lancet_multiwavelength_strip.{config['figure']['formats'][0]}"
+    figure.write_bytes(b"")
+
+    assert TASK.existing_outputs(tmp_path, config, "reproject") == [cached]
+    assert TASK.existing_outputs(tmp_path, config, "plot") == [figure]
+    assert TASK.parse_args(["--overwrite"]).overwrite

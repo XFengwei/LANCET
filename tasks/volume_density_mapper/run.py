@@ -1011,9 +1011,9 @@ def primary_beam_mask(
     print(json.dumps(summaries, indent=2))
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("stage", choices=("inspect", "pilot", "full", "mask"))
+    parser.add_argument("--stage", required=True, choices=("inspect", "pilot", "full", "mask"))
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--mapper-source", type=Path)
     parser.add_argument("--cached-native", type=Path)
@@ -1022,7 +1022,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cached-high-width", type=Path)
     parser.add_argument("--skip-cube-smoke", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":

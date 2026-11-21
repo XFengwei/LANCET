@@ -38,3 +38,15 @@ def test_tile_directory_must_be_delivered(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="delivered"):
         TASK.tile_paths(ProjectPaths(PROJECT_ROOT), config)
+
+
+def test_existing_outputs_are_listed_per_stage(tmp_path: Path) -> None:
+    config = TASK.load_task_config(CONFIG)
+    (tmp_path / "vvv_ks_mosaic.fits").write_bytes(b"")
+    png = tmp_path / str(config["figures"]["png"])
+    png.write_bytes(b"")
+
+    assert TASK.existing_outputs(tmp_path, config, "mosaic") == [tmp_path / "vvv_ks_mosaic.fits"]
+    assert TASK.existing_outputs(tmp_path, config, "rgb") == [png]
+    assert TASK.parse_args(["--overwrite"]).overwrite
+    assert not TASK.parse_args([]).overwrite
