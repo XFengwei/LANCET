@@ -27,6 +27,7 @@ def test_task_has_no_reprojection() -> None:
     assert "reprojection" not in config
 
 
+@pytest.mark.local_inputs("data")
 def test_moment_task_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [

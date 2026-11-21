@@ -143,6 +143,7 @@ def test_remove_source_model_needs_gain_where_sources_exist() -> None:
     assert background[1] == 5.0
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_source_catalogue_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [

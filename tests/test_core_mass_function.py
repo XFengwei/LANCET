@@ -98,6 +98,7 @@ def test_current_catalogue_reproduces_opacity_consistent_global_fit() -> None:
     )
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_core_mass_function_task_inspection_reports_current_catalogue() -> None:
     completed = subprocess.run(
         [

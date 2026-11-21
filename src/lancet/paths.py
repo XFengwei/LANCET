@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import os
 from dataclasses import dataclass
 from pathlib import Path
 import tomllib
@@ -114,6 +115,10 @@ class ProjectPaths:
         candidate = Path(path).expanduser()
         if not candidate.is_absolute():
             candidate = self.root / candidate
+        # Check the written path before following links: data/ subfolders may be
+        # symlinks to a shared data tree (for example in a fresh clone).
+        if Path(os.path.normpath(candidate)).is_relative_to(self.data):
+            raise DataOutputError(f"Outputs must not be written inside data/: {candidate}")
         candidate = candidate.resolve()
 
         if not candidate.is_relative_to(self.root):

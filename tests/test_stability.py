@@ -127,6 +127,7 @@ def test_radius_form_records_its_implied_boundary_pressure() -> None:
     assert boundary["edge_number_density_h2"].to_value(u.cm**-3) > 0
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_bonnor_ebert_task_inspection_reports_radius_assumption() -> None:
     completed = subprocess.run(
         [
@@ -146,6 +147,7 @@ def test_bonnor_ebert_task_inspection_reports_radius_assumption() -> None:
     assert "not independently measured" in completed.stdout
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_bonnor_ebert_task_can_select_measured_external_profile() -> None:
     config = load_task_config(
         PROJECT_ROOT / "tasks" / "bonnor_ebert" / "task.toml"
@@ -176,6 +178,7 @@ def test_bonnor_ebert_task_can_select_measured_external_profile() -> None:
     ) in completed.stdout
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_measured_external_rejects_unphysical_turbulence_fraction() -> None:
     config = load_task_config(
         PROJECT_ROOT / "tasks" / "bonnor_ebert" / "task.toml"
@@ -196,6 +199,7 @@ def test_measured_external_rejects_unphysical_turbulence_fraction() -> None:
         calculate_catalogue(catalogue[:3], invalid, "measured_external")
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_measured_external_scales_internal_environment_turbulence() -> None:
     config = load_task_config(
         PROJECT_ROOT / "tasks" / "bonnor_ebert" / "task.toml"

@@ -58,6 +58,7 @@ def test_every_input_has_a_source_rule():
     assert names == set(TASK.DELIVERED_INPUTS) | set(TASK.TASK_PRODUCT_INPUTS)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_tp_models_must_share_freqghz(monkeypatch):
     from lancet.combination import stages as combination_stages
     real = combination_stages.read_frequency_ghz
@@ -67,6 +68,7 @@ def test_tp_models_must_share_freqghz(monkeypatch):
         _resolve(TASK.load_task_config(CONFIG))
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_measurement_sets_must_be_reduction_inputs():
     config = _config({("measurement_sets", "aca_7m"): "data/delivered/alma/continuum"})
     with pytest.raises(ValueError):
@@ -83,6 +85,7 @@ def test_config_points_at_decided_inputs():
     assert "tp_display_scale" not in config["figure2"]
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_resolved_groups():
     paths = _resolve(TASK.load_task_config(CONFIG))
     assert paths["inputs"]["gain"] == paths["gain"]
@@ -121,6 +124,7 @@ def _files():
     return {p for p in RESULTS.rglob("*") if p.is_file()} if RESULTS.exists() else set()
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_inspect_writes_nothing():
     before = _files()
     run = subprocess.run(

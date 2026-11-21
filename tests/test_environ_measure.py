@@ -80,6 +80,7 @@ def test_measurements_are_appended_with_units() -> None:
     np.testing.assert_array_equal(output["ID"], [1, 2])
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_environment_inspection_reports_current_dependencies() -> None:
     completed = subprocess.run(
         [

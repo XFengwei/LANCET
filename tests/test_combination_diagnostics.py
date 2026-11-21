@@ -50,6 +50,7 @@ def _forbid(*_args, **_kwargs):
     raise AssertionError("read before the product check")
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_diagnostic_paths_use_the_diagnostics_root():
     paths = _paths()
     diagnostic = TASK.diagnostic_paths(paths)
@@ -93,6 +94,7 @@ def test_require_products_names_the_stage_that_writes_each_product(tmp_path):
     assert set(TASK.STAGES) >= {name.split("_")[0] for name in paths["products"]}
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_overlap_stops_without_jcomb_products(tmp_path, monkeypatch):
     from lancet.combination import overlap_tests as combination_tests
     monkeypatch.setattr(combination_tests, "read_test_rows", _forbid)
@@ -101,6 +103,7 @@ def test_overlap_stops_without_jcomb_products(tmp_path, monkeypatch):
                                             save_figure=None, overwrite=False)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_full_sampling_stops_without_jcomb_products(tmp_path, monkeypatch):
     from lancet.combination import full_sampling
     monkeypatch.setattr(full_sampling, "read_test_rows", _forbid)
@@ -108,18 +111,21 @@ def test_full_sampling_stops_without_jcomb_products(tmp_path, monkeypatch):
         full_sampling.build_full_sampling_profiles(_paths_without_products(tmp_path), _config())
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_aca_forward_test_stops_without_products(tmp_path):
     from lancet.combination.aca_forward_test import run_aca_forward_test
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         run_aca_forward_test(_paths_without_products(tmp_path), _config(), save_figure=None)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_amplitude_alignment_stops_without_products(tmp_path):
     from lancet.combination.amplitude_alignment import run_amplitude_alignment
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         run_amplitude_alignment(_paths_without_products(tmp_path), _config(), save_figure=None)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_figure2_requires_products(tmp_path):
     from lancet.combination.coverage_figure import make_combination_figure
     with pytest.raises(FileNotFoundError, match="Run stage 'jcomb' first: missing .*/products/"):
@@ -229,6 +235,7 @@ def test_read_products_returns_image_curves(tmp_path):
     assert np.array_equal(curves["jcomb"][1], [900.0])
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_figure2_names_feather_when_only_jcomb_exists(tmp_path):
     from lancet.combination.coverage_figure import make_combination_figure
     paths = _paths_without_products(tmp_path)
@@ -238,6 +245,7 @@ def test_figure2_names_feather_when_only_jcomb_exists(tmp_path):
         make_combination_figure(paths, _config(), save_figure=None)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_figure2_refuses_rerun_before_computing(tmp_path, monkeypatch):
     from lancet.combination import full_sampling
     from lancet.combination.coverage_figure import make_combination_figure
@@ -287,6 +295,7 @@ def test_config_has_no_path_keys_in_stage_tables():
         assert not removed & set(config[table]), table
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_sky_model_sources_resolve_to_path_groups():
     config, paths = _config(), _paths()
     sources = [spec["source"] for spec in config["aca_forward_test"]["sky_models"].values()]
@@ -325,6 +334,7 @@ def _paths_with(tmp_path, products=None, **stage_files):
     return paths
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_full_sampling_names_overlap_before_reading(tmp_path, monkeypatch):
     from lancet.combination import full_sampling
     monkeypatch.setattr(full_sampling, "read_test_rows", _forbid)
@@ -334,6 +344,7 @@ def test_full_sampling_names_overlap_before_reading(tmp_path, monkeypatch):
     assert not (paths["output_root"] / "full_sampling").exists()
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_aca_forward_test_names_overlap_and_full_sampling(tmp_path):
     from lancet.combination.aca_forward_test import run_aca_forward_test
     with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
@@ -344,6 +355,7 @@ def test_aca_forward_test_names_overlap_and_full_sampling(tmp_path):
     assert not (paths["output_root"] / "aca_forward_test").exists()
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_amplitude_alignment_names_overlap_and_full_sampling(tmp_path):
     from lancet.combination.amplitude_alignment import run_amplitude_alignment
     with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
@@ -354,6 +366,7 @@ def test_amplitude_alignment_names_overlap_and_full_sampling(tmp_path):
     assert not (paths["output_root"] / "amplitude_alignment").exists()
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_amplitude_alignment_requires_only_the_configured_image_curve_products(tmp_path):
     from lancet.combination.amplitude_alignment import run_amplitude_alignment
     config = _config()
@@ -364,6 +377,7 @@ def test_amplitude_alignment_requires_only_the_configured_image_curve_products(t
         run_amplitude_alignment(paths, config, save_figure=None)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_figure2_names_each_missing_stage(tmp_path, monkeypatch):
     from lancet.combination import full_sampling
     from lancet.combination.coverage_figure import make_combination_figure

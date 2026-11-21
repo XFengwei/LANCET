@@ -73,6 +73,7 @@ def test_quantity_uncertainty_is_deterministic() -> None:
     assert first["std"].unit == u.K
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_physical_properties_inspection_reads_generated_catalogue() -> None:
     completed = subprocess.run(
         [

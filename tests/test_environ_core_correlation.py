@@ -160,6 +160,7 @@ def test_current_catalogue_preserves_paper_correlation_slope() -> None:
     )
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_correlation_task_inspection_reports_configured_profile() -> None:
     completed = subprocess.run(
         [

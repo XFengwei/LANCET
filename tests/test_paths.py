@@ -20,7 +20,7 @@ def test_delivered_input_is_resolved_without_special_permission() -> None:
 
     assert project.delivered_input("alma", "7M") == (
         project.root / "data" / "delivered" / "alma" / "7M"
-    )
+    ).resolve()
 
 
 def test_reduction_input_requires_explicit_declaration() -> None:
@@ -31,7 +31,7 @@ def test_reduction_input_requires_explicit_declaration() -> None:
 
     assert project.reduction_input(
         "alma", "7MTM2TM1", declared=True
-    ) == project.root / "data" / "reduction" / "alma" / "7MTM2TM1"
+    ) == (project.root / "data" / "reduction" / "alma" / "7MTM2TM1").resolve()
 
 
 def test_paths_cannot_escape_their_configured_root() -> None:
@@ -70,3 +70,27 @@ def test_guard_outputs_refuses_existing_files_without_overwrite(tmp_path: Path) 
     guard_outputs([existing], overwrite=True)
     with pytest.raises(FileExistsError, match="--overwrite"):
         guard_outputs([existing, tmp_path / "new.fits"], overwrite=False)
+
+
+def _project_with_linked_data(tmp_path: Path) -> ProjectPaths:
+    """A checkout whose data/delivered is a symlink, as in a fresh clone."""
+    root = tmp_path / "clone"
+    (root / "data").mkdir(parents=True)
+    (root / "pyproject.toml").write_text('[project]\nname = "lancet"\n')
+    target = tmp_path / "shared" / "delivered"
+    (target / "alma").mkdir(parents=True)
+    (root / "data" / "delivered").symlink_to(target)
+    return ProjectPaths(root)
+
+
+def test_linked_delivered_data_resolves_to_its_target(tmp_path: Path) -> None:
+    project = _project_with_linked_data(tmp_path)
+
+    assert project.delivered_input("alma") == (tmp_path / "shared" / "delivered" / "alma").resolve()
+
+
+def test_outputs_into_linked_data_are_rejected_as_data_outputs(tmp_path: Path) -> None:
+    project = _project_with_linked_data(tmp_path)
+
+    with pytest.raises(DataOutputError, match="must not"):
+        project.validate_output("data/delivered/generated.fits")

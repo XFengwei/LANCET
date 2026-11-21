@@ -59,6 +59,7 @@ def test_planck_products_apply_independent_signal_masks() -> None:
     )
 
 
+@pytest.mark.local_inputs("data")
 def test_planck_polarization_inspection_reports_inputs() -> None:
     completed = subprocess.run(
         [

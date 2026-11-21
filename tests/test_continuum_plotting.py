@@ -127,6 +127,7 @@ def test_primary_beam_contour_uses_its_own_wcs(tmp_path: Path) -> None:
     plt.close(figure)
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_allscale_plot_inspection_is_read_only() -> None:
     completed = subprocess.run(
         [

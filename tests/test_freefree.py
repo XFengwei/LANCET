@@ -52,6 +52,7 @@ def test_beam_solid_angle_matches_gaussian_definition() -> None:
         beam_solid_angle(0.0, 8.0)
 
 
+@pytest.mark.local_inputs("data")
 def test_exact_meerkat_frequencies_are_read_from_delivered_header() -> None:
     header = fits.getheader(MEERKAT_CUBE)
     frequency = meerkat_subband_frequencies(header)
@@ -206,6 +207,7 @@ def test_task_names_freefree_maps_from_configured_frequency() -> None:
     assert FREEFREE_SCRIPT.freefree_map_stem(config) == "ff224_map"
 
 
+@pytest.mark.local_inputs("data")
 def test_paper2_profile_reproduces_reference_13_band_pixel() -> None:
     with (
         PROJECT_ROOT
@@ -260,6 +262,7 @@ def test_paper2_profile_reproduces_reference_13_band_pixel() -> None:
     )
 
 
+@pytest.mark.local_inputs("data")
 def test_task_inspection_reports_paper_profile_without_writing() -> None:
     completed = subprocess.run(
         [
@@ -283,6 +286,7 @@ def test_task_inspection_reports_paper_profile_without_writing() -> None:
     )
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_temperature_comparison_plot_writes_pdf_and_png(
     tmp_path: Path,
 ) -> None:

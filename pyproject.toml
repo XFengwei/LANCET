@@ -34,3 +34,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "local_inputs(*trees): needs the local data/ and/or results/ trees; skipped when they are absent",
+]

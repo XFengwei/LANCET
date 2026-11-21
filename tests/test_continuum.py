@@ -98,6 +98,7 @@ def test_task_model_frequency_is_the_alma_continuum_frequency() -> None:
     assert SYNTHESIS_SCRIPT.frequency_label(250.0) == "250GHz"
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_task_model_adds_unscaled_components_at_model_frequency(
     tmp_path: Path,
 ) -> None:
@@ -128,6 +129,7 @@ def test_task_model_adds_unscaled_components_at_model_frequency(
     )
 
 
+@pytest.mark.local_inputs("data")
 def test_simba_calibration_exactly_reproduces_legacy_array() -> None:
     raw = fits.getdata(
         PROJECT_ROOT
@@ -157,6 +159,7 @@ def test_simba_calibration_exactly_reproduces_legacy_array() -> None:
     )
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_continuum_task_inspects_declared_inputs() -> None:
     completed = subprocess.run(
         [
@@ -177,6 +180,7 @@ def test_continuum_task_inspects_declared_inputs() -> None:
     assert "ff224_map_smoothed_18arcsec_regrid2dust.fits" in completed.stdout
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_plot_stage_writes_pdf_and_png_products(tmp_path: Path) -> None:
     config = SYNTHESIS_SCRIPT.load_task_config(
         PROJECT_ROOT / "tasks" / "synthesize_continuum" / "task.toml"
@@ -257,6 +261,7 @@ def test_fill_missing_keeps_primary_pixels() -> None:
     np.testing.assert_array_equal(filled, [1.0, 2.0, np.nan])
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_fill_stage_fills_only_outside_the_dust_model(tmp_path: Path) -> None:
     config = SYNTHESIS_SCRIPT.load_task_config(
         PROJECT_ROOT / "tasks" / "synthesize_continuum" / "task.toml"

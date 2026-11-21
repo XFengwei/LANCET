@@ -205,6 +205,7 @@ def test_overlay_figure_can_be_rendered(tmp_path: Path) -> None:
     assert output.stat().st_size > 0
 
 
+@pytest.mark.local_inputs("data", "results")
 def test_core_formation_inspection_reports_optional_reference() -> None:
     completed = subprocess.run(
         [
