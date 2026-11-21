@@ -26,7 +26,7 @@ external project path is written.
 ## Change from Paper II (2026-11-20)
 
 The code reproduces the Paper II products exactly from the Paper II
-`physical_properties` catalogue (all tables and posterior samples
+`core_physical_properties` catalogue (all tables and posterior samples
 byte-identical). With the reviewed catalogue (new 12m+7m+TP background,
 gain-corrected masses for 19 cores; `tables/powerlaw_fits.ecsv`):
 

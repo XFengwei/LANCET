@@ -2,7 +2,7 @@
 name = "core_mass_function"
 
 [inputs]
-catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+catalogue = "results/core_physical_properties/tables/core_physical_properties.ecsv"
 
 [outputs]
 root = "results/core_mass_function"

@@ -65,7 +65,7 @@ are float32.
 ## Readers
 
 `volume_density_mapper` (all-scale and low-resolution surface density),
-`environment_measurements` (intercore and low-resolution surface density),
+`environ_measure` (intercore and low-resolution surface density),
 `source_catalogue` (temperature on the ALMA grid).
 
 ## Change from Paper II (2026-11-20)

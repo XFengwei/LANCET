@@ -64,7 +64,7 @@ Stages: `inspect`, `summary`, `temperature_sampling`, `efficiency`,
   `cont.pb`. With the archived CASA pb the code reproduces the Paper II
   summary exactly; with the MIRIAD pb the same 49 of 65 fragments are kept,
   so the fragment masses are unchanged.
-- With the reviewed `physical_properties`: core mass Young 41.9 → 43.6,
+- With the reviewed `core_physical_properties`: core mass Young 41.9 → 43.6,
   Intermediate 255.9 → 261.0, Evolved 247.9 → 248.0 M☉; fragment-to-core
   efficiency 53.4 → 55.6 %, 38.4 → 39.2 %, 18.7 → 18.7 %; core/cloud
   0.38 → 0.40 %, 1.51 → 1.54 %, 3.10 → 3.10 %.

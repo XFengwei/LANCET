@@ -1,15 +1,15 @@
 [task]
-name = "environment_measurements"
+name = "environ_measure"
 
 [inputs]
-physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+physical_catalogue = "results/core_physical_properties/tables/core_physical_properties.ecsv"
 temperature = "data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits"
 velocity_dispersion = "results/c18o_moments/moments/c18o.mom2.fits.gz"
 intercore_surface_density = "results/column_density/maps/surface_density_intercore.fits"
 surface_density = "results/column_density/prepared/surface_density_lowres.fits"
 
 [outputs]
-root = "results/environment_measurements"
+root = "results/environ_measure"
 
 [aperture]
 radius_arcsec = 15.0

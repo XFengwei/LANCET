@@ -66,12 +66,6 @@ from .magnetic_fields import (
     polarization_angle_degrees,
     polarization_angle_error_degrees,
 )
-from .npdf import (
-    logarithmic_column_density_contrast,
-    npdf_histogram,
-    positive_column_density_excess,
-    shared_excess_mean,
-)
 from .paths import DataOutputError, ProjectPaths, ProjectRootNotFound
 from .physical_properties import symmetric_environment_optical_depth
 from .stability import (
@@ -143,7 +137,6 @@ __all__ = [
     "magnetic_field_angle_degrees",
     "nonthermal_velocity_dispersion",
     "number_density_h2",
-    "npdf_histogram",
     "prepare_sed_cube",
     "pairwise_correlations",
     "peak_to_total_flux_ratio",
@@ -152,7 +145,6 @@ __all__ = [
     "powerlaw_cdf",
     "powerlaw_ks_distance",
     "powerlaw_pdf",
-    "positive_column_density_excess",
     "polarization_angle_degrees",
     "polarization_angle_error_degrees",
     "prepare_correlation_data",
@@ -167,8 +159,6 @@ __all__ = [
     "synthesize_continuum",
     "uniform_brightness_flux_ratio",
     "sound_speed",
-    "shared_excess_mean",
     "symmetric_environment_optical_depth",
     "valid_mass_mask",
-    "logarithmic_column_density_contrast",
 ]

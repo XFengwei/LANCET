@@ -25,7 +25,7 @@ Pass `--overwrite` only when intentionally replacing task products.
 
 ## Readers
 
-`environment_measurements` (`moments/c18o.mom2.fits.gz` → `Vsig`).
+`environ_measure` (`moments/c18o.mom2.fits.gz` → `Vsig`).
 
 ## Change (2026-11-21)
 
@@ -33,4 +33,4 @@ Outputs moved from `results/moment_maps/` to `results/c18o_moments/` (D5).
 Rerun: every cube, moment, mask and flux table is data-identical to the
 previous products. The `reproject` stage (moment 2 on the 0.1″ ALMA grid)
 was removed with its `alma_grid` input and `lancet.moments`, because nothing
-read it (author); `environment_measurements` uses the native moment-2 map.
+read it (author); `environ_measure` uses the native moment-2 map.

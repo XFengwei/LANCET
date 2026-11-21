@@ -77,7 +77,7 @@ def test_physical_properties_inspection_reads_generated_catalogue() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "tasks/physical_properties/run.py",
+            "tasks/core_physical_properties/run.py",
             "--stage",
             "inspect",
         ],
@@ -95,7 +95,7 @@ def test_generated_physical_properties_schema_and_regression_values() -> None:
     generated = (
         PROJECT_ROOT
         / "results"
-        / "physical_properties"
+        / "core_physical_properties"
         / "tables"
         / "core_physical_properties.ecsv"
     )

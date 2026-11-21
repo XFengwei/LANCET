@@ -84,7 +84,7 @@ def test_environment_inspection_reports_current_dependencies() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "tasks/environment_measurements/run.py",
+            "tasks/environ_measure/run.py",
             "--stage",
             "inspect",
         ],
@@ -103,7 +103,7 @@ def test_generated_environment_catalogue_schema_and_regression_values() -> None:
     generated = (
         PROJECT_ROOT
         / "results"
-        / "environment_measurements"
+        / "environ_measure"
         / "tables"
         / "core_environment_catalogue.ecsv"
     )

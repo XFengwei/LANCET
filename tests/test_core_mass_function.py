@@ -22,7 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CATALOGUE = (
     PROJECT_ROOT
     / "results"
-    / "physical_properties"
+    / "core_physical_properties"
     / "tables"
     / "core_physical_properties.ecsv"
 )

@@ -23,7 +23,7 @@ alpha_min = -0.5
 alpha_max = 2.0
 # Frequency at which the fitted free-free map is evaluated: the ALMA 1.3 mm
 # continuum reference frequency (12m image header, 223.84 GHz), also used by
-# physical_properties and column_density. Paper II used 230 GHz (0.25% higher
+# core_physical_properties and column_density. Paper II used 230 GHz (0.25% higher
 # free-free flux density). Output files are named ff<rounded GHz>_map*.fits.
 output_frequency_ghz = 223.8
 

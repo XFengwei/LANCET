@@ -187,7 +187,7 @@ def test_measured_external_rejects_unphysical_turbulence_fraction() -> None:
     catalogue = Table.read(
         PROJECT_ROOT
         / "results"
-        / "environment_measurements"
+        / "environ_measure"
         / "tables"
         / "core_environment_catalogue.ecsv",
         format="ascii.ecsv",
@@ -203,7 +203,7 @@ def test_measured_external_scales_internal_environment_turbulence() -> None:
     catalogue = Table.read(
         PROJECT_ROOT
         / "results"
-        / "environment_measurements"
+        / "environ_measure"
         / "tables"
         / "core_environment_catalogue.ecsv",
         format="ascii.ecsv",

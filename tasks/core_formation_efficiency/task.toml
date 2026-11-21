@@ -2,7 +2,7 @@
 name = "core_formation_efficiency"
 
 [inputs]
-physical_catalogue = "results/physical_properties/tables/core_physical_properties.ecsv"
+physical_catalogue = "results/core_physical_properties/tables/core_physical_properties.ecsv"
 source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
 fragment_ellipse_catalogue = "data/extraction/astrodendro/my_dendrogram.dat"
 fragment_mass_catalogue = "data/extraction/astrodendro/my_catalog.dat"
@@ -95,7 +95,7 @@ random_seed = 20261101
 upper_temperatures_k = [30.0, 40.0, 50.0] # Young, Intermediate, Evolved
 # For global peak-brightness percentile q: F ~ Beta(1+2q, 3-2q).
 brightness_strength = 2.0
-# Same values as [physics] in tasks/physical_properties/task.toml.
+# Same values as [physics] in tasks/core_physical_properties/task.toml.
 frequency_ghz = 223.8
 beam_major_arcsec = 0.71
 beam_minor_arcsec = 0.60

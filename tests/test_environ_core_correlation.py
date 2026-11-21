@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CATALOGUE = (
     PROJECT_ROOT
     / "results"
-    / "environment_measurements"
+    / "environ_measure"
     / "tables"
     / "core_environment_catalogue.ecsv"
 )

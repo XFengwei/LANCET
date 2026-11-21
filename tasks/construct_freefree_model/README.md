@@ -89,4 +89,4 @@ conda run -n py312 python tasks/construct_freefree_model/run.py --stage plot
 The estimate of smooth radio emission within the core footprints (Paper II
 referee item R7) moved on 2026-11-20 to its own task,
 `tasks/freefree_core_contamination/`, because it depends on later tasks
-(`source_catalogue`, `physical_properties`, `core_formation_efficiency`).
+(`source_catalogue`, `core_physical_properties`, `core_formation_efficiency`).

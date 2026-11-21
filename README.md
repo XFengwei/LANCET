@@ -206,8 +206,8 @@ Build the source catalogue and its dependent physical-property table with:
 ```bash
 conda run -n py312 python tasks/source_catalogue/run.py --stage inspect
 conda run -n py312 python tasks/source_catalogue/run.py --stage all
-conda run -n py312 python tasks/physical_properties/run.py --stage inspect
-conda run -n py312 python tasks/physical_properties/run.py --stage build
+conda run -n py312 python tasks/core_physical_properties/run.py --stage inspect
+conda run -n py312 python tasks/core_physical_properties/run.py --stage build
 ```
 
 The source task applies the declared getsf cuts, samples the background and
@@ -218,7 +218,7 @@ evolutionary subregions. Its `diagnostics` stage also compares the 12m+7m and
 `results/source_catalogue/figures/`. The physical task applies deterministic
 Monte Carlo uncertainty propagation. Machine-readable tables and figures are
 written under `results/source_catalogue/` and
-`results/physical_properties/`.
+`results/core_physical_properties/`.
 
 Calculate the supporting foreground/background opacity sensitivity with:
 
@@ -257,12 +257,12 @@ Measure the temperature, C18O velocity-dispersion, total surface-density, and
 intercore surface-density environment around every core with:
 
 ```bash
-conda run -n py312 python tasks/environment_measurements/run.py --stage inspect
-conda run -n py312 python tasks/environment_measurements/run.py --stage build
+conda run -n py312 python tasks/environ_measure/run.py --stage inspect
+conda run -n py312 python tasks/environ_measure/run.py --stage build
 ```
 
 The task uses 15-arcsec apertures and writes the augmented catalogue under
-`results/environment_measurements/`. Its intercore measurements use the
+`results/environ_measure/`. Its intercore measurements use the
 current 0.5 cm2/g opacity scale and are therefore 1.8 times the retained
 values calculated on the earlier 0.9 cm2/g scale.
 
@@ -311,24 +311,20 @@ figures. Their settings and assumptions are declared in
 [`tasks/core_mass_function/task.toml`](tasks/core_mass_function/task.toml);
 all products stay under `results/`.
 
-Two additional analyses are maintained as explicitly ongoing project ideas:
+The magnetic-field analysis is maintained as an explicitly ongoing project
+idea:
 
 ```bash
 conda run -n py312 python scripts/magnetic_fields.py --stage inspect
 conda run -n py312 python scripts/magnetic_fields.py --stage all
-conda run -n py312 python scripts/n_pdf.py --stage inspect
-conda run -n py312 python scripts/n_pdf.py --stage all
 ```
 
-The magnetic-field task creates provisional Planck polarization masks,
-debiased polarization products, orientation maps, and a diagnostic vector
-figure. It does not estimate field strength. The N-PDF task creates three
-regional cutouts and normalized column-density histograms from the currently
-adopted retained all-scale map. Both tasks declare `status = "ongoing"` and
-write summaries with `paper_ready = false`. Their assumptions, unresolved
-decisions, and continuity requirements are recorded in
-[`tasks/magnetic_fields/README.md`](tasks/magnetic_fields/README.md) and
-[`tasks/n_pdf/README.md`](tasks/n_pdf/README.md).
+It creates provisional Planck polarization masks, debiased polarization
+products, orientation maps, and a diagnostic vector figure. It does not
+estimate field strength. It declares `status = "ongoing"` and writes
+summaries with `paper_ready = false`. Its assumptions, unresolved decisions,
+and continuity requirements are recorded in
+[`tasks/magnetic_fields/README.md`](tasks/magnetic_fields/README.md).
 
 
 ## Project paths

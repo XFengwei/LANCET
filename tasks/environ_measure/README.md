@@ -9,7 +9,7 @@ and non-positive pixels are excluded (`minimum_valid_value = 0`).
 
 | Key | File | Column prefix |
 |---|---|---|
-| `physical_catalogue` | `results/physical_properties/tables/core_physical_properties.ecsv` | (copied into the output) |
+| `physical_catalogue` | `results/core_physical_properties/tables/core_physical_properties.ecsv` | (copied into the output) |
 | `temperature` | `data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits` | `Temp` |
 | `velocity_dispersion` | `results/c18o_moments/moments/c18o.mom2.fits.gz` | `Vsig` |
 | `intercore_surface_density` | `results/column_density/maps/surface_density_intercore.fits` | `Interco` |
@@ -18,11 +18,11 @@ and non-positive pixels are excluded (`minimum_valid_value = 0`).
 The C18O moment-2 map is a product of the `c18o_moments` task.
 
 ```bash
-PYTHONPATH=src conda run -n py312 python tasks/environment_measurements/run.py --stage inspect
-PYTHONPATH=src conda run -n py312 python tasks/environment_measurements/run.py --stage build --overwrite
+PYTHONPATH=src conda run -n py312 python tasks/environ_measure/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/environ_measure/run.py --stage build --overwrite
 ```
 
-Output: `results/environment_measurements/tables/core_environment_catalogue.ecsv`,
+Output: `results/environ_measure/tables/core_environment_catalogue.ecsv`,
 the physical-property catalogue plus the `*_env_*` columns. It is the input
 of `environ_core_correlation` and `bonnor_ebert`.
 
@@ -33,7 +33,7 @@ of `environ_core_correlation` and `bonnor_ebert`.
   low-resolution map). The intercore map now has NaN where the intensity is
   negative; those pixels were already excluded as non-positive.
 - The copied physical-property columns follow the reviewed
-  `physical_properties` (new 12m+7m+TP background, gain-corrected cores).
+  `core_physical_properties` (new 12m+7m+TP background, gain-corrected cores).
 
 ## Gain correction of the intercore map (2026-11-20)
 

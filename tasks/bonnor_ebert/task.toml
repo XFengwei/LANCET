@@ -2,7 +2,7 @@
 name = "bonnor_ebert"
 
 [inputs]
-catalogue = "results/environment_measurements/tables/core_environment_catalogue.ecsv"
+catalogue = "results/environ_measure/tables/core_environment_catalogue.ecsv"
 
 [outputs]
 root = "results/bonnor_ebert"

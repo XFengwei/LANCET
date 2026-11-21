@@ -3,7 +3,7 @@
 Paper II referee item R7 (closed). Estimates the smooth radio (free-free)
 emission inside each core footprint and its effect on core and fragment
 masses. Split out of `construct_freefree_model` on 2026-11-20, because it
-depends on later tasks: `source_catalogue`, `physical_properties` and
+depends on later tasks: `source_catalogue`, `core_physical_properties` and
 `core_formation_efficiency`.
 
 ## Status: not reviewed, does not run
@@ -26,7 +26,7 @@ with stages.
 ## Method (adopted profile)
 
 1. `core_freefree_contamination.py` extrapolates the native CORNISH 5.5 GHz
-   map to the `physical_properties` frequency (223.8 GHz). It integrates it
+   map to the `core_physical_properties` frequency (223.8 GHz). It integrates it
    within the saved getsf 12m+7m footprint ellipses, with a uniform CORNISH
    rms of 1.0 mJy/beam. Detections need native pixels > 3σ; nondetections get
    1σ aperture limits. The 12m+7m image, including its local background,

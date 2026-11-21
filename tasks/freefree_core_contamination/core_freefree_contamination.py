@@ -70,7 +70,7 @@ for line in aperture_path.read_text().splitlines():
     if line.startswith('ellipse('):
         shape, number = line.split('#')
         apertures[int(number.strip())] = Regions.parse('fk5\n'+shape, format='ds9')[0]
-frequency = tomllib.loads((root / 'tasks/physical_properties/task.toml').read_text())['physics']['frequency_ghz']
+frequency = tomllib.loads((root / 'tasks/core_physical_properties/task.toml').read_text())['physics']['frequency_ghz']
 spectral_factor = (frequency/5.5)**(-.1)
 alma_beam_area = np.pi*(.65/3600)**2/(4*np.log(2))
 rows = []

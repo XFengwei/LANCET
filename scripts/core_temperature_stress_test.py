@@ -31,10 +31,10 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     names = {
         "source": "results/source_catalogue/tables/source_catalogue.ecsv",
-        "physical": "results/physical_properties/tables/core_physical_properties.ecsv",
+        "physical": "results/core_physical_properties/tables/core_physical_properties.ecsv",
         "regional": "results/core_formation_efficiency/tables/core_formation_summary.ecsv",
-        "environment": "results/environment_measurements/tables/core_environment_catalogue.ecsv",
-        "config": "tasks/physical_properties/task.toml",
+        "environment": "results/environ_measure/tables/core_environment_catalogue.ecsv",
+        "config": "tasks/core_physical_properties/task.toml",
         "sampling_config": "tasks/core_formation_efficiency/task.toml",
     }
     source, physical, regional, environment = [Table.read(root / names[k])

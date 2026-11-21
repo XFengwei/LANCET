@@ -57,7 +57,7 @@ for row in fragments:
 table=Table(rows=rows)
 table.write(out/'fragment_freefree_contamination.ecsv',format='ascii.ecsv',overwrite=True)
 table.write(out/'fragment_freefree_contamination.csv',format='ascii.csv',overwrite=True)
-cores=join(Table.read(root/'results/physical_properties/tables/core_physical_properties.ecsv'),Table.read(out/'smooth_core_contamination.ecsv'),keys='ID',table_names=['mass','ff'])
+cores=join(Table.read(root/'results/core_physical_properties/tables/core_physical_properties.ecsv'),Table.read(out/'smooth_core_contamination.ecsv'),keys='ID',table_names=['mass','ff'])
 eff=Table.read(root/'results/core_formation_efficiency/tables/core_formation_summary.ecsv')
 result={'radio_rms_mjybeam':metadata['adopted_radio_rms_mjy_per_beam'],
  'fragment_method':'Convolve thresholded 2.5 arcsec radio surface brightness to the ACA beam, reproject, apply ACA PB and integrate true leaf masks. Catalogue fluxes independently reproduced.',

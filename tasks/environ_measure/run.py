@@ -23,7 +23,7 @@ from lancet.environment import (
 )
 
 
-DEFAULT_CONFIG = Path("tasks/environment_measurements/task.toml")
+DEFAULT_CONFIG = Path("tasks/environ_measure/task.toml")
 
 
 def load_task_config(path: Path) -> dict[str, object]:

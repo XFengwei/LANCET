@@ -12,7 +12,7 @@ environment properties, then fits the intercore surface-density relation with
 a power law. Its input is the generated, opacity-consistent environment
 catalogue:
 
-`results/environment_measurements/tables/core_environment_catalogue.ecsv`
+`results/environ_measure/tables/core_environment_catalogue.ecsv`
 
 The task produces a detailed corner plot, a compact correlation matrix, and a
 regression-comparison diagnostic from one declared configuration.

@@ -16,12 +16,12 @@ their errors (gain-corrected in `source_catalogue` where gain < 1), and the
 deconvolved sizes.
 
 ```bash
-PYTHONPATH=src conda run -n py312 python tasks/physical_properties/run.py --stage inspect
-PYTHONPATH=src conda run -n py312 python tasks/physical_properties/run.py --stage build --overwrite
+PYTHONPATH=src conda run -n py312 python tasks/core_physical_properties/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/core_physical_properties/run.py --stage build --overwrite
 ```
 
 Machine-readable and publication tables are written under
-`results/physical_properties/tables/`.
+`results/core_physical_properties/tables/`.
 
 The catalogue preserves `Resolvability` for every source. N marks upper size
 limits and lower volume-density limits at the adopted mass. The publication

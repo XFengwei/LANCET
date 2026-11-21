@@ -1,11 +1,11 @@
 [task]
-name = "physical_properties"
+name = "core_physical_properties"
 
 [inputs]
 source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
 
 [outputs]
-root = "results/physical_properties"
+root = "results/core_physical_properties"
 
 [physics]
 frequency_ghz = 223.8

@@ -25,7 +25,7 @@ from lancet.physical_properties import (
 )
 
 
-DEFAULT_CONFIG = Path("tasks/physical_properties/task.toml")
+DEFAULT_CONFIG = Path("tasks/core_physical_properties/task.toml")
 
 
 def load_task_config(path: Path) -> dict[str, object]:
