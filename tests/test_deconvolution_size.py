@@ -1,13 +1,9 @@
 """Tests for elliptical-Gaussian source deconvolution."""
 
-from pathlib import Path
-import subprocess
-import sys
-
 import numpy as np
 import pytest
 
-from lancet.deconvolution import (
+from lancet.deconvolution_size import (
     UnresolvedSourceError,
     convolve_gaussians,
     deconvolve_gaussian,
@@ -82,18 +78,21 @@ def test_invalid_axes_are_rejected() -> None:
         deconvolve_gaussian(0.0, 1.0, 0.0, 0.5, 0.5, 0.0)
 
 
-def test_diagnostic_script_runs() -> None:
-    project_root = Path(__file__).resolve().parents[1]
-    completed = subprocess.run(
-        [
-            sys.executable,
-            "scripts/source_deconvolution.py",
-        ],
-        cwd=project_root,
-        check=True,
-        capture_output=True,
-        text=True,
+def test_position_angle_difference_is_180_degree_periodic() -> None:
+    from lancet.deconvolution_size import position_angle_difference
+
+    assert position_angle_difference(10.0, 170.0) == pytest.approx(20.0)
+    assert position_angle_difference(0.0, 180.0) == pytest.approx(0.0)
+    assert position_angle_difference(45.0, 135.0) == pytest.approx(90.0)
+
+
+def test_reference_example_round_trips_through_the_beam() -> None:
+    from lancet.deconvolution_size import deconvolution_round_trip
+
+    source, axis_residual, pa_residual = deconvolution_round_trip(
+        0.7747, 0.6559, 63.38, 0.712, 0.606, 47.34
     )
 
-    assert "Deconvolved:" in completed.stdout
-    assert "Reconstruction residual:" in completed.stdout
+    assert source[0] > source[1] > 0
+    assert axis_residual < 1e-9
+    assert pa_residual < 1e-6

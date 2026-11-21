@@ -221,3 +221,36 @@ def convolve_gaussians(
         first_major, first_minor, first_pa_deg
     ) + _ellipse_to_covariance(second_major, second_minor, second_pa_deg)
     return _covariance_to_ellipse(covariance, tolerance=1e-10)
+
+
+def position_angle_difference(first_deg: float, second_deg: float) -> float:
+    """Smallest absolute difference of two 180-degree-periodic angles."""
+    return abs((first_deg - second_deg + 90.0) % 180.0 - 90.0)
+
+
+def deconvolution_round_trip(
+    observed_major: float,
+    observed_minor: float,
+    observed_pa_deg: float,
+    beam_major: float,
+    beam_minor: float,
+    beam_pa_deg: float,
+) -> tuple[tuple[float, float, float], float, float]:
+    """Deconvolve the beam, convolve it back, and report the residuals.
+
+    Returns the deconvolved source (major, minor, PA), the largest axis
+    residual (same unit as the axes) and the PA residual (degrees). An
+    unresolved source raises ``UnresolvedSourceError``.
+    """
+    source = deconvolve_gaussian(
+        observed_major, observed_minor, observed_pa_deg,
+        beam_major, beam_minor, beam_pa_deg,
+        on_unresolved="raise",
+    )
+    reconstructed = convolve_gaussians(*source, beam_major, beam_minor, beam_pa_deg)
+    axis_residual = max(
+        abs(reconstructed[0] - observed_major),
+        abs(reconstructed[1] - observed_minor),
+    )
+    pa_residual = position_angle_difference(reconstructed[2], observed_pa_deg)
+    return source, axis_residual, pa_residual

@@ -81,7 +81,7 @@ before. The proposal below is the starting point for the review, not a decision:
 | `core_freefree_contamination`, `plot_core_freefree_contamination`, `freefree_mass_efficiency_bias` | into their own task `freefree_core_contamination` (done 2026-11-20; author); merged into its `run.py` 2026-11-21 |
 | `core_temperature_sampling`, `core_temperature_stress_test`, their two plot scripts, `report_core_temperature_tests` | new task `core_temperature_tests` |
 | `simba_fourier_comparison`, `simba_peak_comparison`, `simba_pixel_comparison` | new task `simba_comparison` |
-| `source_deconvolution` | into `source_catalogue` |
+| `source_deconvolution` | into `lancet.deconvolution_size` (round-trip check and PA difference); script, README section and its diagnostic figure removed (author, 2026-11-21) |
 | `star_cluster` | new task `star_cluster` |
 | `gas_to_dust_ratio` | new task `gas_to_dust_ratio` |
 

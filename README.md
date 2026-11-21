@@ -75,14 +75,10 @@ conda run -n py312 python scripts/gas_to_dust_ratio.py \
 Add `--json` for machine-readable output. The command keeps the statistical,
 systematic, and intrinsic-scatter intervals separate.
 
-Test elliptical-Gaussian source deconvolution with the reference example:
-
-```bash
-conda run -n py312 python scripts/source_deconvolution.py \
-  --output results/diagnostics/source_deconvolution.png
-```
-
-The reusable function is available as `lancet.deconvolve_gaussian`.
+Elliptical-Gaussian source deconvolution is provided by
+`lancet.deconvolve_gaussian` (with `convolve_gaussians` and the round-trip
+check `deconvolution_round_trip` in `lancet.deconvolution_size`); there is no
+separate script or output.
 
 Inspect the delivered collaborator star-cluster orbit catalogue and produce
 the orbit diagnostics with:

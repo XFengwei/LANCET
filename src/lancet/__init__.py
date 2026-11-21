@@ -33,7 +33,7 @@ from .core_mass_function import (
     sample_alpha_posterior,
     valid_mass_mask,
 )
-from .deconvolution import (
+from .deconvolution_size import (
     UnresolvedSourceError,
     convolve_gaussians,
     deconvolve_gaussian,
