@@ -33,7 +33,7 @@ def test_background_effects_inspection_is_ready() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/background_effects.py",
+            "tasks/background_effects/run.py",
             "--stage",
             "inspect",
         ],

@@ -1,9 +1,27 @@
 [task]
 name = "freefree_core_contamination"
-status = "not reviewed; inputs outdated (see README)"
+status = "reviewed 2026-11-21"
 
 [inputs]
 cornish_map = "data/delivered/archive/radio/CORNISH_5p5GHz.fits"
+source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
+# getsf 12m+7m footprint ellipses (FK5 DS9 regions), numbered by getsf NO.
+getsf_footprints = "data/extraction/getsf/triple/results/+sources/+catalogs/G316.sw.sources.ok.cat.1302.foo.fk5.reg"
+# 12m+7m MIRIAD true-sky image (clean / gain): the core masses are
+# gain-corrected, so the aperture flux denominator is true sky as well
+# (replaces the removed drogdeg image).
+continuum_image = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.fits"
+# Mosaic primary beam: display cut of the overlay figure.
+primary_beam = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
+# 7m image and primary beam of the astrodendro fragment extraction; the image
+# reproduces the catalogue fragment fluxes to 1e-5 (replaces ACA.p1).
+aca_image = "data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.image.fits"
+aca_pb = "data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.pb.fits"
+fragment_label_mask = "data/extraction/astrodendro/my_mask_idx.fits"
+fragment_catalogue = "data/extraction/astrodendro/my_dendrogram.dat"
+fragment_selection = "results/core_formation_efficiency/tables/fragment_pb_selection.ecsv"
+physical_catalogue = "results/core_physical_properties/tables/core_physical_properties.ecsv"
+core_formation_summary = "results/core_formation_efficiency/tables/core_formation_summary.ecsv"
 
 [outputs]
 root = "results/freefree_core_contamination"
@@ -13,6 +31,25 @@ noise_box_beams = 8.0
 adopted_radio_rms_mjy_per_beam = 1.0
 detection_sigma = 3.0
 upper_limit_sigma = 1.0
-# Removed from data/delivered on 2026-11-19; repoint at this task's review
-# (MIRIAD clean in data/delivered/alma/continuum/).
-continuum_image = "data/delivered/alma/7MTM2TM1/cont/miriad/IRDC316.8.7MTM2TM1.robust0.5.clean.drogdeg.fits"
+# Optically thin free-free extrapolation from 5.5 GHz to the 1.3 mm
+# reference frequency of core_physical_properties.
+radio_frequency_ghz = 5.5
+frequency_ghz = 223.8
+spectral_index = -0.1
+# Beam of the predicted free-free peak (12m+7m geometric mean, arcsec).
+alma_beam_arcsec = 0.65
+minimum_coverage = 0.999999
+
+[fragments]
+# Paper I fragment masses use opacity 0.9 cm2/g; this work 0.5 (x 1.8).
+mass_opacity_scale = 1.8
+
+[plot]
+center_ra_deg = 221.3468
+center_dec_deg = -59.8230
+size_arcsec = 150.0
+minimum_pb = 0.2
+subregion = "E"
+contour_sigma = [3, 6, 12, 24, 48]
+formats = ["pdf", "svg", "png", "tiff"]
+dpi = 300

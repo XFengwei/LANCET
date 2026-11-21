@@ -2,47 +2,68 @@
 
 Paper II referee item R7 (closed). Estimates the smooth radio (free-free)
 emission inside each core footprint and its effect on core and fragment
-masses. Split out of `construct_freefree_model` on 2026-11-20, because it
-depends on later tasks: `source_catalogue`, `core_physical_properties` and
-`core_formation_efficiency`.
+masses. Split out of `construct_freefree_model` on 2026-11-20 because it
+depends on later tasks (`source_catalogue`, `core_physical_properties`,
+`core_formation_efficiency`). All inputs and settings are in `task.toml`.
 
-## Status: not reviewed, does not run
+## Inputs
 
-Its ALMA inputs were removed or renamed in `data/delivered/alma/` on
-2026-11-19. They will be repointed when this task is reviewed, after
-`core_formation_efficiency`:
-
-| Script | Outdated input | Replacement to check |
-|---|---|---|
-| `core_freefree_contamination.py`, `plot_core_freefree_contamination.py` | `continuum_image` (`…7MTM2TM1.robust0.5.clean.drogdeg.fits`) | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.fits` |
-| `plot_core_freefree_contamination.py` | `7MTM2TM1/cont/casa/primary_beam_rp2miriad.fits` (CASA pb) | MIRIAD `IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits` |
-| `freefree_mass_efficiency_bias.py` | `7M/cont/IRDC316.8.ACA.p1.cont.{image,pb}.fits` | `data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.{image,pb}.fits` |
-
-Paths to `results/`, `extraction/` and the other task configurations are
-still written in the scripts, not in `task.toml`. That will also be fixed at
-the review, together with merging the three scripts into one `run.py`
-with stages.
+| Key | File |
+|---|---|
+| `cornish_map` | `data/delivered/archive/radio/CORNISH_5p5GHz.fits` (native 2.5″) |
+| `source_catalogue` | `results/source_catalogue/tables/source_catalogue.ecsv` |
+| `getsf_footprints` | getsf 12m+7m footprint ellipses (`…G316.sw.sources.ok.cat.1302.foo.fk5.reg`) |
+| `continuum_image` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.fits` |
+| `primary_beam` | `…7MTM2TM1.robust0.5.cont.pb.fits` (display cut, pb ≥ 0.2) |
+| `aca_image`, `aca_pb` | `…IRDC316.8.7M.robust0.5.cont.{image,pb}.fits` (astrodendro fragment image) |
+| `fragment_label_mask`, `fragment_catalogue` | `data/extraction/astrodendro/my_mask_idx.fits`, `my_dendrogram.dat` |
+| `fragment_selection`, `core_formation_summary` | `results/core_formation_efficiency/tables/` |
+| `physical_catalogue` | `results/core_physical_properties/tables/core_physical_properties.ecsv` |
 
 ## Method (adopted profile)
 
-1. `core_freefree_contamination.py` extrapolates the native CORNISH 5.5 GHz
-   map to the `core_physical_properties` frequency (223.8 GHz). It integrates it
-   within the saved getsf 12m+7m footprint ellipses, with a uniform CORNISH
-   rms of 1.0 mJy/beam. Detections need native pixels > 3σ; nondetections get
-   1σ aperture limits. The 12m+7m image, including its local background,
-   integrated over the same footprint, is the denominator. Settings are in
-   `[core_contamination]`.
-2. `plot_core_freefree_contamination.py` draws the spatial overlay and the
-   flux comparison (PDF/SVG, PNG/TIFF, caption, alignment and collision QA).
-3. `freefree_mass_efficiency_bias.py` matches the radio template to the ACA
-   beam and measures it in the retained fragment leaf masks. It then compares
-   the mass-fraction sensitivity of the evolved-region fragments and cores.
-   The adopted catalogues are not changed.
+1. `contamination`: the native CORNISH 5.5 GHz map is extrapolated to
+   223.8 GHz (optically thin, α = −0.1) and integrated within the getsf
+   12m+7m footprints. Native pixels above 3σ of a uniform 1.0 mJy/beam rms
+   are retained; covered nondetections get 1σ aperture limits. The 12m+7m
+   true-sky aperture flux, including its local background, is the
+   denominator. Writes `smooth_core_contamination.{ecsv,csv}`, `summary.json`
+   and the radio noise and retained maps.
+2. `plot`: spatial overlay of the evolved region and the flux comparison
+   (`cornish_core_comparison.{pdf,svg,png,tiff}`, `figure_caption.txt`,
+   `radio_noise_map`). `--qa-scripts <folder>` runs the optional
+   panel-alignment audit (`audit_panel_alignment.py`).
+3. `mass_bias`: the radio template is matched to the 7m beam and measured in
+   the retained fragment leaf masks; the fragment and core mass ratios are
+   recomputed as a sensitivity scenario (`fragment_freefree_contamination`,
+   `mass_efficiency_bias.json`). The adopted catalogues are not changed.
 
-## Outputs
+```bash
+PYTHONPATH=src conda run -n py312 python tasks/freefree_core_contamination/run.py --stage all --overwrite
+```
 
-`results/freefree_core_contamination/` (moved from
-`results/construct_freefree_model/core_contamination/`; some QA files still
-name the old path). `rms_1mjy/` and `rms_1p5mjy/` hold earlier profiles;
-several files at the top level (`*_5mjy_*`, `*_3sigma_*`) come from profiles
-that were superseded. They will be sorted at the review.
+Stages: `contamination`, `plot`, `mass_bias`, `all`. Existing products are
+kept unless `--overwrite` is given.
+
+## Review (2026-11-21)
+
+- The three scripts were merged into `run.py`; every path is now in
+  `task.toml` (the frequency is set here instead of being read from another
+  task's configuration), and the alignment audit no longer needs a local
+  skill path.
+- Inputs: the removed `drogdeg` 12m+7m image is replaced by the MIRIAD
+  true-sky image, matching the gain-corrected core masses; the CASA beam by
+  the MIRIAD `pb`; the removed `ACA.p1` 7m image by the delivered
+  `7M.robust0.5.cont.image`, which reproduces the fragment catalogue fluxes
+  to 1e-5.
+- Check on the Paper II catalogue: every radio-side column (free-free flux,
+  limits, coverage, retained area) and both radio maps are identical; only
+  the 12m+7m denominator changes.
+- Rerun on the current catalogues: evolved region 94 covered cores,
+  32 with radio, 13 above 10 %, none above 100 %; flux-weighted fraction
+  0.0517 → 0.0516. Scenario mass reductions unchanged: cores 3.3 %,
+  fragments 9.9 % (evolved); the core/fragment ratios follow the new core
+  masses (Young 0.534 → 0.556, Intermediate 0.384 → 0.392, Evolved 0.187).
+- Earlier noise profiles (`rms_1mjy/`, `rms_1p5mjy/`, the `*_3sigma_*` and
+  `*_5mjy_*` maps) and the old alignment audits are kept in
+  `results/freefree_core_contamination/superseded/`.

@@ -32,11 +32,21 @@ core optical depth relative to the zero-background result, along with the
 total environmental optical depth.
 
 ```bash
-conda run -n py312 python scripts/background_effects.py --stage inspect
-conda run -n py312 python scripts/background_effects.py --stage all
+PYTHONPATH=src conda run -n py312 python tasks/background_effects/run.py --stage inspect
+PYTHONPATH=src conda run -n py312 python tasks/background_effects/run.py --stage all
 ```
 
 The machine-readable table and JSON summary are written under
 `results/background_effects/tables/`. PDF and PNG figures are written under
 `results/background_effects/figures/`. Add `--overwrite` only when replacing
 existing products.
+
+## Review (2026-11-21)
+
+Rerun: table and summary byte-identical; the model has no data inputs, so
+the new combination does not change it. Where the cores sit on the curve:
+the reviewed `source_catalogue` core background `Ibkg2` has median 148 and
+maximum 758 MJy/sr (Paper II: 309 and 961). The correction τ_core(I_bg)/τ_core(0)
+is 1.006–1.008 at the new median and
+1.034–1.043 at the new maximum (1–100 mJy/beam), against
+1.013–1.017 and 1.043–1.056 in Paper II.

@@ -223,8 +223,8 @@ written under `results/source_catalogue/` and
 Calculate the supporting foreground/background opacity sensitivity with:
 
 ```bash
-conda run -n py312 python scripts/background_effects.py --stage inspect
-conda run -n py312 python scripts/background_effects.py --stage all
+conda run -n py312 python tasks/background_effects/run.py --stage inspect
+conda run -n py312 python tasks/background_effects/run.py --stage all
 ```
 
 The task evaluates the corrected compact-core optical depth for configured
