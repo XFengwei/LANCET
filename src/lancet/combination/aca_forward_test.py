@@ -16,7 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .combination_tests import (
+from .overlap_tests import (
     matching_cells, require_products, row_values, sample_image_visibilities, subset_rows, _write_rows_csv,
 )
 from .full_sampling import FULL_SAMPLING_OUTPUTS, OVERLAP_OUTPUTS, _cell_statistics, require_stage_outputs

@@ -9,7 +9,8 @@ for people; this file records the working rules.
 
 ## Repository layout
 
-- `src/lancet/` — reusable code, one module per topic. `paths.py` holds the
+- `src/lancet/` — reusable code, one module per topic; the `combine_continuum`
+  code is the subpackage `lancet.combination`. `paths.py` holds the
   global path policy (`ProjectPaths`).
 - `tasks/<task>/run.py` — one runnable command per task (there is no
   `scripts/` folder).

@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from scipy import ndimage
 
-from lancet import combination_stages as stages
+from lancet.combination import stages
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RUN = PROJECT_ROOT / "tasks" / "combine_continuum" / "run.py"

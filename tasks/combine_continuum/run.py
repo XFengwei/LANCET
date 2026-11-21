@@ -21,16 +21,16 @@ import tomllib
 from astropy.io import fits
 
 from lancet import ProjectPaths
-from lancet import combination_diagnostics as diagnostics
-from lancet import combination_stages
-from lancet.aca_forward_test import run_aca_forward_test
-from lancet.combination_figure import make_combination_figure
-from lancet.combination_stages import input_hashes, write_json
-from lancet.combination_tests import require_inputs, run_overlap_tests
-from lancet.dirty_beam import run_dirty_beam
-from lancet.full_sampling import build_full_sampling_profiles
+from lancet.combination import diagnostics
+from lancet.combination import stages as combination_stages
+from lancet.combination.aca_forward_test import run_aca_forward_test
+from lancet.combination.coverage_figure import make_combination_figure
+from lancet.combination.stages import input_hashes, write_json
+from lancet.combination.overlap_tests import require_inputs, run_overlap_tests
+from lancet.combination.dirty_beam import run_dirty_beam
+from lancet.combination.full_sampling import build_full_sampling_profiles
 from lancet.imaging import frequency_label, read_frequency_ghz
-from lancet.joint_image_comparison import run_joint_image_comparison
+from lancet.combination.joint_image_comparison import run_joint_image_comparison
 
 DEFAULT_CONFIG = Path("tasks/combine_continuum/task.toml")
 DELIVERED_INPUTS = ("interferometer", "gain", "pb", "psf", "psf_imfit_log", "aca_pbcor", "twelve_m_pbcor",

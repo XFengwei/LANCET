@@ -4,8 +4,8 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from scipy import fft
 
-from lancet.combination import gaussian_transfer, uv_distance_klambda
-from lancet.combination_prep import (
+from lancet.combination.uvplane import gaussian_transfer, uv_distance_klambda
+from lancet.combination.prep import (
     azimuthal_power,
     derive_gain,
     footprint_margin_arcsec,
@@ -116,7 +116,7 @@ def test_pad_no_wraparound():
 
 
 def test_write_product_header(tmp_path):
-    from lancet.combination_prep import write_product
+    from lancet.combination.prep import write_product
 
     h = _celestial_header(30, 20, 0.1)
     h["CTYPE3"], h["CRVAL3"], h["CDELT3"], h["CRPIX3"] = "VELO-LSR", 0.0, 1.0, 1.0
@@ -136,7 +136,7 @@ def test_write_product_header(tmp_path):
 
 
 def test_combine_prepared_end_to_end_small():
-    from lancet.combination_prep import combine_prepared
+    from lancet.combination.prep import combine_prepared
 
     shape, pix = (200, 240), 0.5
     rng = np.random.default_rng(3)
@@ -161,7 +161,7 @@ def test_combine_prepared_end_to_end_small():
 def test_jcomb_tp_alone_has_no_grid_edge_ringing():
     """A smooth TP cut by the grid edge must come back unchanged where there is no
     interferometer: zero-padding the TP leaves a step that J-comb's G_high/G_low rings on."""
-    from lancet.combination_prep import combine_prepared
+    from lancet.combination.prep import combine_prepared
 
     shape, pix = (300, 400), 0.5
     yy, xx = np.indices(shape)

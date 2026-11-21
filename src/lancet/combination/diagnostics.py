@@ -17,7 +17,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 import numpy as np
 
-from .imaging import read_frequency_ghz, read_mjysr
+from ..imaging import read_frequency_ghz, read_mjysr
 from .interferometry import read_unique_uv_coordinates
 
 

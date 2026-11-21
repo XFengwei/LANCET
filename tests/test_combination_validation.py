@@ -1,9 +1,9 @@
 import numpy as np
 from scipy import fft
 
-from lancet.combination import gaussian_transfer, uv_distance_klambda
-from lancet.combination_prep import mjysr_to_jybeam
-from lancet.combination_validation import (
+from lancet.combination.uvplane import gaussian_transfer, uv_distance_klambda
+from lancet.combination.prep import mjysr_to_jybeam
+from lancet.combination.validation import (
     beam_volume_outside,
     large_scale_ratio,
     smooth_to,
@@ -63,7 +63,7 @@ def _gaussians(shape, pix, positions, fwhm_arcsec, amplitude=1.0):
 
 
 def test_tp_at_high_resolution_recovers_high_beam_sky():
-    from lancet.combination_validation import tp_at_high_resolution
+    from lancet.combination.validation import tp_at_high_resolution
 
     shape, pix = (300, 360), 1.0
     rng = np.random.default_rng(4)
@@ -80,7 +80,7 @@ def test_tp_at_high_resolution_recovers_high_beam_sky():
 
 
 def test_cross_spectrum_slopes_bracket_the_scale():
-    from lancet.combination_validation import cross_spectrum_slopes
+    from lancet.combination.validation import cross_spectrum_slopes
 
     shape, pix = (256, 256), 1.0
     b = _smooth_sky(shape, 4.0, seed=5)          # 7.5" structure: signal in every bin
@@ -96,7 +96,7 @@ def test_cross_spectrum_slopes_bracket_the_scale():
 
 
 def test_windowed_amplitude_ratio_identity_and_scale():
-    from lancet.combination_validation import windowed_amplitude_ratio
+    from lancet.combination.validation import windowed_amplitude_ratio
 
     b = _smooth_sky((128, 128), 1.0, seed=7)
     window = np.ones(b.shape)
@@ -105,7 +105,7 @@ def test_windowed_amplitude_ratio_identity_and_scale():
 
 
 def test_mosaic_window_is_smooth_and_bounded():
-    from lancet.combination_validation import mosaic_window
+    from lancet.combination.validation import mosaic_window
 
     gain = np.zeros((200, 200))
     gain[50:150, 50:150] = 0.8
@@ -116,7 +116,7 @@ def test_mosaic_window_is_smooth_and_bounded():
 
 
 def test_core_contrast_ignores_smooth_additions():
-    from lancet.combination_validation import core_contrast_ratio
+    from lancet.combination.validation import core_contrast_ratio
 
     shape, pix = (300, 300), 0.5
     positions = [(80, 90), (150, 160), (220, 200)]
@@ -137,14 +137,14 @@ def test_smooth_to_does_not_wrap_around_the_grid():
 
 
 def test_core_contrast_with_no_positions():
-    from lancet.combination_validation import core_contrast_ratio
+    from lancet.combination.validation import core_contrast_ratio
 
     r = core_contrast_ratio(np.ones((50, 50)), np.ones((50, 50)), [], 0.5)
     assert r["n"] == 0 and np.isnan(r["median"])
 
 
 def test_tp_only_ratio_percentiles():
-    from lancet.combination_validation import tp_only_ratio
+    from lancet.combination.validation import tp_only_ratio
 
     tp = _smooth_sky((80, 90), 1.0, seed=9)
     region = np.zeros(tp.shape, dtype=bool)
@@ -155,7 +155,7 @@ def test_tp_only_ratio_percentiles():
 
 
 def test_tp_only_ratio_empty_region_returns_none_values():
-    from lancet.combination_validation import tp_only_ratio
+    from lancet.combination.validation import tp_only_ratio
 
     tp = np.ones((20, 20))
     product = np.full((20, 20), np.nan)                 # product blank outside the mosaic
@@ -164,7 +164,7 @@ def test_tp_only_ratio_empty_region_returns_none_values():
 
 
 def test_tapered_window_is_one_inside_and_zero_at_the_edge():
-    from lancet.combination_validation import tapered_window
+    from lancet.combination.validation import tapered_window
 
     mask = np.zeros((60, 80), dtype=bool)
     mask[10:50, 10:70] = True
@@ -176,7 +176,7 @@ def test_tapered_window_is_one_inside_and_zero_at_the_edge():
 
 
 def test_windowed_power_scales_with_amplitude_squared_and_ignores_the_mean():
-    from lancet.combination_validation import windowed_power
+    from lancet.combination.validation import windowed_power
 
     sky = _smooth_sky((128, 160), 2.0, seed=4)
     window = np.ones(sky.shape)
@@ -193,7 +193,7 @@ def test_windowed_power_scales_with_amplitude_squared_and_ignores_the_mean():
 def test_psd_match_factor_takes_the_largest_ratio_inside_the_band():
     import pytest
 
-    from lancet.combination_validation import psd_match_factor
+    from lancet.combination.validation import psd_match_factor
 
     centres = np.array([2.0, 4.0, 6.0, 8.0, 12.0])
     p_tp = np.ones(5)
@@ -209,7 +209,7 @@ def test_psd_match_factor_takes_the_largest_ratio_inside_the_band():
 def test_zero_spacing_check_reports_flux_and_pixel_ratios():
     import pytest
 
-    from lancet.combination_validation import zero_spacing_check
+    from lancet.combination.validation import zero_spacing_check
 
     tp = np.full((20, 30), 10.0)
     tp[:, 15:] = 30.0

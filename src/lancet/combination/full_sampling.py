@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .combination_tests import (
+from .overlap_tests import (
     _broad_ddids, _concat_rows, _write_rows_csv, matching_cells,
     predict_primary_beams, read_test_rows, require_inputs, require_products, row_values, subset_rows,
 )

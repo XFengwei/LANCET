@@ -146,11 +146,27 @@ Each phase ends with the test suite passing and one commit. Moves use `git mv`, 
   `combination_diagnostic` (CASA pb.tt0), `plot_core_freefree_contamination`, and the beam-matching test in
   `tests/test_interferometry.py` (used the removed convolve2ACA image as reference).
 
-### Phase 2. Flatten `src/`
+### Phase 2. Sort `src/` (D1 revised)
 
-- Move `src/lancet/*.py` → `src/*.py` and adjust `pyproject.toml` (D1).
-- Sort the modules: one used by a single task and with no wider use moves into that task's folder; shared ones stay. First candidates to move: `combination_figure`, `joint_image_comparison`, `tp_beam_test`, `amplitude_alignment`, `aca_forward_test` (all serve `combination_diagnostic` only).
-- Add tests for the shared modules that have none (`infrared_mosaic` is the main one).
+Done 2026-11-21 (author): the flat `src/` of D1 was dropped, because the
+import name `lancet` would then need an installed package and `PYTHONPATH=src`
+in every run command would stop working. The standard `src/lancet/` layout
+stays. Instead:
+
+- The 17 modules that only `combine_continuum` uses moved into the subpackage
+  `lancet.combination` (`git mv`, history kept): `combination` → `uvplane`,
+  `combination_diagnostics` → `diagnostics`, `combination_figure` →
+  `coverage_figure`, `combination_figures` → `figures`, `combination_prep` →
+  `prep`, `combination_stages` → `stages`, `combination_tests` →
+  `overlap_tests`, `combination_validation` → `validation`, and
+  `aca_forward_test`, `amplitude_alignment`, `full_sampling`, `dirty_beam`,
+  `joint_image_comparison`, `planck_calibration`, `pointing_coverage`,
+  `visibility_diagnostics`, `interferometry` under their own names. Imports in
+  the task, `src/` and the tests were rewritten; `lancet` still exports the
+  interferometry helpers.
+- The other single-task modules stay at the top level (one topic each,
+  tested and importable).
+- Tests added for `infrared_mosaic`, the shared module that had none.
 
 ### Phase 3. Results match tasks
 

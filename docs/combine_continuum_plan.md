@@ -62,7 +62,7 @@
 
 - [ ] **Step 2: Run to verify they fail**
   Run: `PYTHONPATH=src conda run -n py312 python -m pytest tests/test_combination.py -v`
-  Expected: errors with `ModuleNotFoundError: lancet.combination`.
+  Expected: errors with `ModuleNotFoundError: lancet.combination.uvplane`.
 
 - [ ] **Step 3: Implement the functions above in `src/lancet/combination.py`.**
   Rotated-Gaussian transfer: with σ = FWHM/√(8 ln 2) in radians and θ = BPA, the transfer is

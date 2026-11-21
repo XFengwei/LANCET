@@ -11,7 +11,7 @@ from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 from radio_beam import Beam
 from reproject import reproject_interp
-from .imaging import read_mjysr
+from ..imaging import read_mjysr
 from .interferometry import beam_match_and_reproject
 
 

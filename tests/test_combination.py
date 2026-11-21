@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from scipy import fft
 
-from lancet.combination import (
+from lancet.combination.uvplane import (
     butterworth_taper,
     combine_plane,
     feather_weights,

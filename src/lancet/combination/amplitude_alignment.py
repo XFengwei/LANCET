@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 
 from .aca_forward_test import sky_model, smooth_to_circular_beam, source_path
-from .combination_tests import (
+from .overlap_tests import (
     _broad_ddids, matching_cells, require_products, row_values, sample_image_visibilities, subset_rows,
 )
 from .full_sampling import (

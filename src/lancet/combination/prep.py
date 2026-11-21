@@ -10,7 +10,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from scipy import fft, ndimage
 
-from lancet.combination import (
+from lancet.combination.uvplane import (
     combine_plane,
     feather_weights,
     jcomb_weights,

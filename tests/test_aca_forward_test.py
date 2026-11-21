@@ -1,8 +1,8 @@
 import numpy as np
 from astropy.io import fits
 
-from lancet import aca_forward_test
-from lancet.aca_forward_test import binned_rms, pair_weights, sky_model
+from lancet.combination import aca_forward_test
+from lancet.combination.aca_forward_test import binned_rms, pair_weights, sky_model
 
 
 def test_bootstrap_weights_repeat_pairs():
@@ -26,7 +26,7 @@ def test_jy_per_beam_is_converted_to_mjy_per_sr(tmp_path):
 
 
 def test_gaussian_transfer_and_limit_are_consistent():
-    from lancet.amplitude_alignment import gaussian_transfer, response_limit
+    from lancet.combination.amplitude_alignment import gaussian_transfer, response_limit
     limit = response_limit(18.1, 0.1)
     assert np.isclose(gaussian_transfer(limit, 18.1), 0.1)
     half = response_limit(18.1, 0.5)

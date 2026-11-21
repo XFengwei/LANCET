@@ -13,9 +13,9 @@ from astropy.wcs.utils import proj_plane_pixel_scales
 import numpy as np
 from scipy import ndimage
 
-from lancet.combination import gaussian_transfer, uv_distance_klambda
-from lancet import planck_calibration as pc
-from lancet.combination_figures import (
+from lancet.combination.uvplane import gaussian_transfer, uv_distance_klambda
+from lancet.combination import planck_calibration as pc
+from lancet.combination.figures import (
     ARCSEC_PER_KLAMBDA,
     plot_comparison,
     plot_box_spectrum,
@@ -25,9 +25,9 @@ from lancet.combination_figures import (
     plot_tp_factor,
     plot_zero_spacing,
 )
-from lancet.combination_tests import require_inputs
+from lancet.combination.overlap_tests import require_inputs
 from lancet.imaging import frequency_label, read_frequency_ghz
-from lancet.combination_prep import (
+from lancet.combination.prep import (
     azimuthal_power,
     beam_parameters,
     combine_prepared,
@@ -39,7 +39,7 @@ from lancet.combination_prep import (
     taper_edge,
     write_product,
 )
-from lancet.combination_validation import (
+from lancet.combination.validation import (
     cross_spectrum_slopes,
     remove_window_mean,
     beam_volume_outside,

@@ -9,7 +9,7 @@ from astropy.io import fits
 import numpy as np
 import pytest
 
-from lancet.interferometry import (
+from lancet.combination.interferometry import (
     beam_match_and_reproject,
     deduplicate_uv_coordinates,
 )
@@ -84,7 +84,7 @@ def test_uv_reader_does_not_create_casa_log(
     environment["PYTHONPATH"] = str(PROJECT_ROOT / "src")
     code = (
         "import sys\n"
-        "from lancet.interferometry import read_unique_uv_coordinates\n"
+        "from lancet.combination.interferometry import read_unique_uv_coordinates\n"
         "try:\n"
         "    read_unique_uv_coordinates('empty.ms')\n"
         "except Exception:\n"

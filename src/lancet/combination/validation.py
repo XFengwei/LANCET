@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 from scipy import fft, ndimage
 
-from lancet.combination import gaussian_transfer, uv_distance_klambda
-from lancet.combination_prep import combine_prepared, jybeam_to_mjysr, mjysr_to_jybeam, pad
+from lancet.combination.uvplane import gaussian_transfer, uv_distance_klambda
+from lancet.combination.prep import combine_prepared, jybeam_to_mjysr, mjysr_to_jybeam, pad
 
 
 def smooth_to(data, pixel_arcsec, from_beam, to_fwhm_arcsec):

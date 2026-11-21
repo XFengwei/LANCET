@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from lancet.visibility_diagnostics import average_visibility_rows
+from lancet.combination.visibility_diagnostics import average_visibility_rows
 
 
 def test_vector_average_precedes_amplitude_and_excludes_flagged_outlier():

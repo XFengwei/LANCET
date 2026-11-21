@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .imaging import read_mjysr
+from ..imaging import read_mjysr
 from .visibility_diagnostics import (
     C_METRES_PER_SECOND, _table_tool, average_visibility_rows,
     measurement_set_metadata,

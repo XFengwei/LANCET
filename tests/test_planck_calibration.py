@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from lancet import planck_calibration as pc
+from lancet.combination import planck_calibration as pc
 
 
 def test_dbdt_cmb_matches_numerical_derivative():

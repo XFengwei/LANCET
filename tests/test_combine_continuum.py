@@ -59,7 +59,7 @@ def test_every_input_has_a_source_rule():
 
 
 def test_tp_models_must_share_freqghz(monkeypatch):
-    from lancet import combination_stages
+    from lancet.combination import stages as combination_stages
     real = combination_stages.read_frequency_ghz
     monkeypatch.setattr(combination_stages, "read_frequency_ghz",
                         lambda path: 250.0 if Path(path).name.startswith("dust_") else real(path))

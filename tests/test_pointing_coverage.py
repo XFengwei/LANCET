@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from lancet.pointing_coverage import (
+from lancet.combination.pointing_coverage import (
     gain_against_pb,
     pb_at_gain_edge,
     primary_beam_fwhm_arcsec,

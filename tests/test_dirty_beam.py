@@ -1,6 +1,6 @@
 import numpy as np
 
-from lancet.dirty_beam import cumulative_volume, gaussian_beam, radial_profile
+from lancet.combination.dirty_beam import cumulative_volume, gaussian_beam, radial_profile
 
 
 def test_gaussian_volume_matches_analytic_beam_area():

@@ -54,7 +54,7 @@ from .imaging import (
     jybeam_to_mjysr,
     jybeam_to_mjysr_from_header,
 )
-from .interferometry import (
+from .combination.interferometry import (
     beam_match_and_reproject,
     deduplicate_uv_coordinates,
     read_unique_uv_coordinates,

@@ -3,7 +3,7 @@
 import numpy as np
 from astropy.io import fits
 
-from lancet.combination_tests import (
+from lancet.combination.overlap_tests import (
     adjacent_time_pairs, empirical_noise, radial_test_profile,
     sample_image_visibilities, matching_cells, common_cell_ratios,
 )

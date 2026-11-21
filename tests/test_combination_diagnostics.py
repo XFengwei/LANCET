@@ -60,7 +60,7 @@ def test_diagnostic_paths_use_the_diagnostics_root():
 
 def test_diagnostic_stages_are_registered():
     assert set(TASK.DIAGNOSTIC_STAGES) <= set(TASK.STAGES)
-    from lancet.combination_tests import require_inputs
+    from lancet.combination.overlap_tests import require_inputs
     assert TASK.require_outputs is require_inputs
 
 
@@ -77,13 +77,13 @@ def test_diagnostic_wrapper_passes_diagnostic_paths(tmp_path):
 
 
 def test_require_inputs_names_the_stage(tmp_path):
-    from lancet.combination_tests import require_inputs
+    from lancet.combination.overlap_tests import require_inputs
     with pytest.raises(FileNotFoundError, match="Run stage 'jcomb' first: missing"):
         require_inputs([tmp_path / "x.fits"], "jcomb")
 
 
 def test_require_products_names_the_stage_that_writes_each_product(tmp_path):
-    from lancet.combination_tests import require_products
+    from lancet.combination.overlap_tests import require_products
     paths = {"products": TASK.product_paths(tmp_path)}
     paths["products"]["jcomb_continuum"].parent.mkdir(parents=True)
     paths["products"]["jcomb_continuum"].write_text("x")
@@ -94,7 +94,7 @@ def test_require_products_names_the_stage_that_writes_each_product(tmp_path):
 
 
 def test_overlap_stops_without_jcomb_products(tmp_path, monkeypatch):
-    from lancet import combination_tests
+    from lancet.combination import overlap_tests as combination_tests
     monkeypatch.setattr(combination_tests, "read_test_rows", _forbid)
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         combination_tests.run_overlap_tests(_paths_without_products(tmp_path), _config(),
@@ -102,37 +102,37 @@ def test_overlap_stops_without_jcomb_products(tmp_path, monkeypatch):
 
 
 def test_full_sampling_stops_without_jcomb_products(tmp_path, monkeypatch):
-    from lancet import full_sampling
+    from lancet.combination import full_sampling
     monkeypatch.setattr(full_sampling, "read_test_rows", _forbid)
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         full_sampling.build_full_sampling_profiles(_paths_without_products(tmp_path), _config())
 
 
 def test_aca_forward_test_stops_without_products(tmp_path):
-    from lancet.aca_forward_test import run_aca_forward_test
+    from lancet.combination.aca_forward_test import run_aca_forward_test
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         run_aca_forward_test(_paths_without_products(tmp_path), _config(), save_figure=None)
 
 
 def test_amplitude_alignment_stops_without_products(tmp_path):
-    from lancet.amplitude_alignment import run_amplitude_alignment
+    from lancet.combination.amplitude_alignment import run_amplitude_alignment
     with pytest.raises(FileNotFoundError, match=MISSING_PRODUCT):
         run_amplitude_alignment(_paths_without_products(tmp_path), _config(), save_figure=None)
 
 
 def test_figure2_requires_products(tmp_path):
-    from lancet.combination_figure import make_combination_figure
+    from lancet.combination.coverage_figure import make_combination_figure
     with pytest.raises(FileNotFoundError, match="Run stage 'jcomb' first: missing .*/products/"):
         make_combination_figure(_paths_without_products(tmp_path), _config(), save_figure=None)
 
 
 def test_figure_has_no_three_panel_switch():
-    from lancet.combination_figure import make_combination_figure
+    from lancet.combination.coverage_figure import make_combination_figure
     assert "three_panel" not in inspect.signature(make_combination_figure).parameters
 
 
 def test_image_curve_limit_is_the_lowest_of_beam_nyquist_and_interpolation():
-    from lancet.amplitude_alignment import image_curve_limit, interpolation_limit, response_limit
+    from lancet.combination.amplitude_alignment import image_curve_limit, interpolation_limit, response_limit
     pixel_rad = 0.5 * np.pi / 648000
     half_nyquist = 0.5 / (2 * pixel_rad) / 1000                       # 0.5 x 206.26 klambda
     # Half-pixel linear interpolation response |cos(pi u p)| = 0.98 at u = arccos(0.98) / (pi p).
@@ -147,7 +147,7 @@ def test_image_curve_limit_is_the_lowest_of_beam_nyquist_and_interpolation():
 
 
 def test_pixel_binning_transfer_is_the_box_response():
-    from lancet.amplitude_alignment import pixel_binning_transfer
+    from lancet.combination.amplitude_alignment import pixel_binning_transfer
     pixel_rad = 0.5 * np.pi / 648000
     assert pixel_binning_transfer(0.0, 0.5) == 1.0
     assert np.isclose(pixel_binning_transfer(1 / pixel_rad / 1000, 0.5), 0.0, atol=1e-12)
@@ -182,7 +182,7 @@ def _gaussian_curve(tmp_path, shift_arcsec):
     mJy of the image times the Gaussian PB, so a unit-flux source keeps the PB-weighted flux
     pb^2 / (pb^2 + restored^2).
     """
-    from lancet.amplitude_alignment import _image_curve, gaussian_transfer
+    from lancet.combination.amplitude_alignment import _image_curve, gaussian_transfer
     path = tmp_path / "gaussian.fits"
     restored = _gaussian_image(path, source_fwhm=2.0, beam_fwhm=0.7)
     settings = {**_config()["overlap_tests"], "pb_12m_fwhm_arcsec": 2000.0}
@@ -195,7 +195,7 @@ def _gaussian_curve(tmp_path, shift_arcsec):
 
 
 def test_beam_and_binning_corrected_curve_recovers_a_gaussian(tmp_path):
-    from lancet.amplitude_alignment import gaussian_transfer, image_curve_limit, pixel_binning_transfer
+    from lancet.combination.amplitude_alignment import gaussian_transfer, image_curve_limit, pixel_binning_transfer
     grid, rms, expected = _gaussian_curve(tmp_path, 0.0)          # pointing on a binned pixel centre
     limit = image_curve_limit(0.7, 0.1, 0.5, 0.02)
     assert np.isclose(grid.max(), limit)
@@ -215,7 +215,7 @@ def test_image_curve_stops_before_half_pixel_interpolation_loss(tmp_path):
 
 
 def test_read_products_returns_image_curves(tmp_path):
-    from lancet.amplitude_alignment import read_products
+    from lancet.combination.amplitude_alignment import read_products
     (tmp_path / "array_profiles.csv").write_text("array,uv_klambda,rms_mjy\naca_7m,5.0,100.0\n")
     (tmp_path / "overlap.csv").write_text("uv_klambda,aca_native_mjy\n5.0,90.0\n")
     (tmp_path / "tp_continuous.csv").write_text("uv_klambda,tp_raw_common_mjy\n1.0,1000.0\n2.0,800.0\n")
@@ -230,7 +230,7 @@ def test_read_products_returns_image_curves(tmp_path):
 
 
 def test_figure2_names_feather_when_only_jcomb_exists(tmp_path):
-    from lancet.combination_figure import make_combination_figure
+    from lancet.combination.coverage_figure import make_combination_figure
     paths = _paths_without_products(tmp_path)
     paths["products"]["jcomb_continuum"].parent.mkdir(parents=True)
     paths["products"]["jcomb_continuum"].write_text("x")
@@ -239,8 +239,8 @@ def test_figure2_names_feather_when_only_jcomb_exists(tmp_path):
 
 
 def test_figure2_refuses_rerun_before_computing(tmp_path, monkeypatch):
-    from lancet import full_sampling
-    from lancet.combination_figure import make_combination_figure
+    from lancet.combination import full_sampling
+    from lancet.combination.coverage_figure import make_combination_figure
     monkeypatch.setattr(full_sampling, "build_full_sampling_profiles", _forbid)
     paths = _paths_without_products(tmp_path)
     for product in paths["products"].values():
@@ -256,8 +256,8 @@ def test_figure2_refuses_rerun_before_computing(tmp_path, monkeypatch):
 
 
 def test_binned_sky_model_accepts_4d_jybeam(tmp_path):
-    from lancet.combination_prep import jybeam_to_mjysr
-    from lancet.combination_tests import binned_sky_model
+    from lancet.combination.prep import jybeam_to_mjysr
+    from lancet.combination.overlap_tests import binned_sky_model
 
     header = fits.Header({"BUNIT": "JY/BEAM", "BMAJ": 1/3600, "BMIN": 1/3600, "BPA": 0.0,
                           "CTYPE1": "RA---SIN", "CTYPE2": "DEC--SIN", "CRVAL1": 0.0, "CRVAL2": 0.0,
@@ -273,8 +273,8 @@ def test_binned_sky_model_accepts_4d_jybeam(tmp_path):
 
 
 def test_joint_and_dirty_beam_take_paths():
-    from lancet.dirty_beam import run_dirty_beam
-    from lancet.joint_image_comparison import run_joint_image_comparison
+    from lancet.combination.dirty_beam import run_dirty_beam
+    from lancet.combination.joint_image_comparison import run_joint_image_comparison
     for function in (run_joint_image_comparison, run_dirty_beam):
         assert next(iter(inspect.signature(function).parameters)) == "paths"
 
@@ -326,7 +326,7 @@ def _paths_with(tmp_path, products=None, **stage_files):
 
 
 def test_full_sampling_names_overlap_before_reading(tmp_path, monkeypatch):
-    from lancet import full_sampling
+    from lancet.combination import full_sampling
     monkeypatch.setattr(full_sampling, "read_test_rows", _forbid)
     paths = _paths_with(tmp_path)
     with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
@@ -335,7 +335,7 @@ def test_full_sampling_names_overlap_before_reading(tmp_path, monkeypatch):
 
 
 def test_aca_forward_test_names_overlap_and_full_sampling(tmp_path):
-    from lancet.aca_forward_test import run_aca_forward_test
+    from lancet.combination.aca_forward_test import run_aca_forward_test
     with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
         run_aca_forward_test(_paths_with(tmp_path / "a"), _config(), save_figure=None)
     paths = _paths_with(tmp_path / "b", overlap_tests=OVERLAP_FILES)
@@ -345,7 +345,7 @@ def test_aca_forward_test_names_overlap_and_full_sampling(tmp_path):
 
 
 def test_amplitude_alignment_names_overlap_and_full_sampling(tmp_path):
-    from lancet.amplitude_alignment import run_amplitude_alignment
+    from lancet.combination.amplitude_alignment import run_amplitude_alignment
     with pytest.raises(FileNotFoundError, match="Run stage 'overlap' first"):
         run_amplitude_alignment(_paths_with(tmp_path / "a"), _config(), save_figure=None)
     paths = _paths_with(tmp_path / "b", overlap_tests=OVERLAP_FILES)
@@ -355,7 +355,7 @@ def test_amplitude_alignment_names_overlap_and_full_sampling(tmp_path):
 
 
 def test_amplitude_alignment_requires_only_the_configured_image_curve_products(tmp_path):
-    from lancet.amplitude_alignment import run_amplitude_alignment
+    from lancet.combination.amplitude_alignment import run_amplitude_alignment
     config = _config()
     config["amplitude_alignment"]["image_curves"] = {"interferometer": "inputs.interferometer",
                                                      "jcomb": "products.jcomb_continuum"}
@@ -365,8 +365,8 @@ def test_amplitude_alignment_requires_only_the_configured_image_curve_products(t
 
 
 def test_figure2_names_each_missing_stage(tmp_path, monkeypatch):
-    from lancet import full_sampling
-    from lancet.combination_figure import make_combination_figure
+    from lancet.combination import full_sampling
+    from lancet.combination.coverage_figure import make_combination_figure
     monkeypatch.setattr(full_sampling, "build_full_sampling_profiles", _forbid)
     config = _config()
     assert config["figure2"]["amplitude_source"] == "amplitude_alignment"
@@ -383,8 +383,8 @@ def test_figure2_names_each_missing_stage(tmp_path, monkeypatch):
 
 
 def test_figure2_dependencies_include_the_alignment_products():
-    from lancet.amplitude_alignment import ALIGNMENT_OUTPUTS
-    from lancet.combination_figure import figure_dependencies
+    from lancet.combination.amplitude_alignment import ALIGNMENT_OUTPUTS
+    from lancet.combination.coverage_figure import figure_dependencies
     stages = figure_dependencies("amplitude_alignment")
     assert list(stages) == ["uv", "overlap", "full_sampling", "amplitude_alignment"]
     assert {"image_curves.csv", "array_profiles.csv", "tp_continuous.csv"} <= set(ALIGNMENT_OUTPUTS)
@@ -398,7 +398,7 @@ ALIGNMENT_RESULTS = PROJECT_ROOT / "results" / "combine_continuum" / "diagnostic
 @pytest.mark.skipif(not (ALIGNMENT_RESULTS / "manifest.json").is_file(), reason="needs an amplitude_alignment run")
 def test_alignment_figure_has_no_old_tp_factor_reference_line():
     from matplotlib import pyplot as plt
-    from lancet.amplitude_alignment import plot_alignment, read_products
+    from lancet.combination.amplitude_alignment import plot_alignment, read_products
     profiles, overlap, continuous, manifest, _ = read_products(ALIGNMENT_RESULTS)   # read only
     figures = []
     plot_alignment(profiles, overlap, continuous, _config()["amplitude_alignment"],
@@ -412,13 +412,13 @@ def test_alignment_figure_has_no_old_tp_factor_reference_line():
 
 def test_diagnostic_manifests_carry_no_fixed_date():
     import re
-    from lancet import aca_forward_test, amplitude_alignment, combination_figure
+    from lancet.combination import aca_forward_test, amplitude_alignment, coverage_figure as combination_figure
     for module in (aca_forward_test, amplitude_alignment, combination_figure):
         assert not re.search(r'"date":\s*"\d{4}-', inspect.getsource(module)), module.__name__
 
 
 def test_pb_uv_footprint_fwhm():
-    from lancet.amplitude_alignment import pb_uv_fwhm_klambda, response_limit
+    from lancet.combination.amplitude_alignment import pb_uv_fwhm_klambda, response_limit
     # Gaussian PB of FWHM theta: uv-plane Gaussian of FWHM 4 ln2 / (pi theta).
     for theta in (26.0 * 225.0 / 216.74, 26.0 * 225.0 / 230.95):
         assert np.isclose(pb_uv_fwhm_klambda(theta), 2 * response_limit(theta, 0.5))
@@ -427,7 +427,7 @@ def test_pb_uv_footprint_fwhm():
 
 
 def test_image_curve_method_states_the_pb_smoothing():
-    from lancet.amplitude_alignment import image_curve_method, pb_smoothing_note
+    from lancet.combination.amplitude_alignment import image_curve_method, pb_smoothing_note
     config = _config()
     note = pb_smoothing_note(config["overlap_tests"])
     for value in ("26.99", "25.33", "6.74", "7.19", "4 ln2 / (pi theta)"):
@@ -439,7 +439,7 @@ def test_image_curves_follow_configured_set_and_labels():
     import matplotlib
     matplotlib.use("Agg")
     from matplotlib import pyplot as plt
-    from lancet.combination_figure import _plot_image_curves
+    from lancet.combination.coverage_figure import _plot_image_curves
     u = np.array([1.0, 2.0, 3.0])
     curves = {name: (u, u * k) for name, k in [("interferometer", 1), ("jcomb", 2), ("feather", 3)]}
     figure, axis = plt.subplots()
@@ -452,7 +452,7 @@ def test_image_curves_follow_configured_set_and_labels():
 
 
 def test_image_curve_settings_are_validated():
-    from lancet.combination_figure import check_image_curve_settings
+    from lancet.combination.coverage_figure import check_image_curve_settings
     have = {"interferometer", "jcomb"}
     check_image_curve_settings(["interferometer", "jcomb"], {"jcomb": "combine"}, have)
     with pytest.raises(ValueError, match="bogus"):
@@ -464,7 +464,7 @@ def test_image_curve_settings_are_validated():
 
 
 def test_shown_curve_values_need_no_curves_without_alignment():
-    from lancet.combination_figure import shown_curve_values
+    from lancet.combination.coverage_figure import shown_curve_values
     assert shown_curve_values({}, ["interferometer", "jcomb"]) == []
     curves = {"jcomb": (np.array([1.0]), np.array([2.0, 3.0])), "feather": (np.array([1.0]), np.array([9.0]))}
     assert shown_curve_values(curves, ["jcomb"]) == [2.0, 3.0]
