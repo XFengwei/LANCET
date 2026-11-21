@@ -59,11 +59,20 @@ header { height: 120px; }
 }
 
 /* Observatory cards keep the full image and description within one link. */
-.telescope-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+/* Telescope gallery: ALMA alone, then rows of three; rows crossfade every 5 s (gallery.js). */
+/* All rows share one grid cell, so the section keeps the height of the tallest row. */
+.telescope-gallery { max-width: 1216px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: 48px minmax(0,1fr) 48px; gap: 0 16px; align-items: center; }
+.gallery-step { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); font: 28px/1 system-ui, sans-serif; cursor: pointer; display: grid; place-items: center; padding: 0 0 4px; transition: color .2s, border-color .2s; }
+.gallery-step:hover { color: var(--gold); border-color: var(--gold); }
+.gallery-step:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.telescope-rows { display: grid; }
+.gallery-row { grid-area: 1 / 1; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; opacity: 0; visibility: hidden; transition: opacity 1s ease, visibility 0s linear 1s; }
+.gallery-row.is-visible { opacity: 1; visibility: visible; transition: opacity 1s ease, visibility 0s; }
+.telescope-row--main { grid-template-columns: 1fr; }
 .telescope-card { display: flex; flex-direction: column; overflow: hidden; background: #0d131b; border: 1px solid var(--line); transition: border-color .2s; }
-.telescope-card:first-child { grid-column: 1 / -1; display: grid; grid-template-columns: 1.2fr 1fr; }
-.telescope-card > img { width: 100%; height: 210px; object-fit: cover; }
-.telescope-card:first-child > img { height: 100%; min-height: 320px; }
+.telescope-card--main { display: grid; grid-template-columns: 1.2fr 1fr; }
+.telescope-card > img { width: 100%; height: 190px; object-fit: cover; }
+.telescope-card--main > img { height: 100%; min-height: 0; }
 .telescope-copy { padding: 27px; display: flex; flex-direction: column; flex: 1; }
 .telescope-copy h3 { display: flex; justify-content: space-between; color: var(--text); }
 .telescope-copy h3 span { color: var(--gold); font-size: 17px; }
@@ -80,8 +89,9 @@ header { height: 120px; }
 .model-label { animation: continuum-model-label 12s ease-in-out infinite; }
 @keyframes continuum-model-label { 0%,30%,100% { opacity: 1; } 45%,80% { opacity: 0; } }
 @keyframes continuum-crossfade { 0%,30%,100% { opacity: 0; } 45%,80% { opacity: 1; } }
-@media (max-width: 900px) { .telescope-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-@media (max-width: 600px) { .telescope-grid { grid-template-columns: 1fr; } .telescope-card:first-child { display: flex; } .telescope-card:first-child > img { height: 210px; min-height: 0; } }
+/* Without rotation (narrow screens, reduced motion) every row is shown and the arrows are hidden. */
+@media (max-width: 700px), (prefers-reduced-motion: reduce) { .telescope-rows { gap: 24px; } .gallery-row { grid-area: auto; opacity: 1; visibility: visible; transition: none; } .telescope-gallery .gallery-step { display: none; } }
+@media (max-width: 700px) { .telescope-gallery { display: block; } .gallery-row { grid-template-columns: 1fr; } .telescope-card--main { display: flex; } .telescope-card--main > img { height: 190px; } }
 @media (prefers-reduced-motion: reduce) { .recovery-combined, .combined-label, .model-label { animation: none; } .model-label { opacity: 0; } }
 
 /* Fade the fixed edge of the hero image into the dark background. */
@@ -110,3 +120,11 @@ header { height: 120px; }
 .array-gallery-frames { aspect-ratio: 14 / 4; }
 
 .logo-story iframe { display: block; width: 66.6667%; aspect-ratio: 1.5; border: 0; background: transparent; mix-blend-mode: screen; margin: 30px auto 0; }
+/* Units keep their case inside upper-case labels (μm, mm, GHz, cm). */
+.eyebrow .unit { text-transform: none; letter-spacing: .08em; }
+
+/* Scroll reveal (observations page): sections below the opening fade and rise into view once. */
+.js-reveal .reveal { opacity: 0; transform: translateY(40px); transition: opacity .9s ease, transform .9s ease; }
+.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .js-reveal .reveal { opacity: 1; transform: none; transition: none; } }
+@media print { .js-reveal .reveal { opacity: 1; transform: none; } }
