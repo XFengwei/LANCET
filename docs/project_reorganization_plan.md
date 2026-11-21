@@ -92,7 +92,7 @@ two tasks that read it (`construct_freefree_model`, `synthesize_continuum`) are 
 
 **D4. `extraction/` moves into `data/`** as a permanent input (`data/extraction/`). The author
 prunes useless and intermediate getsf files; before and after, the files needed to reproduce the
-Paper II results are checked to exist (list in `docs/reorganization_baseline/`).
+Paper II results are checked to exist (the baseline list was kept locally and removed before publication).
 
 **D5. Results with no task.** As proposed: `moment_maps` → `c18o_moments`; `starcluster` →
 `star_cluster`; `multiwavelength_cards` moved to `design/multiwavelength_cards/` (artwork, not a task; author, 2026-11-21); `continuum_comparison_cards` redrawn from the new combination and moved to `design/continuum_comparison_cards/` (author, 2026-11-21); the empty `results/diagnostics/` and `data/delivered/starcluster/` removed; `diagnostics`
@@ -226,13 +226,14 @@ stays. Instead:
 - Removed (author): `docs/combine_continuum_plan.md` and
   `docs/superpowers/plans/2026-11-20-combine-continuum.md`, the two carried-out
   combination plans (copies in `~/.Trash/LANCET_docs_combination_plans_2026-11-21/`).
-  The design spec `docs/combine_continuum_design.md` stays. The other audits
-  and `docs/reorganization_baseline/` are kept.
+  The design spec `docs/combine_continuum_design.md` stays, as do the other
+  audits. `docs/reorganization_baseline/` (local paths) was removed from the
+  history before publication; a copy is kept locally.
 
 ### Phase 6. Proof (done 2026-11-21)
 
-Fresh clone of `project-reorganisation` (commit after `e2bab8f`) into a scratch
-folder:
+Fresh clone of `project-reorganisation` (after the website update) into a
+scratch folder:
 
 - Without any local data: 431 tests pass, 53 skip (tests that read `data/` or
   `results/` carry `@pytest.mark.local_inputs` and skip with a reason; before

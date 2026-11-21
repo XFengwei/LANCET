@@ -2,7 +2,7 @@
 
 Four static HTML pages, shared CSS, and optimized project imagery. Preview from the repository root with `python3 -m http.server 8765 --directory website`.
 
-The homepage animation cycles through registered VVV, Spitzer + Herschel 70 μm, Herschel 250 μm, and MeerKAT views. The hero frames share the same sky grid and exclude the 1.3 mm image. Regenerate them with `MPLCONFIGDIR=/tmp/lancet-mpl /Users/fexu/miniforge/envs/py312/bin/python website/tools/build_hero.py` in the project environment. The script writes the WebP frames directly (1800 px, quality 82).
+The homepage animation cycles through registered VVV, Spitzer + Herschel 70 μm, Herschel 250 μm, and MeerKAT views. The hero frames share the same sky grid and exclude the 1.3 mm image. Regenerate them with `MPLCONFIGDIR=/tmp/lancet-mpl conda run -n py312 python website/tools/build_hero.py` in the project environment. The script writes the WebP frames directly (1800 px, quality 82).
 
 `website/tools/build_brand.py` exports the header/footer logo with a true alpha channel (the black canvas of `design/logo/lancet-white-gold-on-black-compact.png` converted to transparency, so no dark box shows over the hero), the 180 px touch icon, and the 1200 × 630 social preview `assets/og-image.jpg`. `assets/favicon.svg` is the gold four-point star, drawn by hand. The social metadata uses absolute URLs at the expected GitHub Pages address.
 
