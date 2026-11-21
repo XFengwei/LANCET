@@ -216,3 +216,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"/ +{estimate.intrinsic_ratio_plus:.2f}"
     )
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

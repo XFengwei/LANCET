@@ -83,7 +83,7 @@ before. The proposal below is the starting point for the review, not a decision:
 | `simba_fourier_comparison`, `simba_peak_comparison`, `simba_pixel_comparison` | new task `simba_comparison` |
 | `source_deconvolution` | into `lancet.deconvolution_size` (round-trip check and PA difference); script, README section and its diagnostic figure removed (author, 2026-11-21) |
 | `star_cluster` | **removed** (author, 2026-11-21): script, test and README section deleted, `results/starcluster/` moved to the Trash; the delivered orbit catalogue is kept |
-| `gas_to_dust_ratio` | new task `gas_to_dust_ratio` |
+| `gas_to_dust_ratio` | wrapper removed; the calculation stays in `lancet.gas_to_dust`, run as `python -m lancet.gas_to_dust` (2026-11-21) |
 
 **D3. `data/delivered/` is sorted properly.** First case: remove `data/delivered/paper1/`.
 `TP_SEDsynthetic230GHz_cont.fits` is byte-identical to `sedfitter/Dustmodel_230GHz.fits`, so the

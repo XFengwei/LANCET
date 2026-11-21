@@ -67,7 +67,7 @@ Calculate the gas-to-dust mass ratio from Giannetti et al. (2017), A&A, 606,
 L12, Eq. 2:
 
 ```bash
-conda run -n py312 python scripts/gas_to_dust_ratio.py \
+PYTHONPATH=src conda run -n py312 python -m lancet.gas_to_dust \
   --radius-kpc 6.5 \
   --radius-error-kpc 0.2
 ```

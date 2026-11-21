@@ -50,7 +50,8 @@ def test_command_prints_machine_readable_result() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            "scripts/gas_to_dust_ratio.py",
+            "-m",
+            "lancet.gas_to_dust",
             "--radius-kpc",
             "6.5",
             "--radius-error-kpc",
