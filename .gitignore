@@ -1,6 +1,7 @@
 # Scientific inputs, external products, manuscripts, and generated outputs
-/data/
-/extraction/
+/data/*
+!/data/README.md
+!/data/MANIFEST.tsv
 /papers/
 /presentation/
 /references/

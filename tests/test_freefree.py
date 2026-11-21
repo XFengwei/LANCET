@@ -217,15 +217,12 @@ def test_paper2_profile_reproduces_reference_13_band_pixel() -> None:
 
     y_pixel, x_pixel = 497, 383
     cube = fits.getdata(MEERKAT_CUBE, memmap=True)[0]
-    cornish = fits.getdata(
-        PROJECT_ROOT
-        / "data"
-        / "delivered"
-        / "archive"
-        / "radio"
-        / "CORNISH_5p5GHz_8arcsec_on_MeerKATgrid.fits",
-        memmap=True,
+    prepared = (
+        FREEFREE_RESULTS / "prepared" / "CORNISH_5p5GHz_8arcsec_on_MeerKATgrid.fits"
     )
+    if not prepared.is_file():
+        pytest.skip("construct_freefree_model prepare stage has not been run")
+    cornish = fits.getdata(prepared, memmap=True)
     expected_emission_measure = 1_454_721.875
 
     spectrum = np.concatenate(

@@ -20,10 +20,10 @@ gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fit
 # filled model that the extended36 product contains.
 tp_dust_model = "results/synthesize_continuum/model/dust_224GHz_fill36.fits"
 freefree_smoothed = "results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec.fits"
-box_regions = "region/box2arcmin_three_regions.reg"
-dense_young_region = "region/trichotomy/trichotomy_young.reg"
-dense_intermediate_region = "region/trichotomy/trichotomy_intermediate.reg"
-dense_evolved_region = "region/trichotomy/trichotomy_evolved.reg"
+box_regions = "regions/box2arcmin_three_regions.reg"
+dense_young_region = "regions/trichotomy/trichotomy_young.reg"
+dense_intermediate_region = "regions/trichotomy/trichotomy_intermediate.reg"
+dense_evolved_region = "regions/trichotomy/trichotomy_evolved.reg"
 # Mosaic primary beam (MIRIAD); its 0.2 contour is drawn on the full-field maps.
 primary_beam = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
 

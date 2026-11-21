@@ -12,9 +12,9 @@ combined_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0
 # MIRIAD mosaic gain; 12m+7m getsf fluxes and Ibkg1 are divided by it where < 1.
 gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits"
 temperature = "results/column_density/prepared/temperature_allscale.fits"
-young_region = "region/trichotomy/trichotomy_young_shrink.reg"
-intermediate_region = "region/trichotomy/trichotomy_intermediate_shrink.reg"
-evolved_region = "region/trichotomy/trichotomy_evolved_shrink.reg"
+young_region = "regions/trichotomy/trichotomy_young_shrink.reg"
+intermediate_region = "regions/trichotomy/trichotomy_intermediate_shrink.reg"
+evolved_region = "regions/trichotomy/trichotomy_evolved_shrink.reg"
 
 [outputs]
 root = "results/source_catalogue"

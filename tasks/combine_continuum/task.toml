@@ -42,7 +42,7 @@ configuration_c2 = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.TM2.bin.combs
 aca_7m = "data/reduction/alma/7MTM2TM1/cont/ms/IRDC316.8.ACA.bin.selfcal"
 
 [regions]
-successful_combinations = "region/success.reg"
+successful_combinations = "regions/success.reg"
 
 [outputs]
 root = "results/combine_continuum"

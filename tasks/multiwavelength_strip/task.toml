@@ -60,7 +60,7 @@ arm_arcmin = 0.35
 
 [[panels.annotations]]
 kind = "bracket"
-# Young region (region/trichotomy/trichotomy_young.reg), which the spine
+# Young region (regions/trichotomy/trichotomy_young.reg), which the spine
 # enters at x ~ +2.1 to +2.7 arcmin, up to the end of the dark lane.
 x_range_arcmin = [2.2, 6.6]
 y_arcmin = -1.25

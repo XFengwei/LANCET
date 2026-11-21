@@ -16,7 +16,7 @@ for people; this file records the working rules.
 - `tasks/<task>/` — `task.toml` (all paths and scientific settings) and
   `README.md` (inputs, method, outputs, status).
 - `tests/test_<module>.py` — pytest tests for `src/lancet/`.
-- `region/` — small DS9 regions that tasks declare.
+- `regions/` — small DS9 regions that tasks declare.
 - `docs/` — audits and design notes.
 - Local only (gitignored, never committed): `data/` (with `data/extraction/`,
   the getsf and astrodendro products), `results/`, `papers/`,
@@ -39,8 +39,11 @@ for people; this file records the working rules.
   `data/reduction/...` (for example `<product>_r4b/`), never over existing
   products. Delete their intermediates when the user has what they need;
   MIRIAD and CASA runs can fill the disk.
-- `data/path_aliases.yaml` and `data/path_ledger.tsv` map historical paths to
-  the current layout.
+- `data/MANIFEST.tsv` lists every delivered file (and the top levels of
+  `reduction/` and `extraction/`) with its origin, whether it can be
+  reproduced, and the tasks that read it. Regenerate it with
+  `python docs/make_data_manifest.py` after changing `data/`. Git tracks only
+  `data/README.md` and `data/MANIFEST.tsv`.
 
 ## Task pattern
 

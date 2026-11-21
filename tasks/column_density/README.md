@@ -17,7 +17,7 @@ grid and the Paper I column densities as surface densities.
 | `tp_dust_model` | `results/synthesize_continuum/model/dust_224GHz_fill36.fits` | the filled TP dust model contained in the extended36 product, on the low-resolution grid; `consistency` stage only |
 | `freefree_smoothed` | `results/construct_freefree_model/Te_8000K/ff224_map_smoothed_18arcsec.fits` | contours on the overlay figure |
 | `primary_beam` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits` | MIRIAD mosaic pb; its 0.2 contour is drawn |
-| region files | `region/` | subregion boxes and the dense-gas regions |
+| region files | `regions/` | subregion boxes and the dense-gas regions |
 
 ## Method
 

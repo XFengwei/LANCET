@@ -1,0 +1,367 @@
+path	size_bytes	origin	reproducible	used_by	note
+data/delivered/README.md	3548	documentation			
+data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.image.fits	1748160	reduced	reduction	core_formation_efficiency,freefree_core_contamination	
+data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.image.pbcor.fits	1748160	reduced	reduction	combine_continuum	
+data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.model.fits	1748160	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.7M.robust0.5.cont.pb.fits	1748160	reduced	reduction	freefree_core_contamination	
+data/delivered/alma/continuum/IRDC316.8.7MTM2.robust0.5.cont.clean.fits	12484800	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.7MTM2.robust1.0.cont.clean.fits	12484800	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.7MTM2.robust2.0.cont.clean.fits	12484800	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.fits	145540800	reduced	reduction	column_density	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.flatnoise.fits	145540800	reduced	reduction	core_formation_efficiency	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.flatnoise.pb0.2.fits	145540800	reduced	reduction	volume_density_mapper	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.fits	145540800	reduced	reduction	freefree_core_contamination	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.clean.truesky.pb0.2.fits	145540800	reduced	reduction	combine_continuum,continuum_comparison_cards	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits	145537920	reduced	reduction	column_density,combine_continuum,source_catalogue	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits	145537920	reduced	reduction	column_density,combine_continuum,core_formation_efficiency,freefree_core_contamination,multiwavelength_strip,plot_allscale_continuum,volume_density_mapper	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.fits	16773120	reduced	reduction	combine_continuum	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.psf.imfit.log	463	reduced	reduction	combine_continuum	
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.sen.fits	145537920	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust1.0.cont.clean.fits	145540800	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust2.0.cont.clean.fits	145540800	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.image.fits	192024000	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.image.pbcor.fits	192024000	reduced	reduction	combine_continuum	
+data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.model.fits	192024000	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.pb.fits	192024000	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.psf.fits	192024000	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.TM2TM1.robust0.5.cont.residual.fits	192024000	reduced	reduction		
+data/delivered/alma/continuum/IRDC316.8.TP7M.robust0.5.cont.image.pbcor.MJypsr.fits	12980160	derived	no		older TP+7m combination
+data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended.fits	145532160	derived	task:combine_continuum		promoted J-comb product
+data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits	145532160	derived	task:combine_continuum	multiwavelength_strip,plot_allscale_continuum	promoted J-comb product
+data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.fits	145532160	derived	task:combine_continuum	source_catalogue	promoted J-comb product
+data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended.fits	145532160	derived	task:combine_continuum		promoted J-comb product
+data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.extended36.fits	145532160	derived	task:combine_continuum	column_density,plot_allscale_continuum	promoted J-comb product
+data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont_dust.image.pbcor.fits	145532160	derived	task:combine_continuum		promoted J-comb product
+data/delivered/alma/continuum/README.md	7383	documentation			
+data/delivered/alma/continuum/allscale-archived/allscale_combined_v1_dust.fits	402842880	derived	no		superseded v1-v3 12m+7m+TP combinations (Paper II); replaced by combine_continuum
+data/delivered/alma/continuum/allscale-archived/allscale_combined_v2_dust.fits	402842880	derived	no		superseded v1-v3 12m+7m+TP combinations (Paper II); replaced by combine_continuum
+data/delivered/alma/continuum/allscale-archived/allscale_combined_v2_dust_ff.fits	402842880	derived	no		superseded v1-v3 12m+7m+TP combinations (Paper II); replaced by combine_continuum
+data/delivered/alma/continuum/allscale-archived/allscale_combined_v3_dust.fits	402842880	derived	no		superseded v1-v3 12m+7m+TP combinations (Paper II); replaced by combine_continuum
+data/delivered/alma/continuum/allscale-archived/allscale_combined_v3_dust_ff.fits	402842880	derived	no		superseded v1-v3 12m+7m+TP combinations (Paper II); replaced by combine_continuum
+data/delivered/alma/continuum/casa-archived/IRDC316.8.7MTM2TM1.cont.image.fits	192021120	reduced	reduction		CASA 12m+7m, archived, not for science
+data/delivered/alma/continuum/casa-archived/IRDC316.8.7MTM2TM1.cont.image.pbcor.fits	192021120	reduced	reduction	combine_continuum	CASA 12m+7m, archived, not for science
+data/delivered/alma/continuum/casa-archived/IRDC316.8.7MTM2TM1.cont.pb.fits	192021120	reduced	reduction	combine_continuum	CASA 12m+7m, archived, not for science
+data/delivered/alma/continuum/casa-archived/miriad_clean_template.hdr	6972	reduced	reduction		CASA 12m+7m, archived, not for science
+data/delivered/alma/cube/C18O_2-1/IRDC316.8.TP7MTM2.C18O_2-1.cube.clean.kms.fits	3951961920	reduced	reduction		
+data/delivered/alma/cube/C18O_2-1/IRDC316.8.TP7MTM2.C18O_2-1.cube.clean.mosaic_gain.fits	8421120	reduced	reduction		
+data/delivered/alma/cube/C18O_2-1/IRDC316.8.TP7MTM2.C18O_2-1.cube.clean.mosaic_sensitivity.fits	8421120	reduced	reduction		
+data/delivered/alma/cube/C18O_2-1/IRDC316.8.TP7MTM2.C18O_2-1.cube.clean.reimmerge.fits	3951961920	reduced	reduction		
+data/delivered/alma/cube/C18O_2-1/IRDC316.8.TP7MTM2TM1.C18O_2-1.cube.clean.fits	9666576000	reduced	reduction		
+data/delivered/alma/cube/DCN_3-2/IRDC316.8.7MTM2TM1.DCN_3-2.cube..fits	10616860800	reduced	reduction		
+data/delivered/archive/alma/2013.1.01029.S/member.uid___A001_X145_X414.calibrated.lineSiO.image.pbcor.fits	294053760	archive	download		
+data/delivered/archive/alma/2013.1.01029.S/member.uid___A001_X145_X418.IRDC316._d_03_TE_mosaic_N2Hp_1-0.image.pbcor.fits	216043200	archive	download		
+data/delivered/archive/alma/2018.1.01851.S/member.uid___A001_X135e_X106._G316.75-3__sci.spw22.cube.I.pbcor.fits	401025600	archive	download		
+data/delivered/archive/alma/2018.1.01851.S/member.uid___A001_X135e_X10c._G316.75-1__sci.spw22.cube.I.pbcor.fits	371234880	archive	download		
+data/delivered/archive/alma/2018.1.01851.S/member.uid___A001_X135e_X10c._G316.75-2__sci.spw22.cube.I.pbcor.fits	314274240	archive	download		
+data/delivered/archive/infrared/G316.8_InfraredComposite_3.6_5.8_70.png	3385604	archive	download		
+data/delivered/archive/infrared/GAL316_CAFFEINE_350um_ESO.fits	11401920	archive	download		
+data/delivered/archive/infrared/GAL316_CAFFEINE_450um_ESO.fits	10238400	archive	download		
+data/delivered/archive/infrared/GAL316_CAFFEINE_coldens_ESO.fits	11396160	archive	download		
+data/delivered/archive/infrared/GLM_31650+0000_mosaic_I4.fits	128560320	archive	download		
+data/delivered/archive/infrared/SIMBA_1.2mm.fits	653761	archive	download	synthesize_continuum	
+data/delivered/archive/infrared/VVV/d053_h.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d053_j.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d053_ks.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d054_h.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d054_j.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d054_ks.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d091_h.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d091_j.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d091_ks.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d092_h.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d092_j.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/VVV/d092_ks.fits	64036800	archive	download	vvv_mosaic	
+data/delivered/archive/infrared/atlasgal+planck.fits	728640	archive	download	combine_continuum	
+data/delivered/archive/infrared/image_GLIMPSE-IRAC1.fits	9023040	archive	download	multiwavelength_strip	
+data/delivered/archive/infrared/image_GLIMPSE-IRAC2.fits	9023040	archive	download		
+data/delivered/archive/infrared/image_GLIMPSE-IRAC3.fits	9023040	archive	download	multiwavelength_strip	
+data/delivered/archive/infrared/image_GLIMPSE-IRAC4.fits	9023040	archive	download		
+data/delivered/archive/infrared/image_HHLI-PACS070.fits	7822080	archive	download	multiwavelength_strip	
+data/delivered/archive/infrared/image_HHLI-PACS160.fits	7804800	archive	download		
+data/delivered/archive/infrared/image_HHLI-SPIRE250.fits	2401920	archive	download	multiwavelength_strip	
+data/delivered/archive/infrared/image_HHLI-SPIRE350.fits	1031040	archive	download		
+data/delivered/archive/infrared/image_HHLI-SPIRE500.fits	653760	archive	download		
+data/delivered/archive/infrared/ppmap_cdens.fits	728640	archive	download		
+data/delivered/archive/infrared/ppmap_temp.fits	728640	archive	download		
+data/delivered/archive/paper-1/PaperI_table2.fit	23040	collaborator	no	core_formation_efficiency	published Paper I table
+data/delivered/archive/paper-1/README.md	581	documentation			
+data/delivered/archive/planck/BfieldAngle_deb.fits	60480	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/Ipol_deb.fits	60480	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/Ipol_deb_snr2_mask.fits	118080	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/Ipol_deb_snr3_mask.fits	118080	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/PLCKI_G316.769-0.003_353GHz.fits	60480	archive	download	planck_polarization	
+data/delivered/archive/planck/PLCKQ_G316.769-0.003_353GHz.fits	60480	archive	download	planck_polarization	
+data/delivered/archive/planck/PLCKU_G316.769-0.003_353GHz.fits	60480	archive	download	planck_polarization	
+data/delivered/archive/planck/Pfrac_deb.fits	60480	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/PolAngle_deb.fits	60480	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/PolAngle_deb_error.fits	60480	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/StokesI_snr2_mask.fits	118080	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/StokesI_snr3_mask.fits	118080	derived	task:planck_polarization		earlier polarization products; planck_polarization rebuilds them
+data/delivered/archive/planck/hfi_cutouts/HFI_RIMO_R3.00.fits	1005120	archive	download	combine_continuum	
+data/delivered/archive/planck/hfi_cutouts/README.md	1234	documentation			
+data/delivered/archive/planck/hfi_cutouts/co_type1.npz	62798	archive	download	combine_continuum	
+data/delivered/archive/planck/hfi_cutouts/fetch.json	8318	archive	download	combine_continuum	
+data/delivered/archive/planck/hfi_cutouts/freq217.npz	20488	archive	download	combine_continuum	
+data/delivered/archive/radio/CORNISH_5p5GHz.fits	731520	archive	download	construct_freefree_model,freefree_core_contamination	
+data/delivered/archive/radio/MeerKAT_subcube_reprojected.fits	92168640	archive	download	construct_freefree_model	
+data/delivered/archive/radio/MeerKAT_subimage_1.38GHz_reprojected.fits	11522880	archive	download	construct_freefree_model,multiwavelength_strip	
+data/delivered/archive/radio/Tile724_CORNISH_5GHz.fits	16044480	archive	download		
+data/delivered/archive/radio/subcube_G316.hdr	4651	derived	no		cut-out header (provenance)
+data/delivered/sedfitter/Dustmodel_223.8GHz.fits	365760	derived	no	construct_freefree_model,synthesize_continuum	Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/Ossenkopf_1994.fits	37440	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/README.md	2149	documentation			
+data/delivered/sedfitter/combine/NH2_18arcsec+36arcsec.fits	365760	derived	no	column_density,synthesize_continuum	Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/combine/NH2_18arcsec+36arcsec_rescale.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec+36arcsec.fits	12980160	derived	no	column_density	Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec+36arcsec_rescale.fits	12980160	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec.fits	12980160	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/combine/NH2_6arcsec+18arcsec_rescale.fits	12980160	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/combine/Tdust_18arcsec+36arcsec.fits	365760	derived	no	column_density,environ_measure,synthesize_continuum	Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/hires_NH2_dark.fits	486720	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/hires_NH2_dark_rescale.fits	486720	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/hires_NH2_hii.fits	492480	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/hires_NH2_hii_rescale.fits	492480	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/hires_NH2_yso.fits	489600	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/hires_NH2_yso_rescale.fits	489600	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_dark.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_dark.profile.tsv	1882	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_dark_rescale.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_err_dark.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_err_dark_rescale.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_err_hii.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_err_hii_rescale.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_err_yso.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_err_yso_rescale.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_hii.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_hii.profile.tsv	1378	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_hii_rescale.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_yso.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_yso.profile.tsv	1591	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_NH2_yso_rescale.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_Tdust_dark.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_Tdust_err_dark.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_Tdust_err_hii.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_Tdust_err_yso.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_Tdust_hii.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_Tdust_yso.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_intSED_dark.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_intSED_hii.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/lores_intSED_yso.fits	8640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_dark.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_dark_rescale.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_err_dark.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_err_dark_rescale.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_err_hii.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_err_hii_rescale.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_err_yso.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_err_yso_rescale.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_hii.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_hii_rescale.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_yso.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_NH2_yso_rescale.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_Tdust_dark.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_Tdust_err_dark.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_Tdust_err_hii.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_Tdust_err_yso.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_Tdust_hii.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_Tdust_yso.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_intSED_dark.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_intSED_hii.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/subregion/mires_intSED_yso.fits	17280	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_PACS070_noNaN_univert.fits	2545920	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_PACS070_noNaN_univert_smooth36.fits	2545920	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_PACS070_noNaN_univert_smregrid36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_PACS160_noNaN_univert.fits	2540160	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_PACS160_noNaN_univert_smooth36.fits	2540160	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_PACS160_noNaN_univert_smregrid36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE250_noNaN_univert.fits	728640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE250_noNaN_univert_smooth36.fits	728640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE250_noNaN_univert_smregrid36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE350_noNaN_univert.fits	267840	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE350_noNaN_univert_smooth36.fits	267840	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE350_noNaN_univert_smregrid36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE500_noNaN_univert.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE500_noNaN_univert_smooth36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/Herschel_SPIRE500_noNaN_univert_smregrid36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/atlasgal+planck_univert.fits	728640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/atlasgal+planck_univert_smooth36.fits	728640	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/atlasgal+planck_univert_smregrid36.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/NH2.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/NH2_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/NH2_err_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/NH2_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/Tdust.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/Tdust_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/beta.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/beta_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult/intSED.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/NH2.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/NH2_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/NH2_err_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/NH2_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/Tdust.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/Tdust_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/beta.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/beta_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_EQweis/intSED.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/NH2.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/NH2_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/NH2_err_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/NH2_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/Tdust.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/Tdust_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/beta.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/beta_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_REweis/intSED.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/NH2.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/NH2_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/NH2_err_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/NH2_rescale.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/Tdust.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/Tdust_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/beta.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/beta_err.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version1/fitresult_VaryOpacity/intSED.fits	138240	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/GAL316_CAFFEINE_350um_ESO_univert.fits	11401920	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/GAL316_CAFFEINE_350um_ESO_univert_smooth18.fits	11401920	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/GAL316_CAFFEINE_350um_ESO_univert_smregrid18.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/GAL316_CAFFEINE_450um_ESO_univert.fits	10238400	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/GAL316_CAFFEINE_450um_ESO_univert_smooth18.fits	10238400	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/GAL316_CAFFEINE_450um_ESO_univert_smregrid18.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_PACS070_noNaN_univert.fits	1275840	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_PACS070_noNaN_univert_smooth18.fits	1275840	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_PACS070_noNaN_univert_smregrid18.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_PACS160_noNaN_univert.fits	1272960	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_PACS160_noNaN_univert_smooth18.fits	1272960	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_PACS160_noNaN_univert_smregrid18.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_SPIRE250_noNaN_univert.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_SPIRE350_noNaN_univert.fits	135360	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/Herschel_SPIRE500_noNaN_univert.fits	72000	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/atlasgal+planck_870um_univert.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/NH2.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/NH2_err.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/NH2_err_rescale.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/NH2_rescale.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/Tdust.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/Tdust_err.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/beta.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/beta_err.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/sedfitter/version2/fitresult/intSED.fits	365760	derived	no		Paper I SED fitting (outside this repository)
+data/delivered/simulations/star_outflow/1322980-mag/outflow_xy.gif	2239595	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0083.png	231743	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0084.png	236793	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0085.png	232100	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0086.png	233418	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0087.png	230743	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0088.png	237559	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0089.png	234890	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0090.png	240688	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0091.png	239776	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0092.png	237292	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0093.png	235571	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0094.png	237311	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-mag/proj_0095.png	240614	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/outflow_xy.gif	1843816	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0083.png	99172	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0084.png	102751	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0085.png	97878	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0086.png	99442	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0087.png	96955	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0088.png	100605	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0089.png	99552	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0090.png	99266	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0091.png	100249	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0092.png	101982	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0093.png	101058	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0094.png	103173	collaborator	no		
+data/delivered/simulations/star_outflow/1322980-xy/proj_0095.png	103524	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/outflow_xy.gif	3314960	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0101.png	270386	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0102.png	270384	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0103.png	270013	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0104.png	271251	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0105.png	271776	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0106.png	274236	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0107.png	277032	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0108.png	271688	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0109.png	275519	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0110.png	280554	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0111.png	277356	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0112.png	279879	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0113.png	282823	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-mag/proj_0114.png	289321	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/outflow_xy.gif	2946082	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0101.png	136152	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0102.png	137926	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0103.png	137164	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0104.png	139293	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0105.png	141707	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0106.png	142518	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0107.png	143902	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0108.png	142478	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0109.png	145468	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0110.png	147128	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0111.png	148257	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0112.png	147507	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0113.png	152964	collaborator	no		
+data/delivered/simulations/star_outflow/2326609-xy/proj_0114.png	163092	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/outflow_xy.gif	4785489	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0111.png	255896	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0112.png	258528	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0113.png	268555	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0114.png	268603	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0115.png	267075	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0116.png	276238	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0117.png	271408	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0118.png	277114	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0119.png	283402	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0120.png	282431	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0121.png	287240	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0122.png	292546	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0123.png	281380	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0124.png	288872	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0125.png	288617	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0126.png	292128	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0127.png	288224	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0128.png	290826	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0129.png	296488	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0130.png	295589	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-mag/proj_0131.png	291322	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/outflow_xy.gif	4308294	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0111.png	131468	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0112.png	134283	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0113.png	137938	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0114.png	138663	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0115.png	137406	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0116.png	139761	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0117.png	136938	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0118.png	140846	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0119.png	143540	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0120.png	144487	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0121.png	144797	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0122.png	148618	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0123.png	145478	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0124.png	148300	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0125.png	148966	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0126.png	150438	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0127.png	146045	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0128.png	149802	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0129.png	153711	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0130.png	150193	collaborator	no		
+data/delivered/simulations/star_outflow/2894465-xy/proj_0131.png	154289	collaborator	no		
+data/delivered/total_power/M9501C_117/c18o_2-1_apex.fits	552312000	observed	no		
+data/delivered/total_power/SEDIGISM/c18o_2-1_apex-sedigism.fits	4063680	archive	download	c18o_moments	SEDIGISM
+data/reduction/README.md	1913	documentation			
+data/reduction/alma/7MTM2TM1/	30216626176	reduced	reduction	combine_continuum	workspace (CASA, MIRIAD); not an analysis input unless declared
+data/reduction/alma/CASA/	7566823424	reduced	reduction		workspace (CASA, MIRIAD); not an analysis input unless declared
+data/reduction/alma/TP7MTM2/	59345268736	reduced	reduction		workspace (CASA, MIRIAD); not an analysis input unless declared
+data/reduction/alma/TP7MTM2TM1/	45205434368	reduced	reduction		workspace (CASA, MIRIAD); not an analysis input unless declared
+data/reduction/total_power/M9501C_117/	105164800	reduced	reduction		workspace (CASA, MIRIAD); not an analysis input unless declared
+data/extraction/astrodendro/my_catalog.dat	5951	derived	no	core_formation_efficiency	getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/astrodendro/my_dendrogram.dat	10654	derived	no	core_formation_efficiency,freefree_core_contamination	getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/astrodendro/my_dendrogram.fits	3476160	derived	no		getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/astrodendro/my_mask.fits	1748160	derived	no		getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/astrodendro/my_mask_idx.fits	1748160	derived	no	core_formation_efficiency,freefree_core_contamination	getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/getsf/demo/	436436992	derived	no		getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/getsf/single/	873738240	derived	no		getsf and astrodendro extractions; getsf is not rerun (D7)
+data/extraction/getsf/triple/	2330763264	derived	no	column_density,freefree_core_contamination,source_catalogue	getsf and astrodendro extractions; getsf is not rerun (D7)

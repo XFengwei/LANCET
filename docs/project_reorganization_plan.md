@@ -23,7 +23,7 @@ Papers, design, docs, presentations, references and the website stand beside thi
 | Tests | 37 files, 213 tests, 3 failing for a long time; 19 tests call scripts by path |
 | Results | 28 folders (8.4 GB); 6 have no task of the same name |
 | Data | `delivered/` 48 GB, `reduction/` 135 GB; three path-tracking files that no code reads |
-| Other inputs | `extraction/` 16 GB (getsf, astrodendro); `region/` 0.7 MB, used by 3 tasks |
+| Other inputs | `extraction/` 16 GB (getsf, astrodendro); `regions/` 0.7 MB, used by 3 tasks |
 | Git | 30 uncommitted changes, including the whole of the new combination task |
 
 Problems this plan addresses:
@@ -44,7 +44,7 @@ LANCET/
     extraction/       source-extraction products (getsf, astrodendro), permanent input
     README.md         rules
     MANIFEST.tsv      one row per input: origin, and whether and how it can be regenerated
-  regions/            DS9 regions (renamed from region/)
+  regions/            DS9 regions (renamed from regions/)
   tasks/
     README.md         index of tasks, their order and status
     <task>/
@@ -59,7 +59,7 @@ LANCET/
   pyproject.toml  README.md  CLAUDE.md
 ```
 
-Removed: `scripts/`, `region/`, `src/lancet/`, the three path files in `data/`.
+Removed: `scripts/`, `regions/`, `src/lancet/`, the three path files in `data/`.
 
 Run command for every task:
 
@@ -161,10 +161,12 @@ Each phase ends with the test suite passing and one commit. Moves use `git mv`, 
 
 ### Phase 4. Data
 
-- Rename `region/` → `regions/` and update the 9 references in three `task.toml` files.
-- Move `extraction/` → `data/extraction/` and update the 7 references in three `task.toml` files (D4). Done 2026-11-20 at the `source_catalogue` review (also the 4 paths in the `freefree_core_contamination` scripts); pruning still open.
-- Remove `data/delivered/paper1/` as in D3.
-- Write `data/MANIFEST.tsv`. One row per file or folder of `data/delivered/`, `data/reduction/` (top two levels) and `extraction/`:
+- Rename `region/` → `regions/` and update the 9 references in three `task.toml` files. Done 2026-11-21.
+- Move `extraction/` → `data/extraction/` and update the 7 references in three `task.toml` files (D4). Done 2026-11-20 at the `source_catalogue` review (also the 4 paths in the `freefree_core_contamination` scripts). `getsf/demo/` and `getsf/single/` (1.3 GB) have no reader but are kept for later use (author, 2026-11-21).
+- Remove `data/delivered/paper1/` as in D3. Done 2026-11-21: `PaperI_table2.fit` in `archive/paper-1/`, the TP_SED copy removed.
+- Write `data/MANIFEST.tsv`. Done 2026-11-21 (366 rows; generator `docs/make_data_manifest.py`).
+  Original specification:
+  One row per file or folder of `data/delivered/`, `data/reduction/` (top two levels) and `extraction/`:
 
   | Column | Meaning |
   |---|---|
@@ -173,10 +175,10 @@ Each phase ends with the test suite passing and one commit. Moves use `git mv`, 
   | reproducible | `no`, `download`, `reduction` (hours, external tools), `task` (name of the task that makes it) |
   | used by | tasks that read it |
 
-- Delete `path_aliases.yaml`, `path_ledger.tsv` and `path_ledger.initial-2026-07-27.tsv`. No code reads them; they are mentioned only in `CLAUDE.md`, `data/README.md`, `data/STATUS.md` and two audits in `docs/`, which are updated.
-- Label the derived files in `data/delivered/` (D3). Known cases: `alma/TP7MTM2TM1/` (old v1–v3 combined images, now superseded), the `*.MJysr*`, `*.rp*` and `*.pbcut*` variants of the continuum images, and the smoothed SED products.
-- Delete `data/delivered/archive/radio/CORNISH_5p5GHz_8arcsec_{native,on_MeerKATgrid}.fits`: same data as `results/construct_freefree_model/prepared/` (headers differ). First repoint `tests/test_freefree.py::test_paper2_profile_reproduces_reference_13_band_pixel`, which reads the delivered copy. Keep `Tile724_CORNISH_5GHz.fits` and `subcube_G316.hdr` as provenance (source tile and cutout header; no reader).
-- Let git track `data/README.md` and `data/MANIFEST.tsv` (two exceptions in `.gitignore`), so a fresh clone states what data it needs.
+- Delete `path_aliases.yaml`, `path_ledger.tsv` and `path_ledger.initial-2026-07-27.tsv`. Done (already gone by 2026-11-21; `CLAUDE.md`, `data/README.md` and `data/STATUS.md` updated). No code reads them; they are mentioned only in `CLAUDE.md`, `data/README.md`, `data/STATUS.md` and two audits in `docs/`, which are updated.
+- Label the derived files in `data/delivered/` (D3). Done 2026-11-21 through the `origin` column of `data/MANIFEST.tsv`. Known cases: `alma/TP7MTM2TM1/` (old v1–v3 combined images, now superseded), the `*.MJysr*`, `*.rp*` and `*.pbcut*` variants of the continuum images, and the smoothed SED products.
+- Done 2026-11-21 (with `SIMBA_1.2mm_newhdr{,_rp2sed}.fits`; both tests repointed to the task products). Delete `data/delivered/archive/radio/CORNISH_5p5GHz_8arcsec_{native,on_MeerKATgrid}.fits`: same data as `results/construct_freefree_model/prepared/` (headers differ). First repoint `tests/test_freefree.py::test_paper2_profile_reproduces_reference_13_band_pixel`, which reads the delivered copy. Keep `Tile724_CORNISH_5GHz.fits` and `subcube_G316.hdr` as provenance (source tile and cutout header; no reader).
+- Let git track `data/README.md` and `data/MANIFEST.tsv` (two exceptions in `.gitignore`), so a fresh clone states what data it needs. Done 2026-11-21.
 
 ### Phase 5. Documentation and rules
 

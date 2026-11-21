@@ -19,7 +19,7 @@ low_resolution_continuum = "data/delivered/alma/continuum/IRDC316.8.7M.robust0.5
 [references]
 # This published catalogue is checked during inspection only. The adopted
 # fragment masses below are scientific inputs and are not calculated from it.
-paper1_fragment_catalogue = "data/delivered/paper1/PaperI_table2.fit"
+paper1_fragment_catalogue = "data/delivered/archive/paper-1/PaperI_table2.fit"
 
 [outputs]
 root = "results/core_formation_efficiency"

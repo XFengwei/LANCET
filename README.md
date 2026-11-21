@@ -19,7 +19,7 @@ Claude.
 - Independent workflow settings and documentation live under `tasks/`.
 - Each task's runnable command is `tasks/<task>/run.py`.
 - Small DS9 region definitions required by configured tasks live under
-  `region/`.
+  `regions/`.
 - Each integration step is tested with the `py312` conda environment.
 
 Install LANCET in the active Python 3.12 environment with:

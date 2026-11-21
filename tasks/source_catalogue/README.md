@@ -21,7 +21,7 @@ measurement and `02` the 12m+7m+TP measurement of the original extraction.
 | `combined_continuum` | `data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.fits` | J-comb 12m+7m + dust + free-free TP (`combine_continuum`), true sky, Jy/beam |
 | `gain` | `data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits` | MIRIAD mosaic gain |
 | `temperature` | `results/column_density/prepared/temperature_allscale.fits` | 18″ dust temperature on the ALMA grid |
-| region files | `region/trichotomy/*_shrink.reg` | subregion membership |
+| region files | `regions/trichotomy/*_shrink.reg` | subregion membership |
 
 The getsf 12m+7m image (`data/extraction/getsf/triple/images/G316_12m7m.fits`)
 is the MIRIAD clean image in MJy/sr (ratio 1.000), i.e. sky × gain. Every
