@@ -37,5 +37,10 @@
       "finite_fraction": 1.0,
       "colorbars_shown": false
     }
+  },
+  "value_checks": {
+    "unit": "MJy/sr",
+    "combined_at_tp_beam_over_tp": 1.0087366104125977,
+    "combined_over_12m7m_bright": 1.088640809059143
   }
 }

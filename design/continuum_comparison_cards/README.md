@@ -24,6 +24,28 @@ All three carry the same lower-right contact details. Each artwork area is
 85.6 × 54.0 mm with a 5 mm black border (95.6 × 64.0 mm in total). PNG and LZW
 TIFF exports use 1200 dpi; PDF page sizes are exact.
 
+## One value framework
+
+The three grids are in MJy/sr on the same 3312 × 2089 frame and are drawn
+with the same mapping, so equal colours mean equal surface brightness. Unit
+conversion uses each image's own beam: 1 Jy/beam = 114.6 MJy/sr for the 18.1″
+TP model and 8.695 × 10⁴ MJy/sr for the 0.71″ × 0.61″ images.
+
+| Card | Coverage | Median | 99th percentile | Maximum (MJy/sr) |
+|---|---|---|---|---|
+| Total-power | 100 % | 8.6 | 95 | 265 |
+| ALMA Interferometry | 7 % (mosaic) | 13.0 | 229 | 5374 |
+| Total-power + Interferometry | 100 % | 8.6 | 95 | 5373 |
+
+Cross-checks (asserted by `verify_cards.py`): the combined map smoothed to
+18.1″ over the TP model has a median of 1.009 (16–84 %: 0.973–1.043); the
+combined map over the 12m+7m image at bright pixels (> 300 MJy/sr) has a
+median of 1.089, the extended emission the TP adds under the compact
+structure. Inside the mosaic the medians are 13.0 (12m+7m), 41.9 (combined)
+and 41.4 MJy/sr (TP): the interferometer alone misses the extended level.
+About 19 % of the 12m+7m pixels are negative and 0.02 % of the combined
+pixels exceed 1200 MJy/sr; both clip to the ends of the scale.
+
 ## Reproduce
 
 From the repository root:

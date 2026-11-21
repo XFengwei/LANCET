@@ -54,13 +54,29 @@ for number, item in enumerate(manifest['inputs'], 1):
         assert np.allclose(mm, [95.6,64], atol=.001)
     records[key] = dict(pixels=pixels, pdf_mm=mm, finite_fraction=float(np.isfinite(data).mean()),
                         colorbars_shown=False)
+# One value framework: the three maps are in MJy/sr on one grid and agree
+# where they should. The combined map smoothed to the TP beam matches the TP
+# model, and it follows the 12m+7m image at bright compact emission.
+from scipy.ndimage import gaussian_filter
+grids = {k: fits.getdata(out/'grid'/f'{k}.fits') for k in ('tp', '12m7m', '12m7mtp')}
+pixel = abs(frame_header['CDELT2'])*3600
+sigma = np.sqrt(18.1**2 - 0.66**2)/2.3548/pixel
+smoothed = gaussian_filter(np.nan_to_num(grids['12m7mtp']), sigma)
+bright_tp = np.isfinite(grids['tp']) & (grids['tp'] > 20)
+tp_ratio = float(np.median(smoothed[bright_tp]/grids['tp'][bright_tp]))
+compact = np.isfinite(grids['12m7m']) & (grids['12m7m'] > 300)
+compact_ratio = float(np.median(grids['12m7mtp'][compact]/grids['12m7m'][compact]))
+assert abs(tp_ratio - 1) < 0.05, tp_ratio
+assert 1.0 <= compact_ratio < 1.2, compact_ratio
+value_checks = dict(unit='MJy/sr', combined_at_tp_beam_over_tp=tp_ratio,
+                    combined_over_12m7m_bright=compact_ratio)
 images = [r['image_bounds_mm'] for r in geometry.values()]
 assert np.allclose(images, images[0], atol=1e-6)
 assert np.allclose(images, [5.,5.,85.6,54.], atol=1e-6)
 assert manifest['colorbars_shown'] is False
 assert list(records) == ['tp', '12m7m', '12m7mtp']
 assert len(list(out.glob('*_card.png'))) == 3
-(out/'verification.json').write_text(json.dumps(dict(all_passed=True, cards=records), indent=2)+'\n')
+(out/'verification.json').write_text(json.dumps(dict(all_passed=True, cards=records, value_checks=value_checks), indent=2)+'\n')
 with ZipFile(out/'continuum_comparison_cards.zip', 'w', ZIP_DEFLATED) as bundle:
     for pattern in ('*_card.png','*_card.tiff','*_card.pdf','README.md','manifest.json'):
         for path in sorted(out.glob(pattern)):
