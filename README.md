@@ -80,15 +80,6 @@ Elliptical-Gaussian source deconvolution is provided by
 check `deconvolution_round_trip` in `lancet.deconvolution_size`); there is no
 separate script or output.
 
-Inspect the delivered collaborator star-cluster orbit catalogue and produce
-the orbit diagnostics with:
-
-```bash
-conda run -n py312 python scripts/star_cluster.py
-```
-
-The default figures are written under `results/starcluster/`. Use
-`--summary-only` to inspect the selected orbit without producing files.
 
 Inspect the delivered radio inputs for the free-free model task:
 
