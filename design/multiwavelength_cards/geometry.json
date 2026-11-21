@@ -1,0 +1,63 @@
+{
+  "image_mm": [
+    85.6,
+    54.0
+  ],
+  "border_mm": 5.0,
+  "total_mm": [
+    95.6,
+    64.0
+  ],
+  "dpi": 1200,
+  "grid_shape": [
+    2089,
+    3312
+  ],
+  "panels": {
+    "nir": {
+      "image_bounds_mm": [
+        5.0,
+        5.0,
+        85.59999999999998,
+        53.99999999999999
+      ],
+      "output_prefix": "01_nir_card"
+    },
+    "mir": {
+      "image_bounds_mm": [
+        5.0,
+        5.0,
+        85.59999999999998,
+        53.99999999999999
+      ],
+      "output_prefix": "02_mir_card"
+    },
+    "fir": {
+      "image_bounds_mm": [
+        5.0,
+        5.0,
+        85.59999999999998,
+        53.99999999999999
+      ],
+      "output_prefix": "03_fir_card"
+    },
+    "mm": {
+      "image_bounds_mm": [
+        5.0,
+        5.0,
+        85.59999999999998,
+        53.99999999999999
+      ],
+      "output_prefix": "04_mm_card"
+    },
+    "radio": {
+      "image_bounds_mm": [
+        5.0,
+        5.0,
+        85.59999999999998,
+        53.99999999999999
+      ],
+      "output_prefix": "05_radio_card"
+    }
+  }
+}

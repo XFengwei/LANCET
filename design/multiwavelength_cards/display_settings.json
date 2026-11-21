@@ -1,0 +1,41 @@
+{
+  "image_mm": [
+    85.6,
+    54.0
+  ],
+  "border_mm": 5.0,
+  "border_colour": "black",
+  "total_mm": [
+    95.6,
+    64.0
+  ],
+  "alma": {
+    "input": "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits",
+    "beyond_grid": "results/synthesize_continuum/model/continuum_224GHz_fill36.fits",
+    "pb_cross_fade": [
+      0.2,
+      0.5
+    ],
+    "cmap": "inferno",
+    "stretch": "sqrt",
+    "vmin_mjysr": 0.0,
+    "vmax_mjysr": 1200.0,
+    "visible_colourbar": false
+  },
+  "upper_left_label_scale": 1.5,
+  "compass_corner": "upper right",
+  "contact": {
+    "webpage": "https://xfengwei.github.io/LANCET",
+    "email": "fengweilookuper@gmail.com",
+    "position": "lower right inside artwork",
+    "font_pt": 5.5
+  },
+  "radio_scalebar_corner": "lower left",
+  "compass_arrow_outline": {
+    "colour": "black",
+    "stroke_width_pt": 0.65,
+    "continuous_union_silhouette": true
+  },
+  "compass_hub_diameter_pt": 1.2,
+  "compass_hub_overlays_arrows": true
+}

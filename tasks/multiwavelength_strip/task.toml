@@ -91,28 +91,29 @@ asinh_softening = 0.2
 name = "mm"
 label = "ALMA 12m+7m+TP  1.3 mm"
 kind = "single"
-input = "data/delivered/alma/TP7MTM2TM1/cont/allscale_combined_v3_dust_ff.MJysr.fits"
-# Full all-scale image, no primary-beam cut. Optionally restrict it with
-# mask_input (a primary-beam image) and mask_minimum (e.g. 0.20).
-# Pixels outside the ALMA mosaic are filled with the 18.1" synthetic 230 GHz
-# (dust + free-free) model, converted to MJy/sr and flux-aligned by a linear
-# fit (all-scale smoothed to 18.1" = a * model + b) in a band 18-60" inside
-# the coverage edge. The fit residual fades over fill_blend_arcsec outside.
-fill_input = "results/synthesize_continuum/model/continuum_224GHz.fits"
-fill_fit_band_arcsec = [18.0, 60.0]
-fill_blend_arcsec = 60.0
-# Drop this many arcsec of the mosaic edge (edge artefacts) before filling.
-fill_edge_trim_arcsec = 3.0
-# Cross-fade from the model to the image over this band inside the edge.
-fill_feather_arcsec = 30.0
-# Same scaling as Paper II Fig. 3 (tasks/plot_allscale_continuum styles.allscale):
-# linear greys from -6 rms to 233 MJy/sr, then square-root truncated mako to
-# 1500 MJy/sr.
-style = "dual_colour"
-label_colour = "black"
-background_vmin = -21.0
-transition = 233.0
-highlight_vmax = 1500.0
+# Delivered J-comb 12m+7m + dust + free-free TP (combine_continuum),
+# extended36: beyond the mosaic the TP model alone, continued past the Paper I
+# dust model with the 18"+36" SED maps, so the strip has no gaps. Jy/beam,
+# converted to MJy/sr. Optionally restrict it with mask_input (a primary-beam
+# image) and mask_minimum (e.g. 0.20).
+input = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits"
+to_mjysr = true
+# The strip reaches beyond the 12m+7m grid. Fill those pixels with the
+# synthesize_continuum TP model that the extended36 product contains beyond
+# the mosaic (same model, factor 1.0, so the two join without a fit).
+gap_fill_input = "results/synthesize_continuum/model/continuum_224GHz_fill36.fits"
+# Display only: cross-fade from the TP model to the combined image as the
+# 12m+7m mosaic primary beam rises from 0.2 to 0.5 (cosine weight), so the
+# noisy mosaic rim does not end abruptly against the smooth TP-only area.
+blend_pb_input = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.pb.fits"
+blend_pb_range = [0.2, 0.5]
+# Inferno, square-root stretch from 0 to 1200 MJy/sr: the Fig. 3 view of
+# tasks/plot_allscale_continuum ([styles.sqrt]).
+style = "sqrt"
+cmap = "inferno"
+vmin = 0.0
+vmax = 1200.0
+label_colour = "white"
 
 [[panels]]
 name = "radio"

@@ -6,6 +6,15 @@
 /references/
 /results/
 
+# Rendered print cards (large); scripts, README and settings are tracked
+/design/multiwavelength_cards/**/*.pdf
+/design/multiwavelength_cards/**/*.png
+/design/multiwavelength_cards/**/*.tiff
+/design/multiwavelength_cards/**/*.zip
+/design/multiwavelength_cards/**/*.npy
+/design/multiwavelength_cards/**/*.log
+/design/multiwavelength_cards/grid/
+
 # Referee-response coordination: kept locally, not published
 /tasks/paper_ii_referee_response/
 

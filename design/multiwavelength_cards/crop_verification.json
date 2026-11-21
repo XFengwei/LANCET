@@ -1,0 +1,11 @@
+{
+  "mir_b.fits": true,
+  "nir_j.fits": true,
+  "fir_i.fits": true,
+  "mm_i.fits": true,
+  "mir_g.fits": true,
+  "mir_r.fits": true,
+  "radio_i.fits": true,
+  "nir_h.fits": true,
+  "nir_ks.fits": true
+}

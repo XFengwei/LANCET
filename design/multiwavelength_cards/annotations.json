@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "box",
+    "center_arcmin": [
+      0.0029341186377040973,
+      -0.43172685861337473
+    ],
+    "size_arcsec": 40.0,
+    "label": "high-mass protostellar object",
+    "leader_arcmin": [
+      0.35,
+      0.9
+    ],
+    "arm_arcmin": 0.35
+  },
+  {
+    "kind": "bracket",
+    "x_range_arcmin": [
+      1.9871999999999999,
+      6.0443999999999996
+    ],
+    "y_arcmin": -0.9922749999999996,
+    "tick_arcmin": 0.25,
+    "label": "infrared dark cloud"
+  },
+  {
+    "kind": "bracket",
+    "x_range_arcmin": [
+      -4.4712,
+      -0.7451999999999996
+    ],
+    "y_arcmin": -3.6557499999999994,
+    "tick_arcmin": 0.25,
+    "label": "H II region"
+  }
+]

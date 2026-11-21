@@ -9,16 +9,16 @@ from pathlib import Path
 import tomllib
 import warnings
 
-from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.wcs import FITSFixedWarning, WCS
 import astropy.units as u
 import numpy as np
-from reproject import reproject_adaptive, reproject_interp
+from reproject import reproject_adaptive
 from scipy import ndimage
 
 from lancet import ProjectPaths
 from lancet.continuum_plotting import truncated_mako_colormap
+from lancet.imaging import read_mjysr
 from lancet.infrared_mosaic import (
     boost_saturation,
     coadd_tiles,
@@ -55,8 +55,14 @@ def strip_wcs(grid: Mapping[str, object]) -> tuple[WCS, tuple[int, int]]:
     return wcs, (height, width)
 
 
-def read_image(path: Path) -> tuple[np.ndarray, WCS]:
-    """Return the first 2-D celestial image in *path*."""
+def read_image(path: Path, *, to_mjysr: bool = False) -> tuple[np.ndarray, WCS]:
+    """Return the first 2-D celestial image in *path*; with *to_mjysr*,
+    convert a Jy/beam image to MJy/sr with its own beam."""
+    if to_mjysr:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FITSFixedWarning)
+            data, header = read_mjysr(path)
+            return data, WCS(header).celestial
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FITSFixedWarning)
         with fits.open(path) as hdul:
@@ -87,9 +93,11 @@ def reproject_image(
     wcs_out: WCS,
     shape_out: tuple[int, int],
     fill_holes: bool = False,
+    *,
+    to_mjysr: bool = False,
 ) -> np.ndarray:
     """Resample a surface-brightness image onto the strip grid (anti-aliased)."""
-    data, wcs = read_image(path)
+    data, wcs = read_image(path, to_mjysr=to_mjysr)
     if fill_holes:
         data = fill_interior_holes(data)
     image, footprint = reproject_adaptive(
@@ -105,118 +113,26 @@ def reproject_image(
     return image
 
 
-def beam_fwhm_arcsec(path: Path) -> float:
-    """Geometric-mean restoring-beam FWHM recorded in the header of *path*."""
-    header = fits.getheader(path)
-    return 3600.0 * float(np.sqrt(header["BMAJ"] * header["BMIN"]))
+def fill_gaps(image: np.ndarray, model: np.ndarray) -> np.ndarray:
+    """Use *model* where *image* is blank; keep every finite image pixel."""
+    return np.where(np.isfinite(image), image, model).astype(np.float32)
 
 
-def surface_brightness_model(
-    path: Path, wcs_out: WCS, shape_out: tuple[int, int]
-) -> np.ndarray:
-    """Resample a (smooth) model image onto the grid in MJy/sr."""
-    data, wcs = read_image(path)
-    header = fits.getheader(path)
-    unit = str(header.get("BUNIT", "")).strip().lower()
-    if unit == "jy/beam":
-        omega = (
-            np.pi / (4.0 * np.log(2.0))
-            * np.deg2rad(header["BMAJ"])
-            * np.deg2rad(header["BMIN"])
-        )
-        data = data / omega / 1.0e6
-    elif unit != "mjy/sr":
-        raise ValueError(f"Unsupported model unit {unit!r} in {path}")
-    image, _ = reproject_interp((data, wcs), wcs_out, shape_out=shape_out)
-    return image.astype(np.float32)
-
-
-def fill_with_model(
+def pb_blend(
     image: np.ndarray,
     model: np.ndarray,
-    *,
-    pixel_arcsec: float,
-    image_beam_arcsec: float,
-    model_beam_arcsec: float,
-    fit_band_arcsec: Sequence[float],
-    blend_arcsec: float,
-    edge_trim_arcsec: float = 0.0,
-    feather_arcsec: float = 0.0,
-) -> tuple[np.ndarray, float, float]:
-    """Fill NaN pixels of *image* with a lower-resolution *model*.
-
-    The image is smoothed to the model beam and ``image = a * model + b`` is
-    fitted in a band just inside the coverage edge. The fitted model fills
-    the gaps; the fit residual along the edge is carried a short way into the
-    filled region (fading over *blend_arcsec*) so the join has no step.
-    Within *feather_arcsec* inside the edge the image cross-fades into the
-    fill. Pixels that neither map covers take the nearest smooth value.
-    """
-    from astropy.convolution import Gaussian2DKernel, convolve_fft
-
-    covered = np.isfinite(image)
-    if covered.all():
-        return image, 1.0, 0.0
-    # The outermost mosaic pixels are unreliable; treat them as gaps too.
-    trim = int(round(edge_trim_arcsec / pixel_arcsec))
-    if trim > 0:
-        covered = ndimage.binary_erosion(
-            np.pad(covered, 1, constant_values=False), iterations=trim
-        )[1:-1, 1:-1]
-        image = np.where(covered, image, np.nan)
-    fwhm = np.sqrt(max(model_beam_arcsec**2 - image_beam_arcsec**2, 0.0))
-    kernel = Gaussian2DKernel(fwhm / np.sqrt(8.0 * np.log(2.0)) / pixel_arcsec)
-    weight = convolve_fft(covered.astype(float), kernel, allow_huge=True)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        smoothed = (
-            convolve_fft(np.where(covered, image, 0.0), kernel, allow_huge=True)
-            / weight
-        )
-
-    inside = ndimage.distance_transform_edt(covered) * pixel_arcsec
-    band = (
-        covered
-        & np.isfinite(model)
-        & (inside > fit_band_arcsec[0])
-        & (inside < fit_band_arcsec[1])
-    )
-    design = np.vstack([model[band], np.ones(band.sum())]).T
-    scale, offset = np.linalg.lstsq(design, smoothed[band], rcond=None)[0]
-
-    residual = np.where(band, smoothed - (scale * model + offset), 0.0)
-    nearest = ndimage.distance_transform_edt(
-        ~band, return_distances=False, return_indices=True
-    )
-    residual = ndimage.gaussian_filter(
-        residual[tuple(nearest)], fwhm / np.sqrt(8.0 * np.log(2.0)) / pixel_arcsec
-    )
-    outside = ndimage.distance_transform_edt(~covered) * pixel_arcsec
-    fill = scale * model + offset + residual * np.exp(-outside / blend_arcsec)
-
-    filled = image.copy()
-    gaps = ~covered & np.isfinite(model)
-    filled[gaps] = fill[gaps]
-    # Feather the join: inside the edge, cross-fade from the filled model to
-    # the image over feather_arcsec.
-    if feather_arcsec > 0:
-        ramp = np.clip(inside / feather_arcsec, 0.0, 1.0)
-        ramp = ramp * ramp * (3.0 - 2.0 * ramp)
-        edge = covered & (ramp < 1.0) & np.isfinite(fill)
-        filled[edge] = ramp[edge] * image[edge] + (1.0 - ramp[edge]) * fill[edge]
-
-    # Where neither map has data, extend the smooth (model-resolution)
-    # surface from its nearest valid pixel.
-    remaining = ~np.isfinite(filled)
-    if remaining.any():
-        surface = np.where(covered, smoothed, fill)
-        nearest = ndimage.distance_transform_edt(
-            ~np.isfinite(surface), return_distances=False, return_indices=True
-        )
-        extended = ndimage.gaussian_filter(
-            surface[tuple(nearest)], fwhm / np.sqrt(8.0 * np.log(2.0)) / pixel_arcsec
-        )
-        filled[remaining] = extended[remaining]
-    return filled, float(scale), float(offset)
+    pb: np.ndarray,
+    pb_range: Sequence[float],
+) -> np.ndarray:
+    """Cross-fade from *model* to *image* as the mosaic primary beam rises
+    from pb_range[0] to pb_range[1] (cosine weight); model only where pb is
+    below the range or undefined. Display only."""
+    low, high = (float(value) for value in pb_range)
+    response = np.nan_to_num(np.asarray(pb, dtype=float), nan=0.0)
+    ramp = np.clip((response - low) / (high - low), 0.0, 1.0)
+    weight = 0.5 * (1.0 - np.cos(np.pi * ramp))
+    image = np.where(np.isfinite(image), image, model)
+    return (weight * image + (1.0 - weight) * model).astype(np.float32)
 
 
 def vvv_band_images(
@@ -280,32 +196,40 @@ def run_reproject(project: ProjectPaths, config: Mapping[str, object]) -> None:
                 wcs_out,
                 shape_out,
                 fill_holes=bool(panel.get("fill_holes", False)),
+                to_mjysr=bool(panel.get("to_mjysr", False)),
             )
+            if "gap_fill_input" in panel:
+                model = reproject_image(
+                    project.root / str(panel["gap_fill_input"]),
+                    wcs_out,
+                    shape_out,
+                    to_mjysr=True,
+                )
+                blank = ~np.isfinite(image)
+                image = fill_gaps(image, model)
+                print(
+                    f"{name}: {blank.mean():.3f} of the strip filled from "
+                    f"{Path(str(panel['gap_fill_input'])).name}"
+                )
+                if "blend_pb_input" in panel:
+                    pb = reproject_image(
+                        project.root / str(panel["blend_pb_input"]),
+                        wcs_out,
+                        shape_out,
+                    )
+                    image = pb_blend(
+                        image, model, pb, panel["blend_pb_range"]
+                    )
+                    print(
+                        f"{name}: cross-faded to the model below pb "
+                        f"{panel['blend_pb_range'][1]}"
+                    )
             if "mask_input" in panel:
                 response = reproject_image(
                     project.root / str(panel["mask_input"]), wcs_out, shape_out
                 )
                 with np.errstate(invalid="ignore"):
                     image[~(response >= float(panel["mask_minimum"]))] = np.nan
-            if "fill_input" in panel:
-                fill_path = project.root / str(panel["fill_input"])
-                image, scale, offset = fill_with_model(
-                    image,
-                    surface_brightness_model(fill_path, wcs_out, shape_out),
-                    pixel_arcsec=pixel_arcsec,
-                    image_beam_arcsec=beam_fwhm_arcsec(
-                        project.root / str(panel["input"])
-                    ),
-                    model_beam_arcsec=beam_fwhm_arcsec(fill_path),
-                    fit_band_arcsec=panel["fill_fit_band_arcsec"],
-                    blend_arcsec=float(panel["fill_blend_arcsec"]),
-                    edge_trim_arcsec=float(panel.get("fill_edge_trim_arcsec", 0.0)),
-                    feather_arcsec=float(panel.get("fill_feather_arcsec", 0.0)),
-                )
-                print(
-                    f"{name}: gaps filled with {scale:.3f} x model "
-                    f"{offset:+.2f} from {fill_path.name}"
-                )
             images = {"i": image}
         for key, image in images.items():
             path = grid_path(output_root, name, key)
@@ -321,6 +245,12 @@ def asinh_scale(
     low, high = np.nanpercentile(image, [low_percentile, high_percentile])
     scaled = np.clip((image - low) / (high - low), 0.0, 1.0)
     return np.arcsinh(scaled / softening) / np.arcsinh(1.0 / softening)
+
+
+def sqrt_scale(image: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
+    """Square-root stretch of [vmin, vmax] onto [0, 1]; NaN stays NaN."""
+    clipped = np.clip((np.asarray(image, dtype=float) - vmin) / (vmax - vmin), 0.0, 1.0)
+    return np.sqrt(clipped)
 
 
 def dual_colour_rgb(
@@ -391,12 +321,15 @@ def panel_rgb(
             float(panel["transition"]),
             float(panel["highlight_vmax"]),
         )
-    scaled = asinh_scale(
-        data,
-        float(panel["low_percentile"]),
-        float(panel["high_percentile"]),
-        float(panel["asinh_softening"]),
-    )
+    if panel.get("style") == "sqrt":
+        scaled = sqrt_scale(data, float(panel["vmin"]), float(panel["vmax"]))
+    else:
+        scaled = asinh_scale(
+            data,
+            float(panel["low_percentile"]),
+            float(panel["high_percentile"]),
+            float(panel["asinh_softening"]),
+        )
     cmap = matplotlib.colormaps[str(panel["cmap"])].with_extremes(bad="black")
     return cmap(np.ma.masked_invalid(scaled))[..., :3]
 

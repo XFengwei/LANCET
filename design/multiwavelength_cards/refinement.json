@@ -1,0 +1,23 @@
+{
+  "field_preserved": {
+    "center_ra_deg": 221.21071,
+    "center_dec_deg": -59.78538,
+    "long_axis_pa_deg": 270.0,
+    "width_arcmin": 18.0,
+    "height_arcmin": 11.35514018691589,
+    "pixel_scale_arcsec": 0.3
+  },
+  "affected_pixel_fraction": 0.09604946425950389,
+  "all_other_mm_pixels_identical": true,
+  "all_bright_mm_pixels_identical": true,
+  "method": "harmonic background continuation inside the circled lower-right ellipse",
+  "bright_filament_and_its_surroundings_protected": true,
+  "source_scientific_maps_unchanged": true,
+  "ellipse_fractional_center_and_radii": [
+    0.86,
+    0.35,
+    0.17,
+    0.19
+  ],
+  "coarse_linear_system_max_residual": 1.0658141036401503e-13
+}

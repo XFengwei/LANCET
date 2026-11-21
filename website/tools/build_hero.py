@@ -4,7 +4,7 @@ import importlib.util
 import numpy as np
 from PIL import Image
 root=Path(__file__).resolve().parents[2]
-spec=importlib.util.spec_from_file_location('cards',root/'results/multiwavelength_cards/render_cards.py')
+spec=importlib.util.spec_from_file_location('cards',root/'design/multiwavelength_cards/render_cards.py')
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 config=m.strip.load_toml(root/m.strip.DEFAULT_CONFIG)
 for panel in config['panels']:

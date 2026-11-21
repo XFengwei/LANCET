@@ -1,0 +1,22 @@
+{
+  "source_shape_yx": [
+    2271,
+    3600
+  ],
+  "crop_x0_y0_x1_y1": [
+    0,
+    0,
+    3312,
+    2089
+  ],
+  "output_grid": {
+    "center_ra_deg": 221.23456087855976,
+    "center_dec_deg": -59.79296117478039,
+    "long_axis_pa_deg": 270.0,
+    "width_arcmin": 16.56,
+    "height_arcmin": 10.444999999999999,
+    "pixel_scale_arcsec": 0.3
+  },
+  "same_crop_for_all_panels": true,
+  "data_reinterpolated": false
+}

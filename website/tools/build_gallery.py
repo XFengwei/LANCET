@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location('cards', ROOT/'results/multiwavelength_cards/render_cards.py')
+spec = importlib.util.spec_from_file_location('cards', ROOT/'design/multiwavelength_cards/render_cards.py')
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 m.OUT = m.BASE

@@ -1,0 +1,114 @@
+{
+  "cards": {
+    "01_nir_card": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "dpi": [
+        1199.9976,
+        1199.9976
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "black_border_passed": true,
+      "border_mm": 5.0
+    },
+    "02_mir_card": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "dpi": [
+        1199.9976,
+        1199.9976
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "black_border_passed": true,
+      "border_mm": 5.0
+    },
+    "03_fir_card": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "dpi": [
+        1199.9976,
+        1199.9976
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "black_border_passed": true,
+      "border_mm": 5.0
+    },
+    "04_mm_card": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "dpi": [
+        1199.9976,
+        1199.9976
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "black_border_passed": true,
+      "border_mm": 5.0
+    },
+    "05_radio_card": {
+      "pixels": [
+        4516,
+        3023
+      ],
+      "dpi": [
+        1199.9976,
+        1199.9976
+      ],
+      "pdf_mm": [
+        95.6000001695421,
+        64.00000178019205
+      ],
+      "black_border_passed": true,
+      "border_mm": 5.0
+    }
+  },
+  "grids": {
+    "fir_i.fits": {
+      "finite_fraction": 1.0
+    },
+    "mir_b.fits": {
+      "finite_fraction": 1.0
+    },
+    "mir_g.fits": {
+      "finite_fraction": 1.0
+    },
+    "mir_r.fits": {
+      "finite_fraction": 1.0
+    },
+    "mm_i.fits": {
+      "finite_fraction": 1.0
+    },
+    "nir_h.fits": {
+      "finite_fraction": 1.0
+    },
+    "nir_j.fits": {
+      "finite_fraction": 1.0
+    },
+    "nir_ks.fits": {
+      "finite_fraction": 1.0
+    },
+    "radio_i.fits": {
+      "finite_fraction": 1.0
+    }
+  },
+  "all_passed": true
+}
