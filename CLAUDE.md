@@ -16,9 +16,13 @@ for people; this file records the working rules.
   `scripts/` folder).
 - `tasks/<task>/` — `task.toml` (all paths and scientific settings) and
   `README.md` (inputs, method, outputs, status).
+- `tasks/README.md` — every task with the tasks it needs and its run level;
+  update it when a task is added, removed or gets a new `results/` input.
 - `tests/test_<module>.py` — pytest tests for `src/lancet/`.
 - `regions/` — small DS9 regions that tasks declare.
 - `docs/` — audits and design notes.
+- `design/` — stand-alone artwork (print cards); not a task, may read task
+  results. Rendered files are gitignored.
 - Local only (gitignored, never committed): `data/` (with `data/extraction/`,
   the getsf and astrodendro products), `results/`, `papers/`,
   `presentation/`, `references/`. A fresh clone has code and tests but no
@@ -55,11 +59,14 @@ Every analysis is a self-contained task:
    its scientific settings. No paths or parameters are hard-coded in code.
 2. `tasks/<task>/run.py` loads the TOML, resolves paths through `ProjectPaths`,
    and exposes `--config`, `--stage <name>` and `--overwrite`. Existing
-   outputs are not replaced without `--overwrite`.
+   outputs are not replaced without `--overwrite` (`lancet.paths.guard_outputs`).
 3. Calculations live in `src/lancet/<module>.py`, with tests in `tests/`.
 4. `tasks/<task>/README.md` gives the run command, inputs, method, outputs and
    known limitations. Task files must not depend on or name exploratory
    notebooks or documents.
+
+`tests/test_task_layout.py` checks this pattern for every task and checks
+`tasks/README.md` against the `task.toml` inputs.
 
 Small reusable calculations without outputs live in `src/lancet/` and run as
 modules (for example `python -m lancet.gas_to_dust`); `README.md` lists them

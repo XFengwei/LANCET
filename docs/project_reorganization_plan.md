@@ -214,9 +214,20 @@ stays. Instead:
 
 ### Phase 5. Documentation and rules
 
-- Rewrite `README.md` and `CLAUDE.md` for the new layout and run command.
-- Remove the two obsolete combination design documents in `docs/`.
-- Fix the three long-standing test failures: a float64 FITS in `combination_diagnostic`, the `interferometry` inspection test, and the word "notebook" in the referee progress log (resolved 2026-11-20: `tasks/paper_ii_referee_response/` is local only and excluded).
+- Done 2026-11-21: `README.md` rewritten as a short overview (layout,
+  installation, task command, data rules, conventions); the per-task walk-
+  through it used to hold is in `tasks/README.md` and the task READMEs.
+  `CLAUDE.md` names `tasks/README.md`, `tests/test_task_layout.py`,
+  `lancet.paths.guard_outputs` and `design/`.
+- The three long-standing test failures are gone: `combination_diagnostic` was
+  retired (2026-11-20), the `interferometry` test moved with
+  `lancet.combination`, and `tasks/paper_ii_referee_response/` is local only
+  and excluded. The suite passes (476 tests).
+- Removed (author): `docs/combine_continuum_plan.md` and
+  `docs/superpowers/plans/2026-11-20-combine-continuum.md`, the two carried-out
+  combination plans (copies in `~/.Trash/LANCET_docs_combination_plans_2026-11-21/`).
+  The design spec `docs/combine_continuum_design.md` stays. The other audits
+  and `docs/reorganization_baseline/` are kept.
 
 ### Phase 6. Proof
 
