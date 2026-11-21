@@ -1,6 +1,5 @@
 [task]
-name = "magnetic_fields"
-status = "ongoing"
+name = "planck_polarization"
 
 [inputs]
 stokes_i = "data/delivered/archive/planck/PLCKI_G316.769-0.003_353GHz.fits"
@@ -8,11 +7,10 @@ stokes_q = "data/delivered/archive/planck/PLCKQ_G316.769-0.003_353GHz.fits"
 stokes_u = "data/delivered/archive/planck/PLCKU_G316.769-0.003_353GHz.fits"
 
 [outputs]
-root = "results/magnetic_fields"
+root = "results/planck_polarization"
 
 [noise]
-# These exploratory values must be replaced or justified by a reproducible
-# Planck noise estimate before publication use.
+# Adopted rms of the Stokes I and Q/U maps (K_CMB).
 rms_i_kcmb = 1.0e-2
 rms_qu_kcmb = 3.0e-4
 
@@ -30,8 +28,16 @@ height_inches = 6.0
 colormap = "BuPu"
 vmin_kcmb = 1.0e-2
 vmax_kcmb = 0.42
-vector_step_pixels = 5
-vector_length_pixels = 4.0
+# Zoom: square box centred on the field (G316.769-0.003).
+view_center_glon_deg = 316.7686
+view_center_glat_deg = -0.003
+view_size_arcmin = 30.0
+# Planck 353 GHz beam: Planck 2018 effective FWHM, 4.82' (confirmed by the
+# author; the delivered HEALPix cut-outs carry no beam keyword). Vectors every half beam, rounded
+# to whole 1' pixels; each vector spans vector_length_fraction of the step.
+beam_fwhm_arcmin = 4.82
+vector_spacing_beam = 0.5
+vector_length_fraction = 0.85
 vector_color = "#F4DE00"
 vector_line_width = 1.8
 vector_outline_width = 1.5

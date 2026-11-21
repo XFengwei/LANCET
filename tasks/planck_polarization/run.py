@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Build provisional Planck polarization and magnetic-field diagnostics."""
+"""Build Planck 353 GHz polarization products and magnetic-field orientations."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from lancet import ProjectPaths
 from lancet.magnetic_fields import planck_polarization_products
 
 
-DEFAULT_CONFIG = Path("tasks/magnetic_fields/task.toml")
+DEFAULT_CONFIG = Path("tasks/planck_polarization/task.toml")
 
 
 def load_task_config(path: Path) -> dict[str, object]:
@@ -181,21 +181,15 @@ def _prepare_outputs(
         output.parent.mkdir(parents=True, exist_ok=True)
 
 
-def _task_status(config: Mapping[str, object]) -> str:
-    task = _mapping(config, "task")
-    return str(task["status"])
-
-
 def inspect_inputs(
     paths: Mapping[str, Path],
     config: Mapping[str, object],
 ) -> None:
-    """Report input compatibility and provisional assumptions."""
+    """Report input compatibility and the adopted settings."""
     intensity, q, u, header = _read_stokes(paths)
     noise = _mapping(config, "noise")
     thresholds = _mapping(config, "thresholds")
-    print("Magnetic-field workflow:")
-    print(f"  status: {_task_status(config).upper()} / NOT PAPER-READY")
+    print("Planck polarization inputs:")
     for name in ("stokes_i", "stokes_q", "stokes_u"):
         print(f"  {name}: {paths[name]}")
     print(
@@ -205,7 +199,7 @@ def inspect_inputs(
         f"{np.isfinite(q).sum()}/{np.isfinite(u).sum()}"
     )
     print(
-        "Adopted provisional RMS: "
+        "Adopted rms: "
         f"I={noise['rms_i_kcmb']} K_CMB, "
         f"Q/U={noise['rms_qu_kcmb']} K_CMB"
     )
@@ -213,10 +207,6 @@ def inspect_inputs(
         "Angle mask: debiased PI S/N >= "
         f"{thresholds['angle_polarized_snr']}; "
         "no field-strength estimate is performed"
-    )
-    print(
-        "Continuity note: keep this task ongoing until RMS estimation, "
-        "angle convention, beam treatment, and a strength method are fixed."
     )
     print(f"Output root: {paths['output_root']}")
 
@@ -266,7 +256,7 @@ def _output_header(
     header["BTYPE"] = btype
     header["BUNIT"] = bunit
     header.add_history(
-        "LANCET magnetic_fields ongoing workflow; assumptions are provisional"
+        "LANCET planck_polarization: Planck 353 GHz polarization products"
     )
     return header
 
@@ -332,8 +322,6 @@ def build_products(
         products["polarization_fraction_debiased"]
     )
     summary = {
-        "status": _task_status(config),
-        "paper_ready": False,
         "shape": list(intensity.shape),
         "magnetic_angle_pixel_count": int(np.count_nonzero(finite_angle)),
         "polarization_fraction_pixel_count": int(
@@ -341,10 +329,6 @@ def build_products(
         ),
         "median_polarization_fraction": float(
             np.nanmedian(products["polarization_fraction_debiased"])
-        ),
-        "continuity_note": (
-            "Revisit RMS estimation, coordinate/angle convention, beam "
-            "treatment, and field-strength methodology before scientific use."
         ),
     }
     summary_output.write_text(
@@ -355,13 +339,38 @@ def build_products(
     return products
 
 
+def vector_step_pixels(
+    beam_fwhm_arcmin: float,
+    spacing_beam: float,
+    pixel_arcmin: float,
+) -> int:
+    """Vector spacing of *spacing_beam* beams, in whole pixels (at least 1)."""
+    return max(1, int(round(beam_fwhm_arcmin * spacing_beam / pixel_arcmin)))
+
+
+def view_limits(
+    wcs: WCS,
+    center_lon_deg: float,
+    center_lat_deg: float,
+    size_arcmin: float,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Pixel x and y limits of a square box of *size_arcmin* on the map grid."""
+    from astropy.wcs.utils import proj_plane_pixel_scales
+
+    x, y = wcs.wcs_world2pix([[center_lon_deg, center_lat_deg]], 0)[0]
+    scale_x, scale_y = proj_plane_pixel_scales(wcs) * 60.0
+    half_x = 0.5 * size_arcmin / scale_x
+    half_y = 0.5 * size_arcmin / scale_y
+    return (x - half_x, x + half_x), (y - half_y, y + half_y)
+
+
 def plot_diagnostic(
     paths: Mapping[str, Path],
     config: Mapping[str, object],
     *,
     overwrite: bool,
 ) -> list[Path]:
-    """Plot Planck intensity with the provisional field orientations."""
+    """Plot Planck intensity with the plane-of-sky field orientations."""
     angle_path = _product_paths(paths)["magnetic_field_angle"]
     intensity_mask_path = _product_paths(paths)["intensity_snr3_mask"]
     if not angle_path.is_file() or not intensity_mask_path.is_file():
@@ -401,8 +410,13 @@ def plot_diagnostic(
         cmap=str(plot["colormap"]),
         norm=normalization,
     )
-    step = int(plot["vector_step_pixels"])
-    length = float(plot["vector_length_pixels"])
+    pixel_arcmin = abs(float(header["CDELT2"])) * 60.0
+    step = vector_step_pixels(
+        float(plot["beam_fwhm_arcmin"]),
+        float(plot["vector_spacing_beam"]),
+        pixel_arcmin,
+    )
+    length = float(plot["vector_length_fraction"]) * step
     y_grid, x_grid = np.mgrid[
         0 : angle.shape[0] : step,
         0 : angle.shape[1] : step,
@@ -447,29 +461,22 @@ def plot_diagnostic(
             path_effects.Normal(),
         ]
     )
+    (x0, x1), (y0, y1) = view_limits(
+        WCS(header).celestial,
+        float(plot["view_center_glon_deg"]),
+        float(plot["view_center_glat_deg"]),
+        float(plot["view_size_arcmin"]),
+    )
+    axis.set_xlim(x0, x1)
+    axis.set_ylim(y0, y1)
+    print(
+        f"View {plot['view_size_arcmin']:g} arcmin; vectors every {step} pixels "
+        f"({step * pixel_arcmin:g} arcmin, {step * pixel_arcmin / float(plot['beam_fwhm_arcmin']):.2f} beam)"
+    )
     axis.coords[0].set_axislabel("Galactic longitude")
     axis.coords[1].set_axislabel("Galactic latitude")
     colorbar = figure.colorbar(image, ax=axis, pad=0.02)
     colorbar.set_label(r"Stokes $I$ (K$_{\rm CMB}$)")
-    axis.text(
-        0.02,
-        0.98,
-        "Ongoing diagnostic - assumptions provisional",
-        transform=axis.transAxes,
-        ha="left",
-        va="top",
-        color="white",
-        fontsize=9,
-        bbox={
-            "facecolor": "black",
-            "edgecolor": "none",
-            "alpha": 0.55,
-            "pad": 2.0,
-        },
-        path_effects=[
-            path_effects.withStroke(linewidth=2.5, foreground="black")
-        ],
-    )
     figure.tight_layout()
     for output in outputs:
         figure.savefig(

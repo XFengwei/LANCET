@@ -311,20 +311,18 @@ figures. Their settings and assumptions are declared in
 [`tasks/core_mass_function/task.toml`](tasks/core_mass_function/task.toml);
 all products stay under `results/`.
 
-The magnetic-field analysis is maintained as an explicitly ongoing project
-idea:
+The Planck polarization task (`planck_polarization`) makes the 353 GHz
+polarization products and the plane-of-sky magnetic-field orientation:
 
 ```bash
-conda run -n py312 python scripts/magnetic_fields.py --stage inspect
-conda run -n py312 python scripts/magnetic_fields.py --stage all
+conda run -n py312 python tasks/planck_polarization/run.py --stage inspect
+conda run -n py312 python tasks/planck_polarization/run.py --stage all
 ```
 
-It creates provisional Planck polarization masks, debiased polarization
-products, orientation maps, and a diagnostic vector figure. It does not
-estimate field strength. It declares `status = "ongoing"` and writes
-summaries with `paper_ready = false`. Its assumptions, unresolved decisions,
-and continuity requirements are recorded in
-[`tasks/magnetic_fields/README.md`](tasks/magnetic_fields/README.md).
+It creates Planck polarization masks, debiased polarization products,
+orientation maps, and a vector figure of the central 30′ × 30′. It does not
+estimate field strength. Its settings are recorded in
+[`tasks/planck_polarization/README.md`](tasks/planck_polarization/README.md).
 
 
 ## Project paths
