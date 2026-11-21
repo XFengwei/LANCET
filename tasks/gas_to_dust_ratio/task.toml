@@ -1,0 +1,11 @@
+[task]
+name = "gas_to_dust_ratio"
+
+[galaxy]
+# Galactocentric distance of the filament (Watkins et al. 2019), as quoted in
+# Paper II; the uncertainty is propagated into the statistical interval.
+galactocentric_radius_kpc = 6.5
+galactocentric_radius_error_kpc = 0.2
+
+[outputs]
+root = "results/gas_to_dust_ratio"

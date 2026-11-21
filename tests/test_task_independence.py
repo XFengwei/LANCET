@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-ACTIVE_ROOTS = (PROJECT_ROOT / "scripts", PROJECT_ROOT / "tasks")
+ACTIVE_ROOTS = (PROJECT_ROOT / "tasks",)
 # Local-only coordination records (gitignored, not part of the code base).
 LOCAL_ONLY = (PROJECT_ROOT / "tasks" / "paper_ii_referee_response",)
 TEXT_SUFFIXES = {".py", ".md", ".toml", ".yaml", ".yml"}

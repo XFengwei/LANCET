@@ -4,6 +4,7 @@ name = "core_formation_efficiency"
 [inputs]
 physical_catalogue = "results/core_physical_properties/tables/core_physical_properties.ecsv"
 source_catalogue = "results/source_catalogue/tables/source_catalogue.ecsv"
+environment_catalogue = "results/environ_measure/tables/core_environment_catalogue.ecsv"
 fragment_ellipse_catalogue = "data/extraction/astrodendro/my_dendrogram.dat"
 fragment_mass_catalogue = "data/extraction/astrodendro/my_catalog.dat"
 fragment_label_mask = "data/extraction/astrodendro/my_mask_idx.fits"
@@ -99,3 +100,15 @@ brightness_strength = 2.0
 frequency_ghz = 223.8
 beam_major_arcsec = 0.71
 beam_minor_arcsec = 0.60
+
+# Deterministic core heating (stage `stress_test`): every core from Tenv to
+# its regional upper temperature ([temperature_sampling]) on a grid of h.
+# Output: results/core_formation_efficiency/temperature_stress_test/.
+[temperature_stress_test]
+grid_points = 101
+scenario_h = [0.0, 0.25, 0.5, 0.75, 1.0]
+# Used only for the dimensional mass check; same values as [physics] in
+# tasks/core_physical_properties/task.toml.
+dust_opacity_cm2_per_g = 0.5
+gas_to_dust_ratio = 100.0
+distance_kpc = 2.8

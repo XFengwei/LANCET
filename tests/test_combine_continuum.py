@@ -147,7 +147,7 @@ def test_pb_is_a_delivered_input():
 
 
 RETIRED_TASKS = re.compile(r"linear_combine_continuum|combination_diagnostic(?!s)")
-ACTIVE_ROOTS = ("tasks", "scripts", "src", "tests")
+ACTIVE_ROOTS = ("tasks", "src", "tests")
 NO_REFERENCE_EXEMPT = {
     # This test names the retired tasks to find them.
     "tests/test_combine_continuum.py",

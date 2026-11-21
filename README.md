@@ -17,7 +17,7 @@ Claude.
 - Automated checks live under `tests/`.
 - Global path policy lives in `src/lancet/paths.py`.
 - Independent workflow settings and documentation live under `tasks/`.
-- Runnable scientific commands live under `scripts/`.
+- Each task's runnable command is `tasks/<task>/run.py`.
 - Small DS9 region definitions required by configured tasks live under
   `region/`.
 - Each integration step is tested with the `py312` conda environment.
@@ -63,17 +63,17 @@ to the analysis tasks and records diagnostics under
 
 ### Standalone calculations
 
-Calculate the gas-to-dust mass ratio from Giannetti et al. (2017), A&A, 606,
-L12, Eq. 2:
+The gas-to-dust mass ratio of Paper II (Giannetti et al. 2017, Eq. 2, at
+R_gal = 6.5 ± 0.2 kpc) is the task `gas_to_dust_ratio`:
 
 ```bash
-PYTHONPATH=src conda run -n py312 python -m lancet.gas_to_dust \
-  --radius-kpc 6.5 \
-  --radius-error-kpc 0.2
+PYTHONPATH=src conda run -n py312 python tasks/gas_to_dust_ratio/run.py --stage all --overwrite
 ```
 
-Add `--json` for machine-readable output. The command keeps the statistical,
-systematic, and intrinsic-scatter intervals separate.
+It writes `results/gas_to_dust_ratio/gas_to_dust_ratio.json` with the
+statistical, systematic and intrinsic-scatter intervals kept separate. The
+same calculation runs for any radius with
+`PYTHONPATH=src conda run -n py312 python -m lancet.gas_to_dust --radius-kpc 6.5 --radius-error-kpc 0.2`.
 
 Elliptical-Gaussian source deconvolution is provided by
 `lancet.deconvolve_gaussian` (with `convolve_gaussians` and the round-trip
@@ -143,8 +143,8 @@ read-only intermediates. This task replaced `linear_combine_continuum` and
 Create the all-scale continuum display products with:
 
 ```bash
-conda run -n py312 python scripts/plot_allscale_continuum.py --stage inspect
-conda run -n py312 python scripts/plot_allscale_continuum.py --stage all
+conda run -n py312 python tasks/plot_allscale_continuum/run.py --stage inspect
+conda run -n py312 python tasks/plot_allscale_continuum/run.py --stage all
 ```
 
 This task reads the delivered dust and dust-plus-free-free all-scale maps and
@@ -328,7 +328,7 @@ and output validation rejects paths inside `data/`.
 ## Task convention
 
 Runnable tasks must be self-contained scientific workflows. New files under
-`scripts/` and `tasks/` must describe their inputs, calculations, and outputs
+`tasks/` must describe their inputs, calculations, and outputs
 without depending on or naming exploratory source documents.
 
 Floating-point FITS task products use float32 storage (`BITPIX = -32`) by

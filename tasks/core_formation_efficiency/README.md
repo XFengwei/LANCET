@@ -50,13 +50,38 @@ adopted Tenv hierarchy with counting errors, and the brightness-prior
 regional masses with their 16–84 % intervals. It needs the sampling made
 from the current regional summary.
 
+## Temperature stress test and reports
+
+Stage `stress_test` (moved from the R8d referee scripts on 2026-11-21)
+heats every core deterministically from Tenv to its regional upper
+temperature on a 101-point grid of h, keeping the foreground/background at
+Tenv; masses, surface and volume densities are rescaled from the adopted
+catalogue, and the core–environment correlations are recomputed at
+h = 0, 0.25, 0.5, 0.75, 1 (`[temperature_stress_test]`, products under
+`results/core_formation_efficiency/temperature_stress_test/`).
+
+Stage `temperature_figures` draws the heating-grid figure
+(`temperature_stress_test`), the prior comparison of the sampling
+(`temperature_sampling/mass_efficiency_{independent,regional_shared}`) and
+the two Fig. 9 layouts (`temperature_sampling/figure9_trials/`).
+`--qa-scripts <folder>` adds the optional panel-alignment audit. Stage
+`temperature_report` writes `report.md` in both result folders from the
+products.
+
+Check: from the Paper II inputs the moved stress test reproduces the R8d
+tables exactly. On the current catalogues the hot-endpoint core/cloud
+fractions are 0.142, 0.623, 1.345 % (R8d: 0.137, 0.612, 1.344 %); the
+orderings hold along the coherent heating path and, as before, not at every
+independent regional corner.
+
 ```bash
 PYTHONPATH=src conda run -n py312 python tasks/core_formation_efficiency/run.py --stage inspect
 PYTHONPATH=src conda run -n py312 python tasks/core_formation_efficiency/run.py --stage all --overwrite
 ```
 
-Stages: `inspect`, `summary`, `temperature_sampling`, `efficiency`,
-`overlays`, `all` (in that order).
+Stages, in order: `inspect`, `summary`, `temperature_sampling`,
+`stress_test`, `efficiency`, `temperature_figures`, `temperature_report`,
+`overlays`, `all`.
 
 ## Change from Paper II (2026-11-20)
 

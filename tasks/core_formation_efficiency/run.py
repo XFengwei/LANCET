@@ -28,6 +28,7 @@ from lancet.core_formation import (
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from temperature_sampling import run_temperature_sampling  # noqa: E402
+import temperature_tests  # noqa: E402
 
 DEFAULT_CONFIG = Path("tasks/core_formation_efficiency/task.toml")
 
@@ -374,6 +375,61 @@ def build_temperature_sampling(
     )
 
 
+def temperature_stress_dir(paths: Mapping[str, Path]) -> Path:
+    return Path(paths["output_root"]) / "temperature_stress_test"
+
+
+def build_stress_test(
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    overwrite: bool = False,
+) -> dict[str, object]:
+    """Deterministic core heating from Tenv to the regional upper temperatures."""
+    out = temperature_stress_dir(paths)
+    if (out / "summary.json").exists() and not overwrite:
+        raise FileExistsError(
+            f"Output already exists: {out / 'summary.json'}; pass --overwrite to replace it"
+        )
+    regional = summary_path(paths)
+    if not regional.is_file():
+        raise FileNotFoundError(f"Regional summary not found: {regional}; run --stage summary first")
+    sampling = config["temperature_sampling"]
+    stress = config["temperature_stress_test"]
+    physics = {**sampling, **stress}
+    return temperature_tests.run_stress_test(
+        {
+            "source": paths["source_catalogue"],
+            "physical": paths["physical_catalogue"],
+            "regional": regional,
+            "environment": paths["environment_catalogue"],
+        },
+        physics,
+        sampling["upper_temperatures_k"],
+        out,
+        grid_points=int(stress["grid_points"]),
+        scenario_h=stress["scenario_h"],
+    )
+
+
+def plot_temperature_figures(
+    paths: Mapping[str, Path],
+    *,
+    qa_scripts: Path | None = None,
+) -> None:
+    """Stress-test grid, prior comparison and the two Fig. 9 layouts."""
+    temperature_tests.plot_stress_test(temperature_stress_dir(paths), qa_scripts=qa_scripts)
+    temperature_tests.plot_sampling(
+        temperature_sampling_dir(paths), summary_path(paths), qa_scripts=qa_scripts
+    )
+
+
+def write_temperature_reports(paths: Mapping[str, Path]) -> None:
+    temperature_tests.write_reports(
+        temperature_stress_dir(paths), temperature_sampling_dir(paths), summary_path(paths)
+    )
+
+
 def _load_or_build_summary(
     paths: Mapping[str, Path],
     config: Mapping[str, object],
@@ -501,12 +557,15 @@ def main() -> None:
     parser.add_argument(
         "--stage",
         choices=(
-            "inspect", "summary", "temperature_sampling", "efficiency",
+            "inspect", "summary", "temperature_sampling", "stress_test",
+            "efficiency", "temperature_figures", "temperature_report",
             "overlays", "all",
         ),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--qa-scripts", type=Path,
+                        help="Optional folder with audit_panel_alignment.py for the figure alignment check")
     args = parser.parse_args()
 
     project = ProjectPaths.discover()
@@ -524,8 +583,14 @@ def main() -> None:
             config_path=_project_path(project, args.config),
             overwrite=args.overwrite,
         )
+    if args.stage in {"stress_test", "all"}:
+        build_stress_test(paths, config, overwrite=args.overwrite)
     if args.stage in {"efficiency", "all"}:
         plot_efficiency(paths, config, overwrite=args.overwrite)
+    if args.stage in {"temperature_figures", "all"}:
+        plot_temperature_figures(paths, qa_scripts=args.qa_scripts)
+    if args.stage in {"temperature_report", "all"}:
+        write_temperature_reports(paths)
     if args.stage in {"overlays", "all"}:
         plot_overlays(paths, config, overwrite=args.overwrite)
 

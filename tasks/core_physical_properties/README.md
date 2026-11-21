@@ -51,6 +51,5 @@ The code reproduces the Paper II tables exactly from the Paper II catalogue
 The temperature-prior sampling of the core masses (Paper II Fig. 9) moved to
 `core_formation_efficiency` (stage `temperature_sampling`, settings in its
 `[temperature_sampling]`). The endpoint stress test and its plots
-(`scripts/core_temperature_stress_test.py`,
-`scripts/plot_core_temperature_*.py`, `scripts/report_core_temperature_tests.py`)
-read the upper temperatures from there.
+(stages `stress_test`, `temperature_figures`, `temperature_report`) are also
+in `core_formation_efficiency`.

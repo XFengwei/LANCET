@@ -11,7 +11,8 @@ for people; this file records the working rules.
 
 - `src/lancet/` — reusable code, one module per topic. `paths.py` holds the
   global path policy (`ProjectPaths`).
-- `scripts/<task>.py` — one runnable command per task.
+- `tasks/<task>/run.py` — one runnable command per task (there is no
+  `scripts/` folder).
 - `tasks/<task>/` — `task.toml` (all paths and scientific settings) and
   `README.md` (inputs, method, outputs, status).
 - `tests/test_<module>.py` — pytest tests for `src/lancet/`.
@@ -48,7 +49,7 @@ Every analysis is a self-contained task:
 1. `tasks/<task>/task.toml` declares `[task]`, `[inputs]` (repository-relative
    paths), `[outputs] root = "results/<task>"`, and one table per stage with
    its scientific settings. No paths or parameters are hard-coded in code.
-2. `scripts/<task>.py` loads the TOML, resolves paths through `ProjectPaths`,
+2. `tasks/<task>/run.py` loads the TOML, resolves paths through `ProjectPaths`,
    and exposes `--config`, `--stage <name>` and `--overwrite`. Existing
    outputs are not replaced without `--overwrite`.
 3. Calculations live in `src/lancet/<module>.py`, with tests in `tests/`.
@@ -56,14 +57,14 @@ Every analysis is a self-contained task:
    known limitations. Task files must not depend on or name exploratory
    notebooks or documents.
 
-Small one-off checks (for example the SIMBA and core-temperature tests) are
-standalone scripts without a task folder; `README.md` lists them under
-"Independent calculations". Use a full task for anything a paper relies on.
+Small reusable calculations without outputs live in `src/lancet/` and run as
+modules (for example `python -m lancet.gas_to_dust`); `README.md` lists them
+under "Standalone calculations". Use a full task for anything a paper relies on.
 
 Run a stage from the repository root:
 
 ```bash
-PYTHONPATH=src conda run -n py312 python scripts/<task>.py --stage <name> --overwrite
+PYTHONPATH=src conda run -n py312 python tasks/<task>/run.py --stage <name> --overwrite
 ```
 
 ## Code conventions

@@ -267,3 +267,29 @@ def test_efficiency_stage_requires_current_temperature_sampling(
 
     with pytest.raises(FileNotFoundError, match="--stage temperature_sampling"):
         task.plot_efficiency(paths, config)
+
+
+def test_temperature_test_stages_are_configured() -> None:
+    task = _load_task()
+    config = task.load_task_config(
+        PROJECT_ROOT / "tasks" / "core_formation_efficiency" / "task.toml"
+    )
+
+    assert config["temperature_stress_test"]["grid_points"] == 101
+    assert config["inputs"]["environment_catalogue"].startswith("results/environ_measure/")
+    assert task.temperature_stress_dir({"output_root": Path("/tmp/out")}) == Path(
+        "/tmp/out/temperature_stress_test"
+    )
+
+
+def test_stress_test_keeps_existing_products(tmp_path: Path) -> None:
+    task = _load_task()
+    config = task.load_task_config(
+        PROJECT_ROOT / "tasks" / "core_formation_efficiency" / "task.toml"
+    )
+    out = tmp_path / "temperature_stress_test"
+    out.mkdir()
+    (out / "summary.json").write_text("{}")
+
+    with pytest.raises(FileExistsError):
+        task.build_stress_test({"output_root": tmp_path}, config)
