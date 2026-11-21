@@ -130,3 +130,11 @@ def test_existing_outputs_are_listed_per_stage(tmp_path: Path) -> None:
     assert TASK.existing_outputs(tmp_path, config, "reproject") == [cached]
     assert TASK.existing_outputs(tmp_path, config, "plot") == [figure]
     assert TASK.parse_args(["--overwrite"]).overwrite
+
+
+def test_grid_header_records_mjysr_for_converted_panels() -> None:
+    header = fits.Header({"CTYPE1": "RA---TAN"})
+
+    assert TASK.grid_header(header, {"to_mjysr": True})["BUNIT"] == "MJy/sr"
+    assert "BUNIT" not in TASK.grid_header(header, {})
+    assert "BUNIT" not in header

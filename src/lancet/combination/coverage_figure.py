@@ -93,9 +93,31 @@ IMAGE_CURVES = {"interferometer": ("12m+7m", "--", "#B2182B"), "jcomb": ("J-comb
                 "feather": ("Feather", ":", "#CC79A7")}
 
 
-def image_curve_styles(shown, labels):
+# Colours per theme. "light" is Paper II Fig. 2. "dark" is the website version on the page
+# background: the same hue for each array and curve, stepped into OKLCH L 0.48-0.67 so that it
+# keeps >= 3:1 contrast on #080b10 (arrays: all pairs >= 19.6 CVD dE; with the two image curves
+# >= 6.2, line style and markers are the secondary encoding, as in the light version).
+THEMES = {
+    "light": {"background": "white", "text": "black", "axis": "black",
+              "arrays": dict(COLORS), "curves": {k: v[2] for k, v in IMAGE_CURVES.items()},
+              "tp": "0.45", "tp_corrected": "0.1", "tp_outer": ("0.80", "0.55"), "tp_half": ("0.65", "0.4"),
+              "tp_marker": "0.15", "tp_handle": "0.3", "zoom_box": "0.2", "connector": "black",
+              "divider": "0.8", "scatter_alpha": (0.25, 0.60)},
+    "dark": {"background": "#080b10", "text": "#ecece8", "axis": "#a6adb6",
+             "arrays": {"configuration_c5": "#7441B9", "configuration_c2": "#47A1C5", "aca_7m": "#DD760D"},
+             "curves": {"interferometer": "#D02A39", "jcomb": "#68A157", "feather": "#CC79A7"},
+             "tp": "#8a9099", "tp_corrected": "#ecece8", "tp_outer": ("#323a45", "#8a9099"),
+             "tp_half": ("#59626f", "#c9cdd2"), "tp_marker": "#ecece8", "tp_handle": "#c9cdd2",
+             "zoom_box": "#a6adb6", "connector": "#a6adb6", "divider": "#3a414b",
+             "scatter_alpha": (0.45, 0.75)},
+}
+
+
+def image_curve_styles(shown, labels, colors=None):
     """Style of each shown image curve; the legend labels come from the configuration."""
-    return {name: (labels.get(name, IMAGE_CURVES[name][0]), *IMAGE_CURVES[name][1:]) for name in shown}
+    colors = colors or {}
+    return {name: (labels.get(name, IMAGE_CURVES[name][0]), IMAGE_CURVES[name][1],
+                   colors.get(name, IMAGE_CURVES[name][2])) for name in shown}
 
 
 def check_image_curve_settings(shown, labels, available):
@@ -113,10 +135,10 @@ def shown_curve_values(curves, shown):
     return [v for name in shown for v in curves[name][1]] if curves else []
 
 
-def _plot_image_curves(axis, curves, shown, labels):
+def _plot_image_curves(axis, curves, shown, labels, colors=None):
     """Amplitudes of the shown image curves (beam and pixel binning divided out), with their legend."""
     handles = []
-    for name, (label, style, color) in image_curve_styles(shown, labels).items():
+    for name, (label, style, color) in image_curve_styles(shown, labels, colors).items():
         u, rms = curves[name]
         handles += axis.plot(u, rms, color=color, linestyle=style, linewidth=1.1, label=label, zorder=4)
     # Below the direct "TP, beam-corrected" label, above the long-baseline profiles.
@@ -137,6 +159,8 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     require_products(paths, ["jcomb_continuum", "feather_continuum"])
     root = Path(paths["output_root"])
     settings = config["figure2"]
+    theme = THEMES[settings.get("theme", "light")]
+    colors = theme["arrays"]
     stem = "figure2_combination_diagnostics" + settings.get("output_suffix", "")
     outputs = [root/"figures"/f"{stem}.{suffix}" for suffix in settings["output_formats"]]
     for output in outputs:
@@ -216,7 +240,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         image_meta = {**alignment["image_curves"], "source_csv": str(image_table),
                       "low_uv_pb_smoothing": pb_smoothing_note(config["overlap_tests"]),
                       "styles": {name: {"label": label, "linestyle": style, "color": color}
-                                 for name, (label, style, color) in image_curve_styles(shown_curves, curve_labels).items()},
+                                 for name, (label, style, color) in image_curve_styles(shown_curves, curve_labels, theme["curves"]).items()},
                       "shown": list(shown_curves)}
     tp_table = root/"figures"/f"{stem}_tp_reference.csv"
     if tp_fixed is None:
@@ -227,20 +251,25 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
                    header="uv_klambda,tp_model_rms_mjy,tp_beam_corrected_rms_mjy", comments="")
     plt.rcParams.update({"font.family": "sans-serif", "font.size": 10,
         "axes.linewidth": 0.7, "axes.spines.top": True, "axes.spines.right": True,
-        "pdf.fonttype": 42, "svg.fonttype": "none", "legend.frameon": False})
+        "pdf.fonttype": 42, "svg.fonttype": "none", "legend.frameon": False,
+        "figure.facecolor": theme["background"], "axes.facecolor": theme["background"],
+        "savefig.facecolor": theme["background"], "text.color": theme["text"],
+        "axes.labelcolor": theme["text"], "axes.edgecolor": theme["axis"],
+        "xtick.color": theme["axis"], "ytick.color": theme["axis"],
+        "xtick.labelcolor": theme["text"], "ytick.labelcolor": theme["text"]})
     # Keep three equal square plot areas at the manuscript text width.
     height = settings["width_inches"]*.885/3.64/.74
     fig, axes = plt.subplots(1, 3, figsize=(settings["width_inches"], height))
     fig.subplots_adjust(left=.10, right=.985, bottom=.20, top=.94, wspace=.32)
     a, b, c = axes
     inset = b.inset_axes([.66, .66, .34, .34], zorder=8)
-    inset.patch.set_facecolor("white")
+    inset.patch.set_facecolor(theme["background"])
     for axis in axes.flat:
         axis.tick_params(direction="in", top=True, right=True, length=3, width=0.7)
 
     def title(axis, text):
         axis.text(0.04, .96, text, transform=axis.transAxes, ha="left", va="top", fontsize=10,
-                  bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.94, "pad": 2}, zorder=20)
+                  bbox={"facecolor": theme["background"], "edgecolor": "none", "alpha": 0.94, "pad": 2}, zorder=20)
 
     # (a) pointings
     ra0, dec0 = 221.25, -59.8
@@ -248,7 +277,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         pos = np.array([f["PHASE_DIR"] for f in metadata[name]["subtables"]["FIELD"]]).squeeze()
         ra, dec = np.rad2deg(pos[:, 0]) % 360, np.rad2deg(pos[:, 1])
         a.scatter((ra-ra0)*np.cos(np.deg2rad(dec0))*60, (dec-dec0)*60, s=7,
-                  color=COLORS[name] if name == "aca_7m" else COLORS["configuration_c2"], marker=marker,
+                  color=colors[name] if name == "aca_7m" else colors["configuration_c2"], marker=marker,
                   linewidths=0.7, alpha=0.75, label=label)
     a.set(xlabel="RA offset (arcmin)", ylabel="Dec offset (arcmin)")
     a.set_aspect("equal", adjustable="datalim")
@@ -268,19 +297,20 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         amplitude = np.array([r["rms_mjy"] for r in profile])
         detected = np.array([r["detected"] for r in profile])
         upper = np.array([r["upper_rms_mjy"] for r in profile])
-        c.plot(radius, np.where(detected, amplitude, np.nan), color=COLORS[name],
+        c.plot(radius, np.where(detected, amplitude, np.nan), color=colors[name],
                linewidth=.9, marker=marker, markersize=1.5, label=short[name])
         if (~detected).any():
             c.errorbar(radius[~detected], upper[~detected], yerr=upper[~detected]*0.25,
-                       uplims=True, fmt="none", color=COLORS[name], elinewidth=0.8, capsize=1.2, markersize=1.5)
+                       uplims=True, fmt="none", color=colors[name], elinewidth=0.8, capsize=1.2, markersize=1.5)
         values.extend(amplitude[detected])
         values.extend(upper[~detected])
     positive_tp = tp_u >= 1
-    c.plot(tp_u[positive_tp], tp_amp[positive_tp], color="0.45", linestyle="-.", linewidth=.9, label="TP")
+    c.plot(tp_u[positive_tp], tp_amp[positive_tp], color=theme["tp"], linestyle="-.", linewidth=.9, label="TP")
     if tp_fixed is not None:
-        c.plot(tp_u[positive_tp], tp_fixed[positive_tp], color="0.1", linewidth=1.1, label="TP, beam-corrected")
+        c.plot(tp_u[positive_tp], tp_fixed[positive_tp], color=theme["tp_corrected"], linewidth=1.1,
+               label="TP, beam-corrected")
     if image_curves:
-        _plot_image_curves(c, image_curves, shown_curves, curve_labels)
+        _plot_image_curves(c, image_curves, shown_curves, curve_labels, theme["curves"])
     c.set(xlabel=r"uv distance (k$\lambda$)", ylabel="Amplitude (mJy)", xlim=(1, 1000))
     c.set_xscale("log")
     c.set_xticks([1, 10, 100, 1000], labels=["1", "10", "100", "1000"])
@@ -298,7 +328,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     for (name, _, counts), y in zip(observation_density, track_y):
         occupied = counts > 0
         c.scatter(density_centres[occupied], np.full(occupied.sum(), y),
-                  s=4*counts[occupied]/maximum_count, color=COLORS[name], linewidths=0,
+                  s=4*counts[occupied]/maximum_count, color=colors[name], linewidths=0,
                   transform=c.get_xaxis_transform(), zorder=3)
     # The stack must stay below the "Visibility counts" text at 0.30.
     # One column of labels, level with their tracks but kept a text height apart (bottom to top).
@@ -307,9 +337,9 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         own = track_y[[i for i, (array, _, _) in enumerate(observation_density) if array == name]].mean()
         label_y[name] = max(own, max(label_y.values(), default=-1) + label_gap)
     for name in observation_sources if tp_fixed is not None else ():
-        c.text(0.025, label_y[name], short[name], color=COLORS[name], fontsize=10,
+        c.text(0.025, label_y[name], short[name], color=colors[name], fontsize=10,
                va="center", transform=c.transAxes)
-    c.plot([0, 1], [count_top, count_top], color="0.8", linewidth=0.5, transform=c.transAxes)
+    c.plot([0, 1], [count_top, count_top], color=theme["divider"], linewidth=0.5, transform=c.transAxes)
     c.text(0.025, .30, "Visibility counts", transform=c.transAxes, fontsize=10)
     c.get_xticklabels()[-1].set_horizontalalignment("right")
     title(c, "(c)")
@@ -317,14 +347,14 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
         # Array colours are keyed in panel (b) and labelled on the count tracks;
         # the two TP curves are labelled directly.
         end = np.flatnonzero(positive_tp)[-1]
-        c.text(tp_u[end]*1.03, tp_amp[end]*.5, "TP", color="0.45", fontsize=10, ha="left", va="center")
+        c.text(tp_u[end]*1.03, tp_amp[end]*.5, "TP", color=theme["tp"], fontsize=10, ha="left", va="center")
         c.annotate("TP, beam-corrected", xy=(2.5, np.interp(2.5, tp_u, tp_fixed)), xytext=(3.4, tp_fixed.max()*1.7),
-                   fontsize=10, ha="left", va="bottom", color="0.1",
-                   arrowprops=dict(arrowstyle="-", color="0.1", linewidth=.6, shrinkA=1, shrinkB=1))
+                   fontsize=10, ha="left", va="bottom", color=theme["tp_corrected"],
+                   arrowprops=dict(arrowstyle="-", color=theme["tp_corrected"], linewidth=.6, shrinkA=1, shrinkB=1))
     else:
         c.legend(loc="upper right", bbox_to_anchor=(0.99, 0.98), fontsize=10, labelspacing=0.25,
                  ncol=2, columnspacing=.4, borderpad=.2, handlelength=1.1,
-                 handletextpad=0.4, frameon=True, facecolor="white", framealpha=1, edgecolor="none")
+                 handletextpad=0.4, frameon=True, facecolor=theme["background"], framealpha=1, edgecolor="none")
 
     # (b) uv coverage with the short-baseline inset (7 m and the TP response)
     zoom = 25.0
@@ -332,22 +362,25 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     wavelength = C_METRES_PER_SECOND/(config["visibility_profile"]["reference_frequency_ghz"]*1e9)
     tp_half_metres = tp_meta["half_response_klambda"]*1000*wavelength
     tp_outer_metres = tp_meta["maximum_plotted_klambda"]*1000*wavelength
-    inset.add_patch(Circle((0, 0), tp_outer_metres, facecolor="0.80", edgecolor="0.55", linewidth=0.6, zorder=0))
-    inset.add_patch(Circle((0, 0), tp_half_metres, facecolor="0.65", edgecolor="0.4", linewidth=0.6, linestyle=":", zorder=1))
+    inset.add_patch(Circle((0, 0), tp_outer_metres, facecolor=theme["tp_outer"][0], edgecolor=theme["tp_outer"][1],
+                           linewidth=0.6, zorder=0))
+    inset.add_patch(Circle((0, 0), tp_half_metres, facecolor=theme["tp_half"][0], edgecolor=theme["tp_half"][1],
+                           linewidth=0.6, linestyle=":", zorder=1))
     for axis, extent in [(b, limit), (inset, zoom)]:
         for name, (u, v) in coords.items():
             if axis is inset and name != "aca_7m":
                 continue
             use = (np.abs(u) <= extent) & (np.abs(v) <= extent)
             axis.scatter(np.r_[u[use], -u[use]], np.r_[v[use], -v[use]], s=.25 if axis is b else .75,
-                         color=COLORS[name], alpha=0.25 if name != "aca_7m" else 0.60,
+                         color=colors[name], alpha=theme["scatter_alpha"][name == "aca_7m"],
                          linewidths=0, rasterized=True, zorder=2)
         axis.set(xlim=(-extent, extent), ylim=(-extent, extent))
         axis.set_aspect("equal", adjustable="box")
-    b.add_patch(Rectangle((-zoom, -zoom), 2*zoom, 2*zoom, facecolor="none", edgecolor="0.2", linewidth=0.7, zorder=3))
-    inset.scatter([0], [0], marker="+", s=28, linewidths=1.1, color="0.15", zorder=5)
-    handles = [Line2D([], [], marker="o", linestyle="none", color=COLORS[k], markersize=3, label=short[k]) for k in COLORS]
-    tp_handle = Line2D([], [], marker="+", linestyle="none", color="0.3", markersize=6, label="TP")
+    b.add_patch(Rectangle((-zoom, -zoom), 2*zoom, 2*zoom, facecolor="none", edgecolor=theme["zoom_box"],
+                          linewidth=0.7, zorder=3))
+    inset.scatter([0], [0], marker="+", s=28, linewidths=1.1, color=theme["tp_marker"], zorder=5)
+    handles = [Line2D([], [], marker="o", linestyle="none", color=colors[k], markersize=3, label=short[k]) for k in COLORS]
+    tp_handle = Line2D([], [], marker="+", linestyle="none", color=theme["tp_handle"], markersize=6, label="TP")
     b.legend(handles=handles+[tp_handle], loc="lower left", ncol=2, fontsize=10,
              columnspacing=.35, handlelength=.7, handletextpad=.25, labelspacing=.15,
              frameon=False)
@@ -358,7 +391,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
     inset.minorticks_off()
     for origin, destination in [((-zoom, zoom), (0, 0)), ((zoom, -zoom), (1, 0))]:
         b.add_artist(ConnectionPatch(xyA=origin, coordsA=b.transData,
-            xyB=destination, coordsB=inset.transAxes, color="black", linewidth=.65,
+            xyB=destination, coordsB=inset.transAxes, color=theme["connector"], linewidth=.65,
             linestyle="-", zorder=7, clip_on=False))
     title(b, "(b)")
     save_figure(fig, outputs, dpi=int(settings["dpi"]), bbox_inches=None, exclude_axes=[inset])
@@ -367,7 +400,9 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
                *observation_sources.values(),
                *[root/"uv_coordinates"/f"{n}.npz" for n in COLORS], Path(paths["inputs"]["tp_dust_ff"]),
                *alignment_sources]
-    manifest = {"date": datetime.now(timezone.utc).date().isoformat(), "status": "Paper II Fig. 2",
+    manifest = {"date": datetime.now(timezone.utc).date().isoformat(),
+                "status": "Paper II Fig. 2" if settings.get("theme", "light") == "light" else "website version of Paper II Fig. 2",
+                "theme": settings.get("theme", "light"),
                 "tp": tp_meta, "tp_half_response_metres": tp_half_metres,
                 "tp_ten_percent_response_metres": tp_outer_metres,
                 "panel_c_statistic": "Separate ACA/C2/C5 RMS from independent-hand cross-power in the same 19 pointing pairs; common occupied cells across arrays present in each radial bin where possible, own occupied cells otherwise (CSV matched_arrays flag). ACA model translation targets actual 12m pointing PB. TP has this same PB applied before FFT, with its native restoring beam retained. Non-detections have conditional two-standard-error limits.",
@@ -380,7 +415,7 @@ def make_combination_figure(paths, config, *, save_figure, overwrite=False):
                 "panel_labels": ["(a)", "(b)", "(c)"],
                 "inset_limit_metres": zoom, "main_uv_display_unit": "km", "inset_uv_display_unit": "m",
                 "inset_arrays": ["aca_7m", "TP model response"],
-                "inset_background": "white; flush with upper-right parent edges; two solid black zoom connectors",
+                "inset_background": f"{theme['background']}; flush with upper-right parent edges; two solid zoom connectors",
                 "inset_ticks": False, "inset_tick_labels": False,
                 "panel_c_marker_size_pt": 1.5,
                 "alignment_exclusion": "Upper-right inset in b is intentionally a smaller zoom, not an equal-span main panel",

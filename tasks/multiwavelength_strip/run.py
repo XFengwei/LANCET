@@ -171,6 +171,14 @@ def grid_path(output_root: Path, panel: str, key: str) -> Path:
     return output_root / "grid" / f"{panel}_{key}.fits"
 
 
+def grid_header(header: fits.Header, panel: Mapping[str, object]) -> fits.Header:
+    """Grid header for one panel; panels converted to MJy/sr say so in BUNIT."""
+    header = header.copy()
+    if panel.get("to_mjysr", False):
+        header["BUNIT"] = "MJy/sr"
+    return header
+
+
 def run_reproject(project: ProjectPaths, config: Mapping[str, object]) -> None:
     """Write every panel input on the common strip grid."""
     output_root = project.validate_output(str(config["outputs"]["root"]))
@@ -234,7 +242,7 @@ def run_reproject(project: ProjectPaths, config: Mapping[str, object]) -> None:
             images = {"i": image}
         for key, image in images.items():
             path = grid_path(output_root, name, key)
-            fits.PrimaryHDU(image, header=header).writeto(path, overwrite=True)
+            fits.PrimaryHDU(image, header=grid_header(header, panel)).writeto(path, overwrite=True)
             coverage = np.isfinite(image).mean()
             print(f"Wrote {path.name} coverage={coverage:.3f}")
 

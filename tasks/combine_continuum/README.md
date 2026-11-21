@@ -45,7 +45,7 @@ product for its mock correction and stops if it is missing.
 | `planck_calibration` | TP against Planck 217 GHz; nothing is applied | `checks/planck_calibration/` |
 
 Phase 2, diagnostics. Order: `uv`, `overlap`, `full_sampling`,
-`amplitude_alignment`, `figure2`, `compare_images`, `dirty_beam`,
+`amplitude_alignment`, `figure2`, `figure2_dark`, `compare_images`, `dirty_beam`,
 `aca_forward_test`, `joint_images`, `pointing_coverage`. It needs the phase 1
 products. Outputs go under `results/combine_continuum/diagnostics/`.
 
@@ -56,6 +56,7 @@ products. Outputs go under `results/combine_continuum/diagnostics/`.
 | `full_sampling` | full-sampling profiles | `full_sampling/` |
 | `amplitude_alignment` | 7m moved to the 12m primary beam with the 12m+7m image as sky model; TP through the same beam, with and without its own beam; the image curves of Fig. 2 (c) | `amplitude_alignment/` |
 | `figure2` | Paper II Fig. 2 | `figures/` |
+| `figure2_dark` | website version of Fig. 2: `[figure2_dark]` over `[figure2]`, dark theme | `figures/` (`*_dark.png`) |
 | `compare_images` | 7m and 12m-only pbcor images against the MIRIAD true-sky image | `figures/` |
 | `dirty_beam` | delivered 12m+7m PSF and its restoring-beam fit | `dirty_beam/` |
 | `aca_forward_test` | sky images through the native 7m primary beam at the measured ACA uv points | `aca_forward_test/` |
@@ -260,6 +261,13 @@ moved to the 12m primary beam through the 12m+7m sky model), the TP through the
 `image_curve_labels` in `[figure2]`: 12m+7m (dashed crimson) and J-comb (solid
 green, labelled "combine"). The feather curve is computed and kept in
 `image_curves.csv` but not drawn.
+
+The stage `figure2_dark` draws the same figure for the website
+(`figure2_combination_diagnostics_dark.png`, 330 dpi): page background
+`#080b10`, light text, and each array and curve in its Fig. 2 hue stepped into
+the dark-mode lightness band (`THEMES` in `lancet.combination.coverage_figure`).
+Changing the theme code leaves the paper version pixel-identical (checked
+2026-11-21).
 
 Image curves are computed in the `amplitude_alignment` stage with the TP-curve
 method:

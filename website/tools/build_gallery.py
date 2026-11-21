@@ -12,8 +12,6 @@ m.OUT = m.BASE
 config = m.strip.load_toml(ROOT/m.strip.DEFAULT_CONFIG)
 wcs, shape = m.strip.strip_wcs(config['grid'])
 for panel in config['panels']:
-    if panel['name'] == 'mm':
-        panel = dict(panel, style='inferno')
     image = m.rgb(panel, m.strip.ProjectPaths(ROOT))
     fig = plt.figure(figsize=(14, 4), dpi=160)
     ax = fig.add_axes([0, 0, 1, 1])

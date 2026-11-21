@@ -181,3 +181,19 @@ def test_extended_tp_inputs_must_come_from_synthesize_continuum():
     config = _config({("inputs", "tp_dust_extended"): "data/delivered/sedfitter/Dustmodel_223.8GHz.fits"})
     with pytest.raises(ValueError, match="tp_dust_extended"):
         _resolve(config)
+
+
+def test_figure2_dark_runs_after_figure2():
+    stages = list(TASK.DIAGNOSTIC_STAGES)
+    assert stages.index("figure2_dark") == stages.index("figure2") + 1
+    assert "figure2_dark" in TASK.STAGES
+
+
+def test_figure2_dark_overrides_only_its_own_settings():
+    config = TASK.load_task_config(CONFIG)
+
+    dark = TASK.figure2_dark_config(config)["figure2"]
+
+    assert dark["theme"] == "dark" and dark["output_suffix"] == "_dark"
+    assert dark["amplitude_uv_edges_klambda"] == config["figure2"]["amplitude_uv_edges_klambda"]
+    assert config["figure2"].get("theme", "light") == "light"

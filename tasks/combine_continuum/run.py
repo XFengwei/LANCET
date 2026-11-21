@@ -3,7 +3,7 @@
 
 Combination stages: ``inspect``, ``prepare``, ``tp_factor``, ``box_spectrum``,
 ``planck_calibration``, ``jcomb``, ``feather``. Diagnostic stages: ``uv``, ``overlap``,
-``full_sampling``, ``amplitude_alignment``, ``figure2``, ``compare_images``, ``dirty_beam``,
+``full_sampling``, ``amplitude_alignment``, ``figure2``, ``figure2_dark``, ``compare_images``, ``dirty_beam``,
 ``aca_forward_test``, ``joint_images``, ``pointing_coverage``. ``combine``, ``diagnostics`` and
 ``all`` select groups of stages. ``inspect`` writes nothing. Diagnostic stages write under
 ``diagnostics/`` in the output root.
@@ -45,7 +45,7 @@ TASK_PRODUCT_INPUTS = {**{name: SYNTHESIS_RESULTS for name in SYNTHESIS_INPUTS},
 # box_spectrum reads the J-comb product as its mock truth image, so it runs after jcomb.
 COMBINE_STAGES = ("inspect", "prepare", "tp_factor", "jcomb", "feather", "box_spectrum",
                   "planck_calibration")
-DIAGNOSTIC_STAGES = ("uv", "overlap", "full_sampling", "amplitude_alignment", "figure2",
+DIAGNOSTIC_STAGES = ("uv", "overlap", "full_sampling", "amplitude_alignment", "figure2", "figure2_dark",
                      "compare_images", "dirty_beam", "aca_forward_test", "joint_images",
                      "pointing_coverage")
 DEFAULT_LABEL = "224GHz"
@@ -176,6 +176,15 @@ def _diagnostic(function: Callable, *, figure: bool = True) -> Callable[[dict, d
     return stage
 
 
+def figure2_dark_config(config: dict) -> dict:
+    """The configuration with ``[figure2_dark]`` laid over ``[figure2]`` (website version of Fig. 2)."""
+    return {**config, "figure2": {**config["figure2"], **config["figure2_dark"]}}
+
+
+def run_figure2_dark(paths: dict, config: dict, overwrite: bool) -> object:
+    return _diagnostic(make_combination_figure)(paths, figure2_dark_config(config), overwrite)
+
+
 STAGES: dict[str, Callable[[dict, dict, bool], object]] = {
     "inspect": run_inspect, "prepare": combination_stages.run_prepare,
     "tp_factor": combination_stages.run_tp_factor, "box_spectrum": combination_stages.run_box_spectrum,
@@ -186,6 +195,7 @@ STAGES: dict[str, Callable[[dict, dict, bool], object]] = {
     "full_sampling": _diagnostic(build_full_sampling_profiles, figure=False),
     "amplitude_alignment": _diagnostic(diagnostics.run_amplitude_alignment),
     "figure2": _diagnostic(make_combination_figure),
+    "figure2_dark": run_figure2_dark,
     "compare_images": _diagnostic(diagnostics.plot_image_comparison, figure=False),
     "dirty_beam": _diagnostic(run_dirty_beam),
     "aca_forward_test": _diagnostic(run_aca_forward_test),

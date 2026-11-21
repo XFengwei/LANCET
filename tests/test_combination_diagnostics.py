@@ -468,3 +468,15 @@ def test_shown_curve_values_need_no_curves_without_alignment():
     assert shown_curve_values({}, ["interferometer", "jcomb"]) == []
     curves = {"jcomb": (np.array([1.0]), np.array([2.0, 3.0])), "feather": (np.array([1.0]), np.array([9.0]))}
     assert shown_curve_values(curves, ["jcomb"]) == [2.0, 3.0]
+
+
+def test_dark_theme_colours_every_array_and_curve_of_the_light_theme():
+    from lancet.combination.coverage_figure import THEMES, image_curve_styles
+
+    light, dark = THEMES["light"], THEMES["dark"]
+    assert set(light) == set(dark)
+    assert set(dark["arrays"]) == set(light["arrays"])
+    assert set(dark["curves"]) == set(light["curves"])
+    styles = image_curve_styles(["jcomb"], {}, dark["curves"])
+    assert styles["jcomb"][2] == dark["curves"]["jcomb"]
+    assert image_curve_styles(["jcomb"], {})["jcomb"][2] == light["curves"]["jcomb"]
