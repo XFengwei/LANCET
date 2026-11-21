@@ -229,10 +229,37 @@ stays. Instead:
   The design spec `docs/combine_continuum_design.md` stays. The other audits
   and `docs/reorganization_baseline/` are kept.
 
-### Phase 6. Proof
+### Phase 6. Proof (done 2026-11-21)
 
-- Fresh clone into a temporary folder, install, link `data/`, `extraction/`: the tests pass and every task's inspection stage runs.
-- Delete `results/` for two or three complete chains and regenerate them; compare with the baseline of Phase 0.
+Fresh clone of `project-reorganisation` (commit after `e2bab8f`) into a scratch
+folder:
+
+- Without any local data: 431 tests pass, 53 skip (tests that read `data/` or
+  `results/` carry `@pytest.mark.local_inputs` and skip with a reason; before
+  this phase 40 of them failed). `pip wheel` builds `lancet` with all 18 files
+  of `lancet.combination`.
+- With `data/delivered`, `data/extraction` and `data/reduction` linked from the
+  working copy: 436 pass, 48 skip. Linking showed that a write into a linked
+  `data/` folder was refused with a generic error; `validate_output` now
+  checks the path before following links and raises `DataOutputError`.
+- Three chains regenerated from an empty `results/` in the clone (14 runs,
+  about 3.5 minutes): `construct_freefree_model` → `synthesize_continuum` →
+  `column_density` → `source_catalogue` → `core_physical_properties` →
+  `core_mass_function`; `c18o_moments` → `environ_measure` →
+  `environ_core_correlation`, `bonnor_ebert` (both profiles); and
+  `background_effects`, `planck_polarization`, `gas_to_dust_ratio`. Every
+  file matches the stored result: 112 byte-identical, 8 C18O FITS with
+  identical data (header date only), 2 tables and 1 JSON equal by value;
+  27 PDF/SVG files not compared (embedded dates). No stage failed.
+- All 16 `inspect` stages then ran in the clone.
+- Stored files that the stages do not produce: the SIMBA figures and tables of
+  the three scripts in `tasks/synthesize_continuum/` (open: not yet stages) and
+  the dated check records in `results/column_density/diagnostics/`.
+- Not regenerated (long or external runs): `combine_continuum` (CASA/MIRIAD
+  measurement sets), `volume_density_mapper`, `core_formation_efficiency`,
+  `freefree_core_contamination`, `multiwavelength_strip`,
+  `plot_allscale_continuum`, `vvv_mosaic`; each was rerun and compared during
+  its Phase 1 review.
 
 ## 6. What stays as it is
 
