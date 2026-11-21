@@ -86,15 +86,15 @@ display factor brightens one product to look like another; blank sky is the
 page colour. Labels are white with a black outline, with a compass and a 1 pc
 bar.
 
-**Long pages reveal their sections while scrolling** (trial on the
-Observations page). Each block below the page title carries `class="reveal"`;
+**Pages reveal their sections while scrolling** (all four pages). Each
+block below the hero or page title carries `class="reveal"`;
 `reveal.js` fades it in and lifts it 40 px when its top passes 80 % of the
 window height, and it then stays. Revealing a block also reveals every block
 above it, so a fast scroll or an anchor jump never leaves a hidden section
 behind. A flag set in `<head>` (`html.js-reveal`) hides the blocks only when the
 script will run: without JavaScript, with reduced motion, or in print, the
-whole page shows at once. To adopt it on another page, add the flag script to
-`<head>`, `class="reveal"` to its sections and `reveal.js`.
+whole page shows at once. A new page needs the flag script in `<head>`,
+`class="reveal"` on its sections below the opening and `reveal.js`.
 
 **Galleries rotate, and readers control them.** Image galleries and the
 telescope cards change every 5 s and hold 8 s after a click. Galleries of links

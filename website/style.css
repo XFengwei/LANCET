@@ -123,7 +123,7 @@ header { height: 120px; }
 /* Units keep their case inside upper-case labels (μm, mm, GHz, cm). */
 .eyebrow .unit { text-transform: none; letter-spacing: .08em; }
 
-/* Scroll reveal (observations page): sections below the opening fade and rise into view once. */
+/* Scroll reveal (all pages): sections below the opening fade and rise into view once. */
 .js-reveal .reveal { opacity: 0; transform: translateY(40px); transition: opacity .9s ease, transform .9s ease; }
 .js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .js-reveal .reveal { opacity: 1; transform: none; transition: none; } }
