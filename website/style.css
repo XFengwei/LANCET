@@ -128,3 +128,6 @@ header { height: 120px; }
 .js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .js-reveal .reveal { opacity: 1; transform: none; transition: none; } }
 @media print { .js-reveal .reveal { opacity: 1; transform: none; } }
+/* A row of buttons (open-source links); wraps on narrow screens. */
+.button-row { display: flex; flex-wrap: wrap; gap: 16px; }
+.open-source-text { margin-top: 24px; }

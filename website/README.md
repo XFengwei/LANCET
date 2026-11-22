@@ -1,6 +1,6 @@
 # LANCET website
 
-Four static HTML pages, shared CSS, and optimized project imagery. Preview from the repository root with `python3 -m http.server 8765 --directory website`.
+Four static HTML pages (plus `data.html`, a placeholder for the coming data release), shared CSS, and optimized project imagery. Preview from the repository root with `python3 -m http.server 8765 --directory website`.
 
 The homepage animation cycles through registered VVV, Spitzer + Herschel 70 μm, Herschel 250 μm, and MeerKAT views. The hero frames share the same sky grid and exclude the 1.3 mm image. Regenerate them with `MPLCONFIGDIR=/tmp/lancet-mpl conda run -n py312 python website/tools/build_hero.py` in the project environment. The script writes the WebP frames directly (1800 px, quality 82).
 
