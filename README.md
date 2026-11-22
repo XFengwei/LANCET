@@ -79,12 +79,3 @@ file with its origin and the tasks that read it. In short:
 
 `ProjectPaths` finds the repository root from `pyproject.toml`, so commands do
 not depend on the folder name or the working directory.
-
-## Conventions
-
-- FITS products are float32 (`BITPIX = -32`). Writing float64 needs a
-  documented reason and a regression test.
-- Figures are written as PDF and PNG.
-- Task files do not depend on or name exploratory notebooks or documents.
-- The Paper II referee-response coordination task
-  (`tasks/paper_ii_referee_response/`) is kept locally and not published.
