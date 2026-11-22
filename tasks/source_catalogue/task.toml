@@ -9,6 +9,9 @@ intercore_background = "data/extraction/getsf/triple/results/+components/G316.sw
 source_model = "data/extraction/getsf/triple/results/+components/G316.sw.1302.obs.sources.fits"
 # J-comb 12m+7m + dust + free-free TP (combine_continuum, true sky, Jy/beam).
 combined_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.fits"
+# Display only (Fig. 6): the same J-comb product continued with the TP model
+# beyond the mosaic (extended36), as in Fig. 3.
+display_continuum = "data/delivered/alma/continuum/IRDC316.8.TP7MTM2TM1.robust0.5.cont.image.pbcor.extended36.fits"
 # MIRIAD mosaic gain; 12m+7m getsf fluxes and Ibkg1 are divided by it where < 1.
 gain = "data/delivered/alma/continuum/IRDC316.8.7MTM2TM1.robust0.5.cont.gain.fits"
 temperature = "results/column_density/prepared/temperature_allscale.fits"
@@ -61,3 +64,53 @@ size_min_arcsec = 0.55
 size_max_arcsec = 3.2
 ratio_min = 0.03
 ratio_max = 3.0
+
+[figures]
+# Stage `figures`: Paper II Fig. 6 (source map) and Fig. D.1 (decomposition).
+formats = ["pdf", "png"]
+dpi = 300
+# Display of Paper II Fig. 3 (plot_allscale_continuum [styles.sqrt]).
+cmap = "inferno"
+vmin_mjysr = 0.0
+vmax_mjysr = 1200.0
+# Fig. 6 only (author, 22 Nov 2026): a lower maximum brings out the sources;
+# Fig. D.1 keeps the Fig. 3 scale above.
+source_map_vmax_mjysr = 1000.0
+# Field of Figs. 3 and 4 (column_density [view]).
+center_ra_deg = 221.2346
+center_dec_deg = -59.7738
+width_deg = 0.19166666666666668
+height_deg = 0.13666666666666666
+width_inches = 8.3
+# Zoom boxes: centres of the column_density subregions; ellipses enlarged in
+# the zooms only, as in the paper.
+zoom_size_arcmin = 2.0
+zoom_ellipse_scale = 1.5
+ellipse_colour = "white"
+decomposition_zoom = "intermediate"
+decomposition_width_inches = 6.0
+
+[[figures.zooms]]
+name = "evolved"
+label = "Evolved"
+colour = "red"
+center_ra_deg = 221.3468
+center_dec_deg = -59.8230
+# Inset placement on the source map, in axes fractions: [x0, y0, width, height].
+inset = [0.01, 0.53, 0.31, 0.46]
+
+[[figures.zooms]]
+name = "intermediate"
+label = "Intermediate"
+colour = "orange"
+center_ra_deg = 221.2439
+center_dec_deg = -59.8038
+inset = [0.34, 0.53, 0.31, 0.46]
+
+[[figures.zooms]]
+name = "young"
+label = "Young"
+colour = "blue"
+center_ra_deg = 221.0820
+center_dec_deg = -59.7394
+inset = [0.68, 0.01, 0.31, 0.46]

@@ -84,3 +84,14 @@ def test_background_stage_writes_float32_true_sky_background(
     assert data[0, 0] == pytest.approx(data[1, 1] + 20.0, rel=1e-5)
     with pytest.raises(FileExistsError):
         TASK.build_background(paths)
+
+
+def test_figures_stage_is_declared_with_its_settings() -> None:
+    config = TASK.load_task_config(CONFIG)
+
+    figures = config["figures"]
+    assert {z["name"] for z in figures["zooms"]} == {"young", "intermediate", "evolved"}
+    assert figures["decomposition_zoom"] in {z["name"] for z in figures["zooms"]}
+    assert "figures" in TASK.STAGES
+    assert figures["source_map_vmax_mjysr"] == 1000.0
+    assert figures["vmax_mjysr"] == 1200.0

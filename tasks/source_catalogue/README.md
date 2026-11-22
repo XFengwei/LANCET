@@ -58,7 +58,17 @@ cuts and the flux diagnostics use the raw getsf measurements.
   (PDF, PNG) and their tables; peak/total ratio and
   ΔS/S = (S₁₂ₘ₊₇ₘ₊TP − S₁₂ₘ₊₇ₘ)/S₁₂ₘ₊₇ₘ above `peak_snr_min`. Colours are
   set by `reference_color` and `comparison_color` in `[flux_diagnostics]`.
-- `all`: the four in order.
+- `figures` (needs `background` and `build`): Paper II Fig. 6,
+  `figures/source_map.{pdf,png}`, all sources (12m+7m FWHM and position angle,
+  east of north) on the 12m+7m+TP continuum of Fig. 3 (`display_continuum`,
+  the extended36 product; inferno, square-root, 0–1000 MJy/sr,
+  `source_map_vmax_mjysr`; zoom labels on white boxes) with the three
+  2′×2′ subregion zooms (ellipses ×1.5); and Fig. D.1,
+  `figures/decomposition.{pdf,png}`, one zoom split into data
+  (`combined_continuum`), sources (getsf model / gain), the 12m+7m+TP background
+  and the 12m+7m intercore background (gain-corrected), on the Fig. 3 scale
+  (0–1200 MJy/sr, `vmax_mjysr`). Settings in `[figures]`.
+- `all`: `background`, `build`, `diagnostics`, `figures` in order.
 
 ```bash
 PYTHONPATH=src conda run -n py312 python tasks/source_catalogue/run.py --stage inspect

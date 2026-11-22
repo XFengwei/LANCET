@@ -33,10 +33,13 @@ from lancet.catalogues import (
     relative_flux_difference,
     remove_source_model,
     sample_at_getsf_peaks,
+    source_model_true_sky,
     select_science_sources,
     uniform_brightness_flux_ratio,
 )
 from lancet.imaging import read_mjysr
+from lancet.paths import guard_outputs
+from lancet.source_figures import box_window, ellipse_geometry
 
 
 DEFAULT_CONFIG = Path("tasks/source_catalogue/task.toml")
@@ -857,12 +860,168 @@ def build_flux_diagnostics(
     return products
 
 
+# ---------------------------------------------------------------- figures
+
+def figure_paths(paths: Mapping[str, Path], config: Mapping[str, object]) -> dict[str, list[Path]]:
+    root = paths["output_root"] / "figures"
+    formats = config["figures"]["formats"]
+    return {name: [root / f"{name}.{fmt}" for fmt in formats]
+            for name in ("source_map", "decomposition")}
+
+
+def _zoom(settings: Mapping[str, object], name: str) -> Mapping[str, object]:
+    return next(z for z in settings["zooms"] if z["name"] == name)
+
+
+def _draw_ellipses(axis, catalogue, wcs, *, offset=(0, 0), scale=1.0, colour="white",
+                   linewidth=0.5, window=None) -> int:
+    from matplotlib.patches import Ellipse
+
+    drawn = 0
+    for row in catalogue:
+        geometry = ellipse_geometry(float(row["WCS_ACOOR"]), float(row["WCS_DCOOR"]),
+                                    float(row["AFWHM01"]), float(row["BFWHM01"]),
+                                    float(row["THETA01"]), wcs, scale=scale)
+        x, y = geometry.x - offset[1], geometry.y - offset[0]
+        if window is not None and not (0 <= x < window[1] and 0 <= y < window[0]):
+            continue
+        axis.add_patch(Ellipse((x, y), geometry.width_px, geometry.height_px,
+                               angle=geometry.angle_deg, fill=False, edgecolor=colour,
+                               linewidth=linewidth))
+        drawn += 1
+    return drawn
+
+
+def _label(axis, text, colour, *, boxed=False):
+    """Panel label; ``boxed`` puts it on a white box (Fig. 6 zooms)."""
+    import matplotlib.patheffects as effects
+
+    style = (dict(bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="none"))
+             if boxed else
+             dict(path_effects=[effects.withStroke(linewidth=2, foreground="black")]))
+    axis.text(0.03, 0.97, text, transform=axis.transAxes, ha="left", va="top",
+              color=colour, fontsize=9, fontweight="bold", **style)
+
+
+def plot_source_figures(
+    paths: Mapping[str, Path],
+    config: Mapping[str, object],
+    *,
+    overwrite: bool = False,
+) -> dict[str, list[Path]]:
+    """Paper II Fig. 6 (sources on the 12m+7m+TP map, three zooms) and Fig. D.1
+    (data, sources, 12m+7m+TP background and 12m+7m intercore of one zoom)."""
+    from matplotlib.colors import PowerNorm
+    from matplotlib.patches import Rectangle
+
+    settings = config["figures"]
+    outputs = figure_paths(paths, config)
+    guard_outputs([p for group in outputs.values() for p in group], overwrite)
+    for group in outputs.values():
+        group[0].parent.mkdir(parents=True, exist_ok=True)
+    catalogue = Table.read(output_paths(paths)["catalogue"])
+    data, header = read_mjysr(paths["combined_continuum"])
+    data = np.squeeze(data)
+    wcs = WCS(header).celestial
+    gain = np.squeeze(fits.getdata(paths["gain"]))
+    norm = PowerNorm(0.5, vmin=float(settings["vmin_mjysr"]), vmax=float(settings["vmax_mjysr"]), clip=True)
+    cmap = plt.get_cmap(str(settings["cmap"])).with_extremes(bad="black")
+    show = dict(origin="lower", cmap=cmap, norm=norm, interpolation="nearest")
+    map_norm = PowerNorm(0.5, vmin=float(settings["vmin_mjysr"]),
+                         vmax=float(settings["source_map_vmax_mjysr"]), clip=True)
+    map_show = {**show, "norm": map_norm}
+    dpi = int(settings["dpi"])
+    zoom_deg = float(settings["zoom_size_arcmin"]) / 60.0
+    zoom_scale = float(settings["zoom_ellipse_scale"])
+    colour = str(settings["ellipse_colour"])
+
+    # Fig. 6: the field of Figs. 3 and 4 with the three subregion zooms.
+    half_w = float(settings["width_deg"]) / 2
+    half_h = float(settings["height_deg"]) / 2
+    pixel_deg = abs(float(wcs.wcs.cdelt[1]))
+    cx, cy = wcs.world_to_pixel_values(float(settings["center_ra_deg"]), float(settings["center_dec_deg"]))
+    rows = slice(max(int(cy - half_h / pixel_deg), 0), min(int(cy + half_h / pixel_deg), data.shape[0]))
+    cols = slice(max(int(cx - half_w / pixel_deg), 0), min(int(cx + half_w / pixel_deg), data.shape[1]))
+    display, _ = read_mjysr(paths["display_continuum"])
+    display = np.squeeze(display)
+    if display.shape != data.shape:
+        raise ValueError("display_continuum must share the grid of combined_continuum")
+    view = display[rows, cols]
+    view_wcs = wcs[rows, cols]
+    width = float(settings["width_inches"])
+    figure = plt.figure(figsize=(width, width * view.shape[0] / view.shape[1] * 0.92 + 0.6))
+    axis = figure.add_axes([0.115, 0.09, 0.865, 0.89], projection=view_wcs)
+    axis.imshow(view, **map_show)
+    _draw_ellipses(axis, catalogue, wcs, offset=(rows.start, cols.start), colour=colour, linewidth=0.35)
+    axis.set_xlabel("RA (ICRS)")
+    axis.set_ylabel("Dec (ICRS)")
+    for zoom in settings["zooms"]:
+        z_rows, z_cols = box_window(wcs, float(zoom["center_ra_deg"]), float(zoom["center_dec_deg"]),
+                                    zoom_deg, shape=data.shape)
+        axis.add_patch(Rectangle((z_cols.start - cols.start, z_rows.start - rows.start),
+                                 z_cols.stop - z_cols.start, z_rows.stop - z_rows.start,
+                                 fill=False, edgecolor=str(zoom["colour"]), linewidth=1.4))
+        inset = axis.inset_axes(list(zoom["inset"]))
+        inset.imshow(display[z_rows, z_cols], **map_show)
+        drawn = _draw_ellipses(inset, catalogue, wcs, offset=(z_rows.start, z_cols.start), scale=zoom_scale,
+                               colour=colour, linewidth=0.4,
+                               window=(z_rows.stop - z_rows.start, z_cols.stop - z_cols.start))
+        inset.set_xticks([]); inset.set_yticks([])
+        for spine in inset.spines.values():
+            spine.set_edgecolor(str(zoom["colour"])); spine.set_linewidth(1.4)
+        _label(inset, str(zoom["label"]), str(zoom["colour"]), boxed=True)
+        print(f"source map: {zoom['label']} zoom with {drawn} sources")
+    for output in outputs["source_map"]:
+        figure.savefig(output, dpi=dpi)
+        print(f"Wrote {output}")
+    plt.close(figure)
+
+    # Fig. D.1: decomposition of one zoom box.
+    zoom = _zoom(settings, str(settings["decomposition_zoom"]))
+    z_rows, z_cols = box_window(wcs, float(zoom["center_ra_deg"]), float(zoom["center_dec_deg"]),
+                                zoom_deg, shape=data.shape)
+    sources = source_model_true_sky(np.squeeze(fits.getdata(paths["source_model"])), gain)
+    background = np.squeeze(fits.getdata(background_path(paths)))
+    intercore = gain_correct(np.squeeze(fits.getdata(paths["intercore_background"])), gain)
+    panels = [
+        (data, r"Data $I_\nu$"),
+        (sources, r"Sources $I_\nu^{\rm src}$"),
+        (background, r"Background $I_\nu^{\rm bg}=I_\nu-I_\nu^{\rm src}$"),
+        (intercore, r"Intercore $I_\nu^{\rm ic}=I_\nu^{\rm bg}(<30'')$"),
+    ]
+    size = float(settings["decomposition_width_inches"])
+    figure, axes = plt.subplots(2, 2, figsize=(size, size))
+    figure.subplots_adjust(left=0.005, right=0.995, bottom=0.005, top=0.995, wspace=0.01, hspace=0.01)
+    for axis, (image, title) in zip(axes.flat, panels):
+        axis.imshow(image[z_rows, z_cols], **show)
+        _draw_ellipses(axis, catalogue, wcs, offset=(z_rows.start, z_cols.start), scale=zoom_scale,
+                       colour=colour, linewidth=0.4,
+                       window=(z_rows.stop - z_rows.start, z_cols.stop - z_cols.start))
+        axis.set_xticks([]); axis.set_yticks([])
+        _label(axis, title, "white")
+    for output in outputs["decomposition"]:
+        figure.savefig(output, dpi=dpi)
+        print(f"Wrote {output}")
+    plt.close(figure)
+    return outputs
+
+
+STAGES = {
+    "inspect": lambda paths, config, overwrite: inspect_inputs(paths),
+    "background": lambda paths, config, overwrite: build_background(paths, overwrite=overwrite),
+    "build": lambda paths, config, overwrite: build_catalogue(paths, config, overwrite=overwrite),
+    "diagnostics": lambda paths, config, overwrite: build_flux_diagnostics(paths, config, overwrite=overwrite),
+    "figures": lambda paths, config, overwrite: plot_source_figures(paths, config, overwrite=overwrite),
+}
+ALL_STAGES = ("background", "build", "diagnostics", "figures")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument(
         "--stage",
-        choices=("inspect", "background", "build", "diagnostics", "all"),
+        choices=(*STAGES, "all"),
         default="inspect",
     )
     parser.add_argument("--overwrite", action="store_true")
@@ -870,18 +1029,8 @@ def main() -> None:
     project = ProjectPaths.discover()
     config = load_task_config(_project_path(project, args.config))
     paths = resolve_task_paths(project, config)
-    if args.stage == "inspect":
-        inspect_inputs(paths)
-    elif args.stage == "background":
-        build_background(paths, overwrite=args.overwrite)
-    elif args.stage == "build":
-        build_catalogue(paths, config, overwrite=args.overwrite)
-    elif args.stage == "diagnostics":
-        build_flux_diagnostics(paths, config, overwrite=args.overwrite)
-    else:
-        build_background(paths, overwrite=args.overwrite)
-        build_catalogue(paths, config, overwrite=args.overwrite)
-        build_flux_diagnostics(paths, config, overwrite=args.overwrite)
+    for stage in (ALL_STAGES if args.stage == "all" else (args.stage,)):
+        STAGES[stage](paths, config, args.overwrite)
 
 
 if __name__ == "__main__":

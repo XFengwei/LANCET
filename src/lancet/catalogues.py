@@ -228,12 +228,18 @@ def remove_source_model(
     without a positive gain becomes NaN.
     """
     data = np.asarray(image, dtype=float)
+    return data - source_model_true_sky(source_model, gain)
+
+
+def source_model_true_sky(source_model: np.ndarray, gain: np.ndarray) -> np.ndarray:
+    """A getsf source model made on a sky x gain image, in true sky:
+    ``source_model / gain`` where the model is non-zero, 0 elsewhere; a source
+    pixel without a positive gain becomes NaN."""
     sources = np.nan_to_num(np.asarray(source_model, dtype=float), nan=0.0)
     response = np.asarray(gain, dtype=float)
     with np.errstate(divide="ignore", invalid="ignore"):
-        true_sky = np.where(
+        return np.where(
             sources == 0.0,
             0.0,
             np.where(response > 0, sources / response, np.nan),
         )
-    return data - true_sky
